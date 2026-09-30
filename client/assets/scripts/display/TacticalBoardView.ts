@@ -2,6 +2,7 @@ import { _decorator, Color, Component, Graphics, Node, UITransform } from 'cc';
 import { Coord } from '../logic/BoardCoord';
 import { shouldRedrawGrid, shouldRedrawUnits } from '../logic/SnapshotDisplayDiff';
 import { BOARD_SIZE, parseViewSnapshot, ViewSnapshot } from '../logic/TacticalSnapshot';
+import { cellPixelOrigin, drawLegalMoveCell, drawSelectedUnitCell } from './BoardSelectionVisuals';
 import { terrainFillColor } from './TerrainPalette';
 import { UnitPlaceholderView } from './UnitPlaceholderView';
 
@@ -82,23 +83,15 @@ export class TacticalBoardView extends Component {
     }
     g.clear();
     const cs = this.cellSize;
-    const inset = 3;
     for (const c of this.legalDestinations) {
-      const px = c.x * cs;
-      const py = (snap.boardSize - 1 - c.y) * cs;
-      g.fillColor = new Color(80, 200, 120, 110);
-      g.rect(px + inset, py + inset, cs - inset * 2, cs - inset * 2);
-      g.fill();
+      const { px, py } = cellPixelOrigin(snap, c, cs);
+      drawLegalMoveCell(g, px, py, cs);
     }
     if (this.selectedUnitId != null) {
       const unit = snap.units.find((u) => u.id === this.selectedUnitId && u.hp > 0);
       if (unit) {
-        const px = unit.x * cs;
-        const py = (snap.boardSize - 1 - unit.y) * cs;
-        g.lineWidth = 2;
-        g.strokeColor = new Color(255, 220, 60, 255);
-        g.rect(px + 1, py + 1, cs - 2, cs - 2);
-        g.stroke();
+        const { px, py } = cellPixelOrigin(snap, { x: unit.x, y: unit.y }, cs);
+        drawSelectedUnitCell(g, px, py, cs);
       }
     }
   }

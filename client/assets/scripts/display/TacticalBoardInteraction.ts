@@ -89,6 +89,10 @@ export class TacticalBoardInteraction extends Component {
     }
 
     if (unitAt && unitAt.owner === this.localPlayerId) {
+      if (this.selectedUnitId === unitAt.id) {
+        this.clearSelection();
+        return;
+      }
       this.selectedUnitId = unitAt.id;
       const legal = computeLegalMoveDestinations(snap, unitAt.id);
       board.setSelection(unitAt.id, legal);
