@@ -1,5 +1,6 @@
 import { _decorator, Color, Component, Graphics, Node, Sprite, UITransform } from 'cc';
-import { CHAR_CARD_TEXTURE_KEYS, CharacterCardSpriteRegistry } from './CharacterCardSpriteRegistry';
+import { drawSelectedCharCardFrame } from './BoardSelectionVisuals';
+import { CHAR_CARD_TEXTURE_KEYS, CharCardTextureKey, CharacterCardSpriteRegistry } from './CharacterCardSpriteRegistry';
 import { CHAR_CARD_ART_HEIGHT_PX, CHAR_CARD_ART_WIDTH_PX, charCardDisplaySize } from './PixelSpriteUtil';
 
 const { ccclass, property } = _decorator;
@@ -26,6 +27,22 @@ export class CharacterCardHudStrip extends Component {
   gap = 6;
 
   private built = false;
+  private cardWidth = 0;
+  private cardHeight = 0;
+  private readonly cardNodes = new Map<CharCardTextureKey, Node>();
+  private highlightedKey: CharCardTextureKey | null = null;
+
+  /** 與棋盤選取聯動：高亮對應角色卡，null 清除。 */
+  setSelectionLinkedCard(cardKey: CharCardTextureKey | null): void {
+    if (this.highlightedKey === cardKey) {
+      return;
+    }
+    this.highlightedKey = cardKey;
+    if (!this.built) {
+      return;
+    }
+    this.refreshAllCardHighlights();
+  }
 
   buildStrip(): void {
     if (this.built) {
@@ -34,6 +51,8 @@ export class CharacterCardHudStrip extends Component {
     this.built = true;
     const keys = [...CHARACTER_CARD_HUD_PREVIEW_KEYS];
     const { width, height } = charCardDisplaySize(this.previewMaxWidth, this.previewMaxHeight);
+    this.cardWidth = width;
+    this.cardHeight = height;
     let x = 0;
     for (const key of keys) {
       const n = new Node(key);
@@ -51,7 +70,39 @@ export class CharacterCardHudStrip extends Component {
       if (!ok) {
         this.drawCardPlaceholder(n, width, height, key);
       }
+      this.ensureSelectionHighlightLayer(n, width, height);
+      this.cardNodes.set(key, n);
       x += width + this.gap;
+    }
+    this.refreshAllCardHighlights();
+  }
+
+  private ensureSelectionHighlightLayer(cardNode: Node, w: number, h: number): void {
+    let hl = cardNode.getChildByName('SelectionHighlight');
+    if (!hl) {
+      hl = new Node('SelectionHighlight');
+      hl.setParent(cardNode);
+      hl.addComponent(Graphics);
+    }
+    const ui = hl.getComponent(UITransform) ?? hl.addComponent(UITransform);
+    ui.setContentSize(w, h);
+  }
+
+  private refreshAllCardHighlights(): void {
+    for (const key of CHARACTER_CARD_HUD_PREVIEW_KEYS) {
+      const node = this.cardNodes.get(key);
+      if (!node) {
+        continue;
+      }
+      const hl = node.getChildByName('SelectionHighlight');
+      const g = hl?.getComponent(Graphics);
+      if (!g) {
+        continue;
+      }
+      g.clear();
+      if (key === this.highlightedKey) {
+        drawSelectedCharCardFrame(g, this.cardWidth, this.cardHeight);
+      }
     }
   }
 

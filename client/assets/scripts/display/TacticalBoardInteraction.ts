@@ -6,6 +6,7 @@ import { TacticalBoardView } from './TacticalBoardView';
 const { ccclass, property } = _decorator;
 
 export type MoveSubmitHandler = (unitId: number, to: Coord) => void | Promise<void>;
+export type SelectionChangeHandler = (selectedUnitId: number | null) => void;
 
 /**
  * Tap select unit → highlight legal moves → tap cell to submit move.
@@ -17,11 +18,17 @@ export class TacticalBoardInteraction extends Component {
 
   private boardView: TacticalBoardView | null = null;
   private onSubmitMove: MoveSubmitHandler | null = null;
+  private onSelectionChange: SelectionChangeHandler | null = null;
   private selectedUnitId: number | null = null;
 
-  bind(boardView: TacticalBoardView, onSubmitMove: MoveSubmitHandler): void {
+  bind(
+    boardView: TacticalBoardView,
+    onSubmitMove: MoveSubmitHandler,
+    onSelectionChange?: SelectionChangeHandler,
+  ): void {
     this.boardView = boardView;
     this.onSubmitMove = onSubmitMove;
+    this.onSelectionChange = onSelectionChange ?? null;
   }
 
   onLoad(): void {
@@ -33,8 +40,12 @@ export class TacticalBoardInteraction extends Component {
   }
 
   clearSelection(): void {
+    if (this.selectedUnitId === null) {
+      return;
+    }
     this.selectedUnitId = null;
     this.boardView?.setSelection(null, []);
+    this.onSelectionChange?.(null);
   }
 
   /** Recompute highlights after snapshot refresh. */
@@ -96,6 +107,7 @@ export class TacticalBoardInteraction extends Component {
       this.selectedUnitId = unitAt.id;
       const legal = computeLegalMoveDestinations(snap, unitAt.id);
       board.setSelection(unitAt.id, legal);
+      this.onSelectionChange?.(unitAt.id);
       return;
     }
 
