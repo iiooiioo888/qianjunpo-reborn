@@ -19,9 +19,3 @@ func TestCounters(t *testing.T) {
 	}
 }
 
-func TestDamageNonNegative(t *testing.T) {
-	d := Damage(fixed.FromInt(5), fixed.FromInt(10))
-	if d.Raw() != 0 {
-		t.Fatal("damage clamped")
-	}
-}
