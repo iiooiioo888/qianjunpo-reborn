@@ -195,9 +195,11 @@ func (m *Match) validateAttack(cmd Command, attacker *Unit) error {
 	if defender == nil || defender.Owner == attacker.Owner {
 		return validate.MoveError{Code: validate.CodeWrongStart, Message: "invalid attack target"}
 	}
-	dist := board.Chebyshev(attacker.Pos, cmd.To)
-	if dist < 1 || dist > attacker.Stats.Range {
+	if !combat.InAttackRange(attacker.Pos, cmd.To, attacker.Stats.Range) {
 		return validate.MoveError{Code: validate.CodeNotAdjacent, Message: "attack out of range"}
+	}
+	if combat.RangedAttackNeedsLine(attacker.Stats.Range) && !combat.AttackLineClear(m.Board, attacker.Pos, cmd.To, attacker.ID, targetID) {
+		return validate.MoveError{Code: validate.CodeBlocked, Message: "attack line blocked"}
 	}
 	return nil
 }
