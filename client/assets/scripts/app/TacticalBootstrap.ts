@@ -276,6 +276,7 @@ export class TacticalBootstrap extends Component {
       charStrip.buildStrip();
       if (this.useLiveJanus) {
         const startLivePoller = () => {
+          this.poller?.stop();
           this.poller = new LiveViewSnapshotPoller({
             cfg: this.liveNetworkCfg(),
             battleId: this.liveBattleId,
@@ -317,7 +318,14 @@ export class TacticalBootstrap extends Component {
           }, 250);
         };
 
-        void (async () => {
+        const runLivePrepare = async () => {
+          this.poller?.stop();
+          this.poller = null;
+          if (this.livePollAgeTimer !== null) {
+            clearInterval(this.livePollAgeTimer);
+            this.livePollAgeTimer = null;
+          }
+          this.lastLiveSnapshotAtMs = 0;
           hud.setNetworkStatus('Live：POST connect → enter-battle…');
           try {
             const prepared = await prepareJanusLiveSession({
@@ -338,12 +346,18 @@ export class TacticalBootstrap extends Component {
           } catch (err) {
             const msg = formatJanusLivePrepareError(err);
             console.error('[TacticalBootstrap] live session prepare failed', err);
-            hud.setNetworkStatus(msg);
+            hud.setNetworkStatus(msg, {
+              livePrepareRetry: () => {
+                void runLivePrepare();
+              },
+            });
             hud.setLockstepSyncContext(
               liveSyncContextFromPoll(0, this.livePollIntervalMs, 'error'),
             );
           }
-        })();
+        };
+
+        void runLivePrepare();
         return;
       }
 

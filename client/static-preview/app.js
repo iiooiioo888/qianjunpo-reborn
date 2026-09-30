@@ -22,6 +22,7 @@ const els = {
   rate: document.getElementById('hud-rate'),
   frame: document.getElementById('hud-frame'),
   status: document.getElementById('hud-status'),
+  retryLive: document.getElementById('hud-retry-live'),
   mode: document.getElementById('hud-mode'),
   cards: document.getElementById('char-cards'),
   canvas: document.getElementById('board'),
@@ -46,6 +47,26 @@ let liveBattleId = battleIdFromLiveUrl(boot.liveUrlRaw);
 function setStatus(text, isError = false) {
   els.status.textContent = text;
   els.status.classList.toggle('error', isError);
+}
+
+function hideLivePrepareRetry() {
+  els.retryLive.hidden = true;
+  els.retryLive.onclick = null;
+}
+
+function showLivePrepareRetry(onRetry) {
+  els.retryLive.hidden = false;
+  els.retryLive.onclick = () => {
+    hideLivePrepareRetry();
+    onRetry();
+  };
+}
+
+function stopLivePoll() {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
 }
 
 function refreshHud() {
@@ -181,28 +202,36 @@ async function pollLive() {
   }
 }
 
+async function runLivePrepare() {
+  stopLivePoll();
+  lastPollAt = 0;
+  hideLivePrepareRetry();
+  setStatus('Live：POST connect → enter-battle…');
+  try {
+    const prepared = await prepareLiveJanusSession(boot.liveGateway, liveBattleId);
+    liveSessionId = prepared.sessionId;
+    liveBattleId = prepared.battleId;
+    if (prepared.initialSnapshot) {
+      snapshot = validateSnapshot(prepared.initialSnapshot);
+      render();
+    }
+    setStatus(`Live：EnterBattle 已建局 ${liveBattleId}；開始快照輪詢。`);
+    await pollLive();
+    pollTimer = window.setInterval(() => void pollLive(), LIVE_POLL_INTERVAL_MS);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    syncCtx = { source: 'live', link: 'error', pollIntervalMs: LIVE_POLL_INTERVAL_MS };
+    refreshHud();
+    setStatus(msg, true);
+    showLivePrepareRetry(() => {
+      void runLivePrepare();
+    });
+  }
+}
+
 function startLive() {
   syncCtx.source = 'live';
-  void (async () => {
-    setStatus('Live：正在 EnterBattle（HTTP）…');
-    try {
-      const prepared = await prepareLiveJanusSession(boot.liveGateway, liveBattleId);
-      liveSessionId = prepared.sessionId;
-      liveBattleId = prepared.battleId;
-      if (prepared.initialSnapshot) {
-        snapshot = validateSnapshot(prepared.initialSnapshot);
-        render();
-      }
-      setStatus(`Live：EnterBattle 已建局 ${liveBattleId}；開始快照輪詢。`);
-      await pollLive();
-      pollTimer = window.setInterval(() => void pollLive(), LIVE_POLL_INTERVAL_MS);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      syncCtx = { source: 'live', link: 'error', pollIntervalMs: LIVE_POLL_INTERVAL_MS };
-      refreshHud();
-      setStatus(msg, true);
-    }
-  })();
+  void runLivePrepare();
 }
 
 function unitAt(x, y) {

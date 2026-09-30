@@ -56,6 +56,22 @@ h1 {
   color: var(--error);
 }
 
+.hud .retry-live {
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+}
+
+.hud .retry-live:hover {
+  border-color: var(--accent);
+}
+
 .board-panel {
   display: flex;
   flex-wrap: wrap;
