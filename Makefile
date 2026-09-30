@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
-=======
-.PHONY: test demo match-play match-verify janus-roma-test compose-e2e-test compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
->>>>>>> a99d35f (feat(phase2): deepen Janus/Roma placeholders after PR #10)
+.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
 
 COMPOSE ?= docker compose --profile dev
 PROTOC ?= protoc
