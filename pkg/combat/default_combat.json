@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "counters": {
+    "matrix": [
+      [{"num": 100, "den": 100}, {"num": 125, "den": 100}, {"num": 80, "den": 100}],
+      [{"num": 80, "den": 100}, {"num": 100, "den": 100}, {"num": 125, "den": 100}],
+      [{"num": 125, "den": 100}, {"num": 80, "den": 100}, {"num": 100, "den": 100}]
+    ]
+  },
+  "units": {
+    "infantry": {
+      "base_hp": 100,
+      "base_atk": 30,
+      "base_def": 10,
+      "move": 4,
+      "range": 1,
+      "cost_food": 50,
+      "cost_gold": 20
+    },
+    "archer": {
+      "base_hp": 80,
+      "base_atk": 28,
+      "base_def": 8,
+      "move": 3,
+      "range": 3,
+      "cost_food": 45,
+      "cost_gold": 25
+    },
+    "cavalry": {
+      "base_hp": 90,
+      "base_atk": 32,
+      "base_def": 9,
+      "move": 5,
+      "range": 1,
+      "cost_food": 60,
+      "cost_gold": 35
+    }
+  }
+}

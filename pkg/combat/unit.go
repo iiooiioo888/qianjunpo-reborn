@@ -1,3 +1,5 @@
+// Package combat provides deterministic unit stats, counter matrix, and damage helpers.
+// Rules are loaded from JSON (see docs/combat-formula.md); simulation uses FP64 only.
 package combat
 
 import "github.com/iiooiioo888/qianjunpo-reborn/pkg/fixed"
@@ -14,36 +16,25 @@ const (
 // CounterMatrix[row][col] multiplier when attacker row hits defender col.
 type CounterMatrix [3][3]fixed.Fixed
 
-// DefaultCounters returns brief-style rock-paper-scissors style modifiers (FP64).
+// DefaultCounters returns the embedded combat.json counter matrix.
 func DefaultCounters() CounterMatrix {
-	// Base 1.0, strong 1.25, weak 0.8 — all via fixed.FromFloat at init only.
-	one := fixed.FromInt(1)
-	strong := fixed.FromFloat(1.25)
-	weak := fixed.FromFloat(0.8)
-	m := CounterMatrix{}
-	for i := 0; i < 3; i++ {
-		for j := 0; j < 3; j++ {
-			m[i][j] = one
-		}
+	cfg, err := DefaultConfig()
+	if err != nil {
+		panic(err)
 	}
-	// Infantry > Archer, Archer > Cavalry, Cavalry > Infantry
-	m[UnitInfantry][UnitArcher] = strong
-	m[UnitInfantry][UnitCavalry] = weak
-	m[UnitArcher][UnitCavalry] = strong
-	m[UnitArcher][UnitInfantry] = weak
-	m[UnitCavalry][UnitInfantry] = strong
-	m[UnitCavalry][UnitArcher] = weak
-	return m
+	return cfg.Counters
 }
 
 // UnitStats holds deterministic combat numbers.
 type UnitStats struct {
 	ID      uint32
 	Type    UnitType
+	BaseHP  fixed.Fixed
 	BaseATK fixed.Fixed
 	BaseDEF fixed.Fixed
 	HP      fixed.Fixed
 	Move    int
+	Range   int
 }
 
 // FinalATK computes attack after counter matrix.

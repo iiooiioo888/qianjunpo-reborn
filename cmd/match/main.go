@@ -48,7 +48,7 @@ func runPlay(args []string) {
 	fmt.Printf("initial_hash=%016x\n", rec.InitialHash)
 	fmt.Printf("chain_hash=%016x\n", replay.ComputeChainHash(rec))
 	fmt.Printf("final_hash=%016x\n", final)
-	if m.Winner != 255 {
+	if m.Winner != tactical.NoWinner {
 		fmt.Printf("winner=player%d\n", m.Winner)
 	} else {
 		fmt.Println("winner=draw")
