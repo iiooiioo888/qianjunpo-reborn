@@ -19,4 +19,5 @@ export interface SubmitMoveResult {
   rejectReason?: string;
   stubOnly?: boolean;
   lockstepFrame?: number;
+  stateHash?: number;
 }

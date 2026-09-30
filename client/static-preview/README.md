@@ -48,8 +48,17 @@ cp client/assets/resources/data/tactical/demo_initial.json client/static-preview
 ## 互動
 
 - 點己方單位（owner `0`）→ BFS 高亮（move **4**）。
-- 點高亮格 → 非權威 mock 移動。
-- `?live=1` 預設只讀。
+- Mock：點高亮格 → 非權威 `applyMockMove`（與 Cocos mock 一致）。
+- `?live=1`：點高亮格 → **同域** `POST v1/tactical/command`（#50）；成功後輪詢快照更新棋面；失敗顯示 `reject_reason`／HTTP 錯。仍可用 `localDrift` mock 疊加（手動改 JSON 後行為同前）。
+
+### curl ↔ static-preview
+
+| curl | 頁面 |
+|------|------|
+| `GET …/v1/tactical/snapshot?battle_id=default/0` | 預設 `liveUrl`（`?liveUrl=` 覆寫） |
+| `POST …/v1/tactical/command` + Move body | 合法格點選（`?commandUrl=` 覆寫） |
+
+Compose 直打範例見 [`../README.md`](../README.md) 與 [`../../docs/janus-http-mirror.md`](../../docs/janus-http-mirror.md)；Dev 公開頁用同域 `/qjp/v1/…` 或 `:18093/v1/…`，勿對外使用 `:18090`／`:18092`。
 
 ## HUD
 

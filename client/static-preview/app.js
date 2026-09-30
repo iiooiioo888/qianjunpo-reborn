@@ -87,6 +87,48 @@ async function loadMock() {
   setStatus(`Mock snapshot loaded (${url}). Click your unit (blue) to preview moves.`);
 }
 
+function battleIdFromLiveUrl(liveUrlRaw) {
+  try {
+    const q = liveUrlRaw.includes('?') ? liveUrlRaw.slice(liveUrlRaw.indexOf('?')) : '';
+    const id = new URLSearchParams(q).get('battle_id');
+    return id || 'default/0';
+  } catch {
+    return 'default/0';
+  }
+}
+
+async function submitLiveCommand(unitId, to) {
+  const unit = snapshot?.units.find((u) => u.id === unitId && u.hp > 0);
+  if (!unit) {
+    return { accepted: false, rejectReason: 'unit missing' };
+  }
+  const body = {
+    battle_id: battleIdFromLiveUrl(boot.liveUrlRaw),
+    player_id: unit.owner,
+    kind: 1,
+    unit_id: unitId,
+    to_x: to.x,
+    to_y: to.y,
+    session_id: '',
+  };
+  const res = await fetch(boot.commandUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    return { accepted: false, rejectReason: `HTTP ${res.status}: ${text}` };
+  }
+  const json = await res.json();
+  return {
+    accepted: Boolean(json.accepted),
+    rejectReason: json.reject_reason,
+    lockstepFrame: json.lockstep_frame,
+    stateHash: json.state_hash,
+  };
+}
+
 async function pollLive() {
   const started = performance.now();
   try {
@@ -108,7 +150,7 @@ async function pollLive() {
       renderer.clearSelection();
     }
     render();
-    setStatus('Live Janus mirror polling (read-only; moves disabled).');
+    setStatus('Live Janus mirror polling; legal moves POST to v1/tactical/command.');
   } catch (err) {
     syncCtx = {
       source: 'live',
@@ -147,16 +189,34 @@ function onCellClick(x, y) {
   }
   const unitAtCell = unitAt(x, y);
 
-  if (boot.live && !localDrift) {
-    setStatus('Live mode: snapshot is authoritative; local move preview disabled.');
-    return;
-  }
-
   const selected = renderer.selectedUnitId;
   if (selected != null) {
     const legal = renderer.legalCells;
     const isLegal = legal.some((c) => c.x === x && c.y === y);
     if (isLegal) {
+      if (boot.live && !localDrift) {
+        void (async () => {
+          setStatus('Live：送出移動指令…');
+          try {
+            const result = await submitLiveCommand(selected, { x, y });
+            if (result.accepted) {
+              const hashPart =
+                result.stateHash != null ? ` hash=${result.stateHash}` : '';
+              renderer.clearSelection();
+              setStatus(
+                `Live：指令已接受 frame=${result.lockstepFrame ?? '?'}${hashPart}（等待快照）`,
+              );
+              await pollLive();
+            } else {
+              setStatus(`Live 拒絕：${result.rejectReason ?? 'unknown'}`, true);
+            }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            setStatus(`Live 指令失敗：${msg}`, true);
+          }
+        })();
+        return;
+      }
       const result = applyMockMove(snapshot, selected, { x, y });
       if (result.ok && result.snapshot) {
         snapshot = result.snapshot;
