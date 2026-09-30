@@ -41,7 +41,7 @@ pick_unit_id() {
   local snapshot_json="$1"
   if command -v jq >/dev/null 2>&1; then
     echo "$snapshot_json" | jq -r --argjson owner "$PLAYER_ID" '
-      (.units // []) | map(select(.owner == owner)) | .[0].id // empty
+      (.units // []) | map(select(.owner == $owner)) | .[0].id // empty
     '
   else
     echo "$snapshot_json" | python3 -c "
