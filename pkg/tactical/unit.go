@@ -3,7 +3,6 @@ package tactical
 import (
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/combat"
-	"github.com/iiooiioo888/qianjunpo-reborn/pkg/fixed"
 )
 
 // UnitIDPlayer0 and UnitIDPlayer1 are the default duel units.
@@ -20,19 +19,15 @@ type Unit struct {
 	Pos   board.Coord
 }
 
-func defaultUnit(id uint32, owner uint8, typ combat.UnitType, pos board.Coord) Unit {
-	hp := fixed.FromInt(100)
+func defaultUnit(cfg combat.Config, id uint32, owner uint8, typ combat.UnitType, pos board.Coord) Unit {
+	stats, err := cfg.CatalogStats(id, typ)
+	if err != nil {
+		panic(err)
+	}
 	return Unit{
 		ID:    id,
 		Owner: owner,
 		Pos:   pos,
-		Stats: combat.UnitStats{
-			ID:      id,
-			Type:    typ,
-			BaseATK: fixed.FromInt(30),
-			BaseDEF: fixed.FromInt(10),
-			HP:      hp,
-			Move:    4,
-		},
+		Stats: stats,
 	}
 }

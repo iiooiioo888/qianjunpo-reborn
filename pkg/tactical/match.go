@@ -18,7 +18,6 @@ import (
 
 const (
 	PlayerCount   = 2
-	noWinner      = 255
 	maxTurnFrames = 64
 )
 
@@ -68,9 +67,11 @@ type Match struct {
 	buffer   *commandBuffer
 
 	Frame    uint64
-	Finished bool
-	Winner   uint8
+	Finished  bool
+	Winner    uint8
+	EndReason EndReason
 
+	combatCfg combat.Config
 	counters  combat.CounterMatrix
 	recorder  *replay.Recorder
 	initial   uint64
@@ -80,6 +81,15 @@ type Match struct {
 
 // NewMatch creates a standard infantry vs cavalry duel with a bridged river.
 func NewMatch(seed uint64) *Match {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		panic(err)
+	}
+	return NewMatchWithConfig(seed, cfg)
+}
+
+// NewMatchWithConfig builds a duel using a combat rules snapshot (load once per match).
+func NewMatchWithConfig(seed uint64, cfg combat.Config) *Match {
 	b := board.New()
 	for x := 0; x < board.Size; x++ {
 		b.SetTerrain(board.Coord{x, 9}, board.TerrainRiver)
@@ -87,8 +97,8 @@ func NewMatch(seed uint64) *Match {
 	b.SetTerrain(board.Coord{9, 9}, board.TerrainPass)
 	b.SetPassable(board.Coord{9, 9}, true)
 
-	u0 := defaultUnit(UnitIDPlayer0, 0, combat.UnitInfantry, board.Coord{2, 8})
-	u1 := defaultUnit(UnitIDPlayer1, 1, combat.UnitCavalry, board.Coord{16, 10})
+	u0 := defaultUnit(cfg, UnitIDPlayer0, 0, combat.UnitInfantry, board.Coord{2, 8})
+	u1 := defaultUnit(cfg, UnitIDPlayer1, 1, combat.UnitCavalry, board.Coord{16, 10})
 	b.SetUnit(u0.Pos, u0.ID)
 	b.SetUnit(u1.Pos, u1.ID)
 
@@ -99,8 +109,9 @@ func NewMatch(seed uint64) *Match {
 		Units:    map[uint32]*Unit{u0.ID: &u0, u1.ID: &u1},
 		validate: validate.NewValidator(b),
 		buffer:   newCommandBuffer(),
-		counters: combat.DefaultCounters(),
-		Winner:   noWinner,
+		combatCfg: cfg,
+		counters:  cfg.Counters,
+		Winner:    NoWinner,
 	}
 	m.initial = m.StateHash()
 	m.recorder = replay.NewRecorder(m.initial, m.RNG.GetState())
@@ -184,7 +195,8 @@ func (m *Match) validateAttack(cmd Command, attacker *Unit) error {
 	if defender == nil || defender.Owner == attacker.Owner {
 		return validate.MoveError{Code: validate.CodeWrongStart, Message: "invalid attack target"}
 	}
-	if board.Chebyshev(attacker.Pos, cmd.To) != 1 {
+	dist := board.Chebyshev(attacker.Pos, cmd.To)
+	if dist < 1 || dist > attacker.Stats.Range {
 		return validate.MoveError{Code: validate.CodeNotAdjacent, Message: "attack out of range"}
 	}
 	return nil
@@ -269,15 +281,17 @@ func (m *Match) checkVictory() {
 	if len(alive) == 1 {
 		m.Finished = true
 		m.Winner = alive[0]
+		m.EndReason = EndAnnihilation
 	}
 	if len(alive) == 0 {
 		m.Finished = true
-		m.Winner = noWinner
+		m.Winner = NoWinner
+		m.EndReason = EndMutualWipe
 	}
 }
 
 func (m *Match) decideTimeoutWinner() {
-	var best uint8 = noWinner
+	var best uint8 = NoWinner
 	var bestHP int64 = -1
 	for _, u := range m.Units {
 		hp := u.Stats.HP.Raw()
@@ -285,11 +299,12 @@ func (m *Match) decideTimeoutWinner() {
 			bestHP = hp
 			best = u.Owner
 		} else if hp == bestHP && hp >= 0 {
-			best = noWinner
+			best = NoWinner
 		}
 	}
 	m.Finished = true
 	m.Winner = best
+	m.EndReason = EndTimeout
 }
 
 // RunSchedule submits commands at frames and steps until targetFrame.
@@ -314,7 +329,7 @@ type ScheduledCommand struct {
 // FinishRecording seals the replay with the terminal state hash.
 func (m *Match) FinishRecording() uint64 {
 	if !m.Finished {
-		if m.Winner == noWinner {
+		if m.Winner == NoWinner {
 			m.checkVictory()
 		}
 	}
