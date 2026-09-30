@@ -64,9 +64,9 @@ export class TacticalBootstrap extends Component {
   @property
   janusHttpTacticalBase = '';
 
-  /** Live EnterBattle：`access_token`（與 compose Janus 一致，開發常用 `dev`）。 */
+  /** Live：`access_token`（Lares 簽發；預設空，請在 Inspector 填入，勿對現網使用字面 `dev`）。 */
   @property
-  liveAccessToken = 'dev';
+  liveAccessToken = '';
 
   @property
   liveZoneId = 'default';

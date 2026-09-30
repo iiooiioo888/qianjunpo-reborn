@@ -4,6 +4,14 @@ import { resolveTacticalHttpUrl, TacticalNetworkConfig } from './JanusGatewayStu
 export const DEFAULT_JANUS_HTTP_CONNECT_PATH = 'v1/tactical/connect';
 export const DEFAULT_JANUS_HTTP_ENTER_BATTLE_PATH = 'v1/tactical/enter-battle';
 
+/** HUD／狀態列：Live 建局前未提供 Lares 簽發 token 時顯示（勿使用字面 `dev` 連現網）。 */
+export const LIVE_ACCESS_TOKEN_MISSING_HUD_MESSAGE =
+  '需提供 Lares 簽發 accessToken（?accessToken=…）';
+
+export function isLiveAccessTokenMissing(accessToken: string): boolean {
+  return accessToken.trim().length === 0;
+}
+
 export interface JanusLiveZoneRef {
   zoneId: string;
   shard: number;
@@ -160,6 +168,9 @@ export async function httpJanusEnterBattle(
 export async function prepareJanusLiveSession(
   opts: JanusLiveSessionPrepareOptions,
 ): Promise<JanusLiveSessionPrepareResult> {
+  if (isLiveAccessTokenMissing(opts.accessToken)) {
+    throw new JanusLiveSessionPrepareError(LIVE_ACCESS_TOKEN_MISSING_HUD_MESSAGE);
+  }
   const sessionId = await httpJanusConnect(opts.cfg, opts);
   return httpJanusEnterBattle(opts.cfg, { ...opts, sessionId });
 }

@@ -117,7 +117,7 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 
 1. `make compose-up`（Janus HTTP 容器 `:8090`，宿主機 **`:18090`**）。
 
-2. **全 HTTP 建局**（與 Cocos Live 相同順序）：
+2. **全 HTTP 建局**（與 Cocos Live 相同順序）。`access_token` 須為 **Lares 簽發**；下列 `"dev"` **僅示意本地 compose**，現網勿用字面 `dev`（會 unauthorized）：
 
    ```bash
    SESSION=$(curl -sS -X POST 'http://127.0.0.1:18090/v1/tactical/connect' \
@@ -131,7 +131,7 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
    curl -s "http://127.0.0.1:18090/v1/tactical/snapshot?battle_id=$BATTLE" | jq '.lockstepFrame'
    ```
 
-3. Cocos：勾選 **`useLiveJanus`**。預設同域 `v1/tactical/*`（`resolveTacticalHttpUrl`）；可選 **`janusHttpTacticalBase`**、`liveAccessToken`、`liveZoneId`／`liveZoneShard`、路徑覆寫 `janusHttpConnectPath`／`janusHttpEnterBattlePath`。
+3. Cocos：勾選 **`useLiveJanus`**。預設同域 `v1/tactical/*`（`resolveTacticalHttpUrl`）；**`liveAccessToken` 預設空**（Inspector 填入 Lares token，勿對現網填字面 `dev`）。可選 **`janusHttpTacticalBase`**、`liveZoneId`／`liveZoneShard`、路徑覆寫 `janusHttpConnectPath`／`janusHttpEnterBattlePath`。
 
 ### Live 輪詢與 HUD
 

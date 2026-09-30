@@ -17,6 +17,8 @@
 
 Dev nginx 已將上述路徑反代到 Janus。`?live=1` 會先 **`POST v1/tactical/connect`** → **`POST v1/tactical/enter-battle`**（#60），再輪詢快照／發指令；可用 `?connectUrl=`、`?enterBattleUrl=` 覆寫路徑。
 
+**accessToken**：預覽須帶 Lares 簽發 token，例如 `?live=1&accessToken=<token>`（預設空，勿對現網使用字面 `dev`）。缺 token 時狀態列提示並可重試建局。
+
 子路徑部署時在 `index.html` 啟用：`<base href="/qjp/" />`。
 
 ## 本地開啟
@@ -27,7 +29,7 @@ npx --yes serve . -l 3456
 ```
 
 - Mock（預設）：<http://localhost:3456/> → `mock/demo_initial.json`（離線，僅本目錄即可）
-- Live：<http://localhost:3456/?live=1>（本地需自行反代 `v1/` 或 `?liveUrl=` 指到可達端點）
+- Live：<http://localhost:3456/?live=1&accessToken=…>（本地需自行反代 `v1/` 或 `?liveUrl=` 指到可達端點）
 - 隱藏角色卡：`?cards=0`
 
 僅部署本目錄（如 `deploy-web-preview.sh`）時不需 `client/assets`。
