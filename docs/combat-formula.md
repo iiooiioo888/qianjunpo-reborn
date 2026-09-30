@@ -53,4 +53,4 @@
 - `combat.CollectAoETargets(board, center, radius, excludeID)`：在上述格子上收集單位 ID（升序），可排除施放者；僅選格，不套用傷害。
 - `combat.ResolveStrikeDamage`：純函式版單次結算（供測試與文件對照）；戰術層 `applyStrike` 與單體 `KindAttack` 共用同一 RNG 消耗順序。
 - 戰術層 `(*tactical.Match).ApplyAoEStrike(attackerID, center, radius)`：對 `CollectAoETargets` 結果中的**敵方**單位升序逐個 `applyStrike`；友軍在範圍內略過。
-- 指令 `KindAoE`（`Command.To` = 範圍中心）：提交時驗證中心在盤內（`AOE_OUT_OF_BOUNDS`）且至少一名敵人在 splash（`AOE_NO_TARGETS`）；**不**改 `InAttackRange`／`AttackLineClear`／`CollectAoECells` 行為；單體 `validateAttack` 路徑不變。
+- 指令 `KindAoE`（`Command.To` = 範圍中心）：提交與 `ApplyAoEStrike` 前，對中心格套用與單體攻擊相同的 `combat.InAttackRange`／`combat.AttackLineClear`（遠程才檢 LOS；中心格占位單位 ID 作為射線忽略的 target）；失敗碼 `AOE_OUT_OF_RANGE`／`AOE_LOS_BLOCKED`。另驗證中心在盤內（`AOE_OUT_OF_BOUNDS`）且至少一名敵人在 splash（`AOE_NO_TARGETS`）。**不**改 `InAttackRange`／`AttackLineClear`／`CollectAoECells` 本體；單體 `validateAttack` 路徑不變。

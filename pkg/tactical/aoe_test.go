@@ -27,8 +27,7 @@ func TestMatchCollectAoETargets_stub(t *testing.T) {
 func TestApplyAoEStrikeDamagesAdjacentEnemy(t *testing.T) {
 	m := NewMatch(2)
 	attacker := m.Units[UnitIDPlayer0]
-	center := attacker.Pos
-	neighbor := board.Coord{X: center.X + 1, Y: center.Y}
+	neighbor := board.Coord{X: attacker.Pos.X + 1, Y: attacker.Pos.Y}
 	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
 	defender := m.Units[UnitIDPlayer1]
 	defender.Pos = neighbor
@@ -37,7 +36,7 @@ func TestApplyAoEStrikeDamagesAdjacentEnemy(t *testing.T) {
 		t.Fatal("place defender")
 	}
 	before := defender.Stats.HP.Raw()
-	if err := m.ApplyAoEStrike(UnitIDPlayer0, center, combat.DefaultAoERadius); err != nil {
+	if err := m.ApplyAoEStrike(UnitIDPlayer0, neighbor, combat.DefaultAoERadius); err != nil {
 		t.Fatal(err)
 	}
 	if defender.Stats.HP.Raw() >= before {
@@ -47,7 +46,8 @@ func TestApplyAoEStrikeDamagesAdjacentEnemy(t *testing.T) {
 
 func TestApplyAoEStrikeNoEnemyRejected(t *testing.T) {
 	m := NewMatch(3)
-	center := m.Units[UnitIDPlayer0].Pos
+	attacker := m.Units[UnitIDPlayer0]
+	center := board.Coord{X: attacker.Pos.X + 1, Y: attacker.Pos.Y}
 	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
 	err := m.ApplyAoEStrike(UnitIDPlayer0, center, combat.DefaultAoERadius)
 	var ae AoEError
@@ -72,8 +72,8 @@ func TestSubmitKindAoEOutOfBoundsRejected(t *testing.T) {
 
 func TestSubmitKindAoEAcceptedWithNeighborEnemy(t *testing.T) {
 	m := NewMatch(5)
-	center := m.Units[UnitIDPlayer0].Pos
-	neighbor := board.Coord{X: center.X + 1, Y: center.Y}
+	attacker := m.Units[UnitIDPlayer0]
+	neighbor := board.Coord{X: attacker.Pos.X + 1, Y: attacker.Pos.Y}
 	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
 	m.Units[UnitIDPlayer1].Pos = neighbor
 	if !m.Board.SetUnit(neighbor, UnitIDPlayer1) {
@@ -83,9 +83,61 @@ func TestSubmitKindAoEAcceptedWithNeighborEnemy(t *testing.T) {
 		PlayerID: 0,
 		Kind:     KindAoE,
 		UnitID:   UnitIDPlayer0,
-		To:       center,
+		To:       neighbor,
 	})
 	if err != nil {
 		t.Fatalf("submit aoe: %v", err)
+	}
+}
+
+func TestApplyAoEStrikeOutOfRangeRejected(t *testing.T) {
+	m := NewMatch(6)
+	attacker := m.Units[UnitIDPlayer0]
+	far := board.Coord{X: attacker.Pos.X + 3, Y: attacker.Pos.Y}
+	err := m.ApplyAoEStrike(UnitIDPlayer0, far, combat.DefaultAoERadius)
+	var ae AoEError
+	if !errors.As(err, &ae) || ae.Code != CodeAoEOutOfRange {
+		t.Fatalf("want AOE_OUT_OF_RANGE, got %v", err)
+	}
+}
+
+func TestSubmitKindAoELoSBlockedRejected(t *testing.T) {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewMatchWithConfig(7, cfg)
+	attacker := m.Units[UnitIDPlayer0]
+	attacker.Stats.Type = combat.UnitArcher
+	attacker.Stats.Range = 3
+	attacker.Pos = board.Coord{X: 2, Y: 2}
+	m.Units[UnitIDPlayer0] = attacker
+	m.Board.ClearUnit(board.Coord{2, 8})
+	if !m.Board.SetUnit(attacker.Pos, UnitIDPlayer0) {
+		t.Fatal("place archer")
+	}
+
+	center := board.Coord{X: 5, Y: 2}
+	blocker := board.Coord{X: 3, Y: 2}
+	if !m.Board.SetUnit(blocker, 999) {
+		t.Fatal("place blocker")
+	}
+	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
+	defender := m.Units[UnitIDPlayer1]
+	defender.Pos = center
+	m.Units[UnitIDPlayer1] = defender
+	if !m.Board.SetUnit(center, UnitIDPlayer1) {
+		t.Fatal("place defender")
+	}
+
+	err = m.Submit(Command{
+		PlayerID: 0,
+		Kind:     KindAoE,
+		UnitID:   UnitIDPlayer0,
+		To:       center,
+	})
+	var ae AoEError
+	if !errors.As(err, &ae) || ae.Code != CodeAoELoSBlocked {
+		t.Fatalf("want AOE_LOS_BLOCKED, got %v", err)
 	}
 }
