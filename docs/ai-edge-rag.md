@@ -124,6 +124,8 @@ Each in-process NPC fallback (`source=npc`) increments an atomic counter keyed b
 
 Counters reflect fallbacks in **this OS process** (game gateway, tests, or a co-located edge-infer binary that links `pkg/ai`). A standalone edge-infer with no `InferClient` calls usually shows an empty map. After NPC fallbacks in that process, verify with `curl -s localhost:8088/health | jq '.npc_fallback_by_reason'` (e.g. `"no_infer_client": 1` when `RAGInferClient.Infer` is nil).
 
+`make test-ai-rag` includes `pkg/ai/npc_fallback_metrics_test.go`, which asserts `NPCFallbackCounts()` increments for every in-process `fallback_reason`: `request_build_failed`, `http_transport_error`, `timeout`, `http_non_ok_status`, `bad_or_empty_response`, and `no_infer_client` (`rag_infer_test.go`).
+
 When edge `/v1/infer` fails, the service returns JSON `{"error","code":"backend_infer_failed"}` with HTTP 502; the client maps status + code into `FallbackDetail`.
 
 ```bash
