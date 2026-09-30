@@ -40,14 +40,17 @@ type UnitCatalogEntry struct {
 // Config is the combat rules snapshot used for one match.
 type Config struct {
 	Version  int                           `json:"version"`
+	Damage   DamageRules                   `json:"-"`
 	Counters CounterMatrix                 `json:"-"`
 	Units    map[UnitType]UnitCatalogEntry `json:"-"`
 	rawUnits map[string]UnitCatalogEntry   `json:"-"`
 	rawMatrix [3][3]Ratio                  `json:"-"`
+	rawDamage DamageRules                  `json:"-"`
 }
 
 type configJSON struct {
 	Version  int                         `json:"version"`
+	Damage   DamageRules                 `json:"damage"`
 	Counters struct {
 		Matrix [3][3]Ratio `json:"matrix"`
 	} `json:"counters"`
@@ -75,8 +78,10 @@ func LoadBytes(data []byte) (Config, error) {
 		return Config{}, fmt.Errorf("combat: parse config: %w", err)
 	}
 	cfg := Config{
-		Version:  raw.Version,
-		rawUnits: raw.Units,
+		Version:   raw.Version,
+		Damage:    raw.Damage,
+		rawDamage: raw.Damage,
+		rawUnits:  raw.Units,
 	}
 	if cfg.rawUnits == nil {
 		cfg.rawUnits = make(map[string]UnitCatalogEntry)
@@ -146,7 +151,10 @@ func (c Config) CatalogStats(id uint32, typ UnitType) (UnitStats, error) {
 
 // MarshalJSON round-trips the logical config (for tests).
 func (c Config) MarshalJSON() ([]byte, error) {
-	raw := configJSON{Version: c.Version}
+	raw := configJSON{Version: c.Version, Damage: c.rawDamage}
+	if raw.Damage.ArmorK == 0 && c.Damage.ArmorK != 0 {
+		raw.Damage = c.Damage
+	}
 	if len(c.rawUnits) > 0 {
 		raw.Units = c.rawUnits
 	} else {

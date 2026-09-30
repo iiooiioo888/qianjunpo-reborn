@@ -43,11 +43,3 @@ func FinalATK(attacker UnitStats, defender UnitStats, counters CounterMatrix) fi
 	return attacker.BaseATK.Mul(mul)
 }
 
-// Damage applies simple ATK - DEF clamped at zero (FP64).
-func Damage(atk, def fixed.Fixed) fixed.Fixed {
-	d := atk.Sub(def)
-	if d.Raw() < 0 {
-		return fixed.Zero
-	}
-	return d
-}

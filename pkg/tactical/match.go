@@ -261,7 +261,7 @@ func (m *Match) apply(cmd Command) {
 			return
 		}
 		atk := combat.FinalATK(u.Stats, defender.Stats, m.counters)
-		dmg := combat.Damage(atk, defender.Stats.BaseDEF)
+		dmg := m.combatCfg.ResolveDamage(atk, defender.Stats.BaseDEF)
 		defender.Stats.HP = defender.Stats.HP.Sub(dmg)
 		// Deterministic battle noise for desync detection (bounded).
 		_ = m.RNG.NextIntBounded(5)

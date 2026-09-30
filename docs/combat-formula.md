@@ -18,7 +18,9 @@
 與白皮書 Phase 2 垂直切片一致（§4.4 細節未入庫時採可測的簡化式）：
 
 1. `FinalATK = BaseATK × counter[attacker.Type][defender.Type]`
-2. `Damage = max(0, FinalATK − defender.BaseDEF)`
+2. 傷害（`combat.ResolveDamage`，由 `damage.armor_k` 決定）：
+   - `armor_k = 0`（預設）：`Damage = max(0, FinalATK − defender.BaseDEF)`
+   - `armor_k > 0`：`Damage = max(0, FinalATK × K / (K + defender.BaseDEF))`
 3. `HP' = HP − Damage`
 
 戰術層攻擊距離：目標格與攻擊者 Chebyshev 距離須滿足 `1 ≤ d ≤ Range`（`Range` 來自兵種目錄）。
