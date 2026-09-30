@@ -16,6 +16,53 @@
 
 若場景腳本綁定遺失：在 `Canvas/TacticalRoot` 上 **添加组件 → 自定義脚本 → TacticalBootstrap**，`Snapshot Resource` 填 `data/tactical/demo_initial`。
 
+## 戰棋操作（選取 → 高亮 → 移動）
+
+顯示層互動由 **`TacticalBoardInteraction`**（與棋盤同節點）處理；合法格為 **BFS 可達格**（移動點數預設 **4**，對齊 `pkg/tactical` 決鬥單位；僅供高亮，權威仍以 Roma 驗證）。
+
+| 操作 | 行為 |
+|------|------|
+| 點擊己方單位（`localPlayerId`，預設 **0**） | 黃框選取 + 綠色半透明合法目的地 |
+| 點擊合法格 | 送出移動指令 |
+| 點擊空白／非法格 | 取消選取 |
+
+### Mock 驗證（預設）
+
+1. `useLiveJanus = false`，`localPlayerId = 0`。
+2. 預覽後點左側步兵（約格 `(2,8)`）。
+3. 應出現綠色高亮格；點其中一格。
+4. **預期**：單位移動、HUD 第三行 `Mock：已本地套用移動（非權威）`；瀏覽器 console 有 `[TacticalBootstrap] submit move`。
+5. `lockstep frame` 在 HUD 第二行 +1（本地 mock 遞增，非 Roma）。
+
+### Live 驗證
+
+1. `make compose-up`，`useLiveJanus = true`，`liveBattleId = default/0`。
+2. 選取與高亮同 Mock；點合法格後 **預期**：console 記錄指令；HUD 提示 **HTTP 指令鏡像尚未部署**（Janus 目前僅 `GET /v1/tactical/snapshot`）。
+3. 權威提交請用 gRPC（與後端測試相同）：
+
+   ```bash
+   grpcurl -plaintext -d '{
+     "battle_id":"default/0",
+     "player_id":0,
+     "kind":1,
+     "unit_id":101,
+     "to_x":5,
+     "to_y":8
+   }' localhost:9090 qianjunpo.gateway.v1.JanusGateway/SubmitTacticalCommand
+   ```
+
+4. 輪詢快照後棋面應與 Roma 一致；**TimeFlowHud** 仍只顯示 JSON 內 `timeFlowRateParts`／`lockstepFrame`。
+
+### 相關腳本
+
+| 檔案 | 職責 |
+|------|------|
+| `logic/ClientMoveReachability.ts` | 合法格 BFS（`CLIENT_DEFAULT_MOVE_POINTS=4`） |
+| `logic/MockSnapshotMutator.ts` | Mock 本地套用移動 |
+| `network/TacticalCommandClient.ts` | `submitTacticalMove`（POST 鏡像或 stub） |
+| `display/TacticalBoardInteraction.ts` | 點選輸入 |
+| `display/TacticalBoardView.ts` | 高亮層 + `pixelToGrid` |
+
 ## Mock vs Live Janus
 
 | 模式 | `TacticalBootstrap` | 資料來源 |
@@ -76,16 +123,17 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 ### 仍為 stub／後續
 
 - Janus **TCP** framing（`:7000`）仍為 skeleton；正式客戶端應走 gRPC／未來 WebSocket。
-- Cocos 內尚未內建 gRPC；Live 預覽用 HTTP 鏡像。
+- Cocos 內尚未內建 gRPC；Live 預覽用 HTTP **快照**鏡像；**SubmitTacticalCommand** 瀏覽器端為 stub（已嘗試 `POST /v1/tactical/command`，未部署則僅記錄 + HUD 提示）。
+- `ViewSnapshot` 尚未帶每單位移動點數；高亮使用客戶端常數 4。
 - Replay `TimeFlowRates` 串流尚未接入；目前僅 snapshot 內當幀 `timeFlowRateParts`。
 
 ## 目錄與分層
 
 | 路徑 | 職責 |
 |------|------|
-| `assets/scripts/logic/` | 純資料：`ViewSnapshot`、顯示 diff 鍵 |
-| `assets/scripts/display/` | 棋盤、單位 Sprite／占位、HUD |
-| `assets/scripts/network/` | `fetchLiveViewSnapshot`、`LiveViewSnapshotPoller` |
+| `assets/scripts/logic/` | 純資料：`ViewSnapshot`、合法格 BFS、Mock 移動 |
+| `assets/scripts/display/` | 棋盤、點選互動、單位 Sprite／占位、HUD |
+| `assets/scripts/network/` | 快照輪詢、`TacticalCommandClient` |
 | `assets/scripts/app/` | `TacticalBootstrap` 場景入口 |
 | `assets/resources/data/tactical/` | Mock 戰局 JSON |
 | `assets/resources/textures/2d/` | 2D 像素貼圖（見目錄內 README） |
