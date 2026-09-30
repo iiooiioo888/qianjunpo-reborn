@@ -62,7 +62,7 @@
 | `pkg/timesync` | Phase 4：Wall/Sim 雙時間戳、跨區映射、跨區凍結 |
 | `pkg/anticheat` | Phase 4：特徵抽取 + 模型推理介面（假資料 E2E） |
 | `pkg/loadsample` | CPU／隊列／成長率／P99 採樣 + `Predictor`（LSTM 可插拔介面） |
-| `pkg/loadpredict` | Phase 5：30s 前瞻、预 scale 信號、假序列 `SeriesPredictor` |
+| `pkg/loadpredict` | Phase 5：30s 前瞻、PreScale 信號、假序列 `SeriesPredictor` |
 | `pkg/balance` | Phase 5：平衡批次模擬、勝率門檻 |
 | `pkg/contentops` | Phase 5：動態內容審核佇列 |
 | `pkg/observability/metrics` | Phase 5：Prometheus 指標 |
