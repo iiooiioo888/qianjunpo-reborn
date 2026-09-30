@@ -268,3 +268,53 @@ func TestSubmitKindAoELoSBlockedRejected(t *testing.T) {
 		t.Fatalf("want AOE_LOS_BLOCKED, got %v", err)
 	}
 }
+
+// Symmetric to TestSubmitKindAttackLoSTerrainBlockedRejected (#69): impassable terrain on trace rejects KindAoE.
+func TestSubmitKindAoELoSTerrainBlockedRejected(t *testing.T) {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewMatchWithConfig(7, cfg)
+	attacker := m.Units[UnitIDPlayer0]
+	attacker.Stats.Type = combat.UnitArcher
+	attacker.Stats.Range = 3
+	attacker.Pos = board.Coord{X: 2, Y: 2}
+	m.Units[UnitIDPlayer0] = attacker
+	m.Board.ClearUnit(board.Coord{2, 8})
+	if !m.Board.SetUnit(attacker.Pos, UnitIDPlayer0) {
+		t.Fatal("place archer")
+	}
+
+	center := board.Coord{X: 5, Y: 2}
+	blockCell := board.Coord{X: 3, Y: 2}
+	m.Board.SetTerrain(blockCell, board.TerrainMountain)
+	if m.Board.Get(blockCell).Passable {
+		t.Fatal("setup: blocker terrain must be impassable")
+	}
+	if m.Board.GetUnit(blockCell) != 0 {
+		t.Fatal("setup: blocker cell must be empty")
+	}
+
+	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
+	defender := m.Units[UnitIDPlayer1]
+	defender.Pos = center
+	m.Units[UnitIDPlayer1] = defender
+	if !m.Board.SetUnit(center, UnitIDPlayer1) {
+		t.Fatal("place defender")
+	}
+
+	err = m.Submit(Command{
+		PlayerID: 0,
+		Kind:     KindAoE,
+		UnitID:   UnitIDPlayer0,
+		To:       center,
+	})
+	if err == nil {
+		t.Fatal("expected terrain-blocked line rejection")
+	}
+	var ae AoEError
+	if !errors.As(err, &ae) || ae.Code != CodeAoELoSBlocked {
+		t.Fatalf("want AOE_LOS_BLOCKED, got %v", err)
+	}
+}
