@@ -289,7 +289,14 @@ export class TacticalBootstrap extends Component {
                 err.message,
                 `(retry ~${retryMs}ms)`,
               );
-              hud.setNetworkStatus(`Janus: ${err.message}（約 ${retryMs}ms 後重試）`);
+              hud.setNetworkStatus(
+                `Janus: ${err.message}（約 ${retryMs}ms 後重試；或點「重連 Live」）`,
+                {
+                  livePollReconnect: () => {
+                    void runLivePrepare();
+                  },
+                },
+              );
               const age =
                 this.lastLiveSnapshotAtMs > 0 ? Date.now() - this.lastLiveSnapshotAtMs : retryMs;
               hud.setLockstepSyncContext(

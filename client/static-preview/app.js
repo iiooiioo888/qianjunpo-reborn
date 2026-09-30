@@ -49,18 +49,23 @@ function setStatus(text, isError = false) {
   els.status.classList.toggle('error', isError);
 }
 
-function hideLivePrepareRetry() {
+function hideLiveRetry() {
   els.retryLive.hidden = true;
   els.retryLive.onclick = null;
+  els.retryLive.textContent = '';
 }
 
-function showLivePrepareRetry(onRetry) {
+function showLiveRetry(label, onRetry) {
   els.retryLive.hidden = false;
+  els.retryLive.textContent = label;
   els.retryLive.onclick = () => {
-    hideLivePrepareRetry();
+    hideLiveRetry();
     onRetry();
   };
 }
+
+const LIVE_LABEL_PREPARE_RETRY = '重試 Live 建局（connect → enter-battle）';
+const LIVE_LABEL_POLL_RECONNECT = '重連 Live';
 
 function stopLivePoll() {
   if (pollTimer) {
@@ -187,6 +192,7 @@ async function pollLive() {
     }
     render();
     setStatus('Live Janus mirror polling; legal moves POST to v1/tactical/command.');
+    hideLiveRetry();
   } catch (err) {
     syncCtx = {
       source: 'live',
@@ -196,16 +202,19 @@ async function pollLive() {
     refreshHud();
     const msg = err instanceof Error ? err.message : String(err);
     setStatus(
-      `Live fetch failed (${msg}). Use same-origin v1/… (see README: /qjp/v1/ or :18093 /v1/).`,
+      `Live 快照失敗（${msg}）。可點「重連 Live」或等待自動重試；同域 v1/… 見 README。`,
       true,
     );
+    showLiveRetry(LIVE_LABEL_POLL_RECONNECT, () => {
+      void runLivePrepare();
+    });
   }
 }
 
 async function runLivePrepare() {
   stopLivePoll();
   lastPollAt = 0;
-  hideLivePrepareRetry();
+  hideLiveRetry();
   setStatus('Live：POST connect → enter-battle…');
   try {
     const prepared = await prepareLiveJanusSession(boot.liveGateway, liveBattleId);
@@ -223,7 +232,7 @@ async function runLivePrepare() {
     syncCtx = { source: 'live', link: 'error', pollIntervalMs: LIVE_POLL_INTERVAL_MS };
     refreshHud();
     setStatus(msg, true);
-    showLivePrepareRetry(() => {
+    showLiveRetry(LIVE_LABEL_PREPARE_RETRY, () => {
       void runLivePrepare();
     });
   }

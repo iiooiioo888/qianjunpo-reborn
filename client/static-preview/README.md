@@ -51,7 +51,7 @@ cp client/assets/resources/data/tactical/demo_initial.json client/static-preview
 
 - 點己方單位（owner `0`）→ BFS 高亮（move **4**）。
 - Mock：點高亮格 → 非權威 `applyMockMove`（與 Cocos mock 一致）。
-- `?live=1`：啟動時 connect → enter-battle；點高亮格 → **同域** `POST v1/tactical/command`（帶 `session_id`＋`battle_id`）；成功後輪詢快照；失敗顯示真實 HTTP／`reject_reason`。仍可用 `localDrift` mock 疊加。
+- `?live=1`：啟動時 connect → enter-battle；點高亮格 → **同域** `POST v1/tactical/command`（帶 `session_id`＋`battle_id`）；成功後輪詢快照；建局／**快照輪詢**失敗顯示真實 HTTP 並可一鍵 **「重連 Live」**（或建局失敗時「重試 Live 建局」）。仍可用 `localDrift` mock 疊加。
 
 ### curl ↔ static-preview
 
