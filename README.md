@@ -76,6 +76,8 @@
 | `pkg/tactical` | Phase 2 垂直切片：19×19 戰術對局、權威驗證、戰鬥、回放 |
 | `cmd/demo` | 雙客戶端同種子同輸入哈希對照 |
 | `cmd/match` | 戰術對局演示與 gzip 回放驗證 CLI |
+| `cmd/client-snapshot` | 匯出 Cocos 顯示層 mock JSON（`make client-snapshot`） |
+| `client/` | Cocos Creator 3.x 戰術棋盤 shell（本地 JSON，見 `client/README.md`） |
 
 ## 鎖步與時間模型
 
@@ -103,6 +105,7 @@
 make test          # 等同 go test ./...
 make demo          # 雙客戶端確定性演示
 make match-play    # Phase 2 戰術對局 + 哈希鏈輸出
+make client-snapshot  # 匯出 Cocos mock 戰局 JSON（client/resources/data/tactical/）
 make match-verify  # 寫入臨時回放並 verify 終局哈希
 go run ./cmd/match play -seed 0xcafe -out /tmp/match.rgz
 go run ./cmd/match verify -in /tmp/match.rgz
