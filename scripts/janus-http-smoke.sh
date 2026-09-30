@@ -31,7 +31,7 @@ json_field() {
   local json="$1"
   local key="$2"
   if command -v jq >/dev/null 2>&1; then
-    echo "$json" | jq -r --arg k "$key" '.[k] // empty'
+    echo "$json" | jq -r --arg k "$key" '.[$k] // empty'
   else
     echo "$json" | python3 -c 'import json,sys; k=sys.argv[1]; d=json.load(sys.stdin); v=d.get(k); print("" if v is None else v)' "$key"
   fi
