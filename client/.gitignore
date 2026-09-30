@@ -1,0 +1,12 @@
+# Cocos Creator generated (do not commit)
+library/
+local/
+temp/
+profiles/
+native/
+build/
+extensions/*/node_modules/
+
+# OS / IDE
+.DS_Store
+*.log

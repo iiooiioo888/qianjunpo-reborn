@@ -1,0 +1,10 @@
+{
+  "name": "qianjunpo-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "千軍破·重生 — Cocos Creator 3.x 戰術棋盤顯示層（非權威）",
+  "creator": {
+    "version": "3.8.4"
+  },
+  "uuid": "c4e8f1a2-9b3d-4f6e-8a1c-2d5e7f901234"
+}
