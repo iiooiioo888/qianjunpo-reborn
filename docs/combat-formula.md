@@ -29,7 +29,11 @@
    - 暴擊時 `Damage = Damage × crit_mul`（整數比，FP64）
 5. `HP' = HP − Damage`
 
-戰術層攻擊距離：目標格與攻擊者 Chebyshev 距離須滿足 `1 ≤ d ≤ Range`（`Range` 來自兵種目錄）。
+戰術層攻擊距離（`combat.InAttackRange` / `tactical.validateAttack`）：
+
+- 目標格與攻擊者 Chebyshev 距離須滿足 `1 ≤ d ≤ Range`（`Range` 來自兵種目錄）。
+- **遠程**（目錄 `range > 1`，如弓兵）：另須 `combat.AttackLineClear`——沿 8 向直線步進的射線上每一格地形可通行，且除攻擊者／目標單位外不得有第三方單位占位（與 `pathfind.ExpandSegment` 同 trace）。
+- **近戰**（`range ≤ 1`）：僅 Chebyshev 距離，不檢查射線。
 
 ## 終局條件（`pkg/tactical`）
 

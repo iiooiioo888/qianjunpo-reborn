@@ -113,3 +113,61 @@ func TestArcherRangeAllowsDistanceTwo(t *testing.T) {
 		t.Fatalf("archer should attack at range 2: %v", err)
 	}
 }
+
+func TestArcherRangeThreeAllowed(t *testing.T) {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewMatchWithConfig(17, cfg)
+	archPos := board.Coord{13, 10}
+	m.Board.ClearUnit(m.Units[UnitIDPlayer0].Pos)
+	u := defaultUnit(cfg, UnitIDPlayer0, 0, combat.UnitArcher, archPos)
+	m.Units[UnitIDPlayer0] = &u
+	m.Board.SetUnit(archPos, UnitIDPlayer0)
+	enemyPos := m.Units[UnitIDPlayer1].Pos
+	if board.Chebyshev(archPos, enemyPos) != 3 {
+		t.Fatalf("setup: want chebyshev 3, got %d", board.Chebyshev(archPos, enemyPos))
+	}
+	err = m.Submit(Command{
+		PlayerID: 0,
+		Kind:     KindAttack,
+		UnitID:   UnitIDPlayer0,
+		To:       enemyPos,
+	})
+	if err != nil {
+		t.Fatalf("archer should attack at catalog range 3: %v", err)
+	}
+}
+
+func TestRangedAttackBlockedByUnitOnLine(t *testing.T) {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewMatchWithConfig(18, cfg)
+	archPos := board.Coord{13, 10}
+	m.Board.ClearUnit(m.Units[UnitIDPlayer0].Pos)
+	u := defaultUnit(cfg, UnitIDPlayer0, 0, combat.UnitArcher, archPos)
+	m.Units[UnitIDPlayer0] = &u
+	m.Board.SetUnit(archPos, UnitIDPlayer0)
+	enemyPos := m.Units[UnitIDPlayer1].Pos
+	blocker := board.Coord{15, 10}
+	if m.Board.GetUnit(blocker) != 0 {
+		t.Fatal("blocker cell should be empty")
+	}
+	m.Board.SetUnit(blocker, 999)
+	err = m.Submit(Command{
+		PlayerID: 0,
+		Kind:     KindAttack,
+		UnitID:   UnitIDPlayer0,
+		To:       enemyPos,
+	})
+	if err == nil {
+		t.Fatal("expected blocked line rejection")
+	}
+	var me validate.MoveError
+	if !asMoveError(err, &me) || me.Code != validate.CodeBlocked {
+		t.Fatalf("expected CodeBlocked, got %v", err)
+	}
+}
