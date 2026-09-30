@@ -55,6 +55,18 @@ export function drawSelectedUnitCell(g: Graphics, px: number, py: number, cellSi
   g.fill();
 }
 
+/** HUD 角色卡選取高亮（與單位選取環同色系）。 */
+export function drawSelectedCharCardFrame(g: Graphics, width: number, height: number): void {
+  g.lineWidth = 2.5;
+  g.strokeColor = SELECTION_RING_STROKE;
+  g.rect(1, 1, width - 2, height - 2);
+  g.stroke();
+  g.lineWidth = 1;
+  g.strokeColor = SELECTION_RING_GLOW;
+  g.rect(0.5, 0.5, width - 1, height - 1);
+  g.stroke();
+}
+
 export function drawUnitSelectionRing(g: Graphics, cellSize: number): void {
   const cx = cellSize / 2;
   const cy = cellSize / 2;

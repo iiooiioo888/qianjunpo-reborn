@@ -9,6 +9,7 @@ import {
 } from '../display/LockstepHudFormat';
 import { TimeFlowHudStub } from '../display/TimeFlowHudStub';
 import { CharacterCardHudStrip } from '../display/CharacterCardHudStrip';
+import { resolveCharCardKeyForUnit } from '../display/UnitCharacterCardMapping';
 import { ResourceIconHudStrip } from '../display/ResourceIconHudStrip';
 import {
   formatTexturePreloadHudNote,
@@ -154,57 +155,72 @@ export class TacticalBootstrap extends Component {
       }
     };
 
-    interaction.bind(boardView, async (unitId, to) => {
+    const syncCharCardHighlight = (selectedUnitId: number | null) => {
       const snap = boardView.getSnapshot();
-      const unit = snap?.units.find((u) => u.id === unitId);
-      if (!unit) {
+      const unit =
+        selectedUnitId != null ? snap?.units.find((u) => u.id === selectedUnitId && u.hp > 0) : undefined;
+      if (!unit || unit.owner !== this.localPlayerId) {
+        charStrip.setSelectionLinkedCard(null);
         return;
       }
-      console.info('[TacticalBootstrap] submit move', {
-        unitId,
-        to,
-        playerId: unit.owner,
-        battleId: this.liveBattleId,
-      });
+      charStrip.setSelectionLinkedCard(resolveCharCardKeyForUnit(unit));
+    };
 
-      if (!this.useLiveJanus) {
-        if (this.mockSnapshotRaw == null) {
-          hud.setNetworkStatus('Mock：無快照基底');
+    interaction.bind(
+      boardView,
+      async (unitId, to) => {
+        const snap = boardView.getSnapshot();
+        const unit = snap?.units.find((u) => u.id === unitId);
+        if (!unit) {
           return;
         }
-        const result = applyMockMove(
-          parseViewSnapshot(this.mockSnapshotRaw),
+        console.info('[TacticalBootstrap] submit move', {
           unitId,
           to,
-        );
-        if (!result.ok || !result.snapshot) {
-          hud.setNetworkStatus(`Mock 移動拒絕：${result.reason ?? 'unknown'}`);
+          playerId: unit.owner,
+          battleId: this.liveBattleId,
+        });
+
+        if (!this.useLiveJanus) {
+          if (this.mockSnapshotRaw == null) {
+            hud.setNetworkStatus('Mock：無快照基底');
+            return;
+          }
+          const result = applyMockMove(
+            parseViewSnapshot(this.mockSnapshotRaw),
+            unitId,
+            to,
+          );
+          if (!result.ok || !result.snapshot) {
+            hud.setNetworkStatus(`Mock 移動拒絕：${result.reason ?? 'unknown'}`);
+            return;
+          }
+          this.mockSnapshotRaw = result.snapshot;
+          applySnapshot(result.snapshot, 'Mock：已本地套用移動（非權威）');
+          this.boardInteraction?.clearSelection();
           return;
         }
-        this.mockSnapshotRaw = result.snapshot;
-        applySnapshot(result.snapshot, 'Mock：已本地套用移動（非權威）');
-        this.boardInteraction?.clearSelection();
-        return;
-      }
 
-      const submit = await submitTacticalMove(DEFAULT_NETWORK_STUB, {
-        battleId: this.liveBattleId,
-        sessionId: '',
-        playerId: unit.owner,
-        unitId,
-        toX: to.x,
-        toY: to.y,
-      });
-      if (submit.accepted) {
-        hud.setNetworkStatus(`Live：指令已接受 frame=${submit.lockstepFrame ?? '?'}`);
-        this.boardInteraction?.clearSelection();
-      } else if (submit.stubOnly) {
-        hud.setNetworkStatus(submit.rejectReason ?? 'Live：指令已記錄（stub）');
-        console.info('[TacticalBootstrap] live submit stub — use grpcurl SubmitTacticalCommand');
-      } else {
-        hud.setNetworkStatus(`Live 拒絕：${submit.rejectReason ?? 'unknown'}`);
-      }
-    });
+        const submit = await submitTacticalMove(DEFAULT_NETWORK_STUB, {
+          battleId: this.liveBattleId,
+          sessionId: '',
+          playerId: unit.owner,
+          unitId,
+          toX: to.x,
+          toY: to.y,
+        });
+        if (submit.accepted) {
+          hud.setNetworkStatus(`Live：指令已接受 frame=${submit.lockstepFrame ?? '?'}`);
+          this.boardInteraction?.clearSelection();
+        } else if (submit.stubOnly) {
+          hud.setNetworkStatus(submit.rejectReason ?? 'Live：指令已記錄（stub）');
+          console.info('[TacticalBootstrap] live submit stub — use grpcurl SubmitTacticalCommand');
+        } else {
+          hud.setNetworkStatus(`Live 拒絕：${submit.rejectReason ?? 'unknown'}`);
+        }
+      },
+      syncCharCardHighlight,
+    );
 
     const displayMode = this.useLiveJanus ? 'live' : 'mock';
     void preloadTacticalDisplayTextures().then((report) => {

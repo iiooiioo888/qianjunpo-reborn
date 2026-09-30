@@ -61,6 +61,9 @@ const unitViewSrc = readFileSync(join(displayDir, 'UnitPlaceholderView.ts'), 'ut
 const visualsSrc = readFileSync(join(displayDir, 'BoardSelectionVisuals.ts'), 'utf8');
 const hudSrc = readFileSync(join(displayDir, 'TimeFlowHudStub.ts'), 'utf8');
 const lockstepHudSrc = readFileSync(join(displayDir, 'LockstepHudFormat.ts'), 'utf8');
+const charStripSrc = readFileSync(join(displayDir, 'CharacterCardHudStrip.ts'), 'utf8');
+const charMapSrc = readFileSync(join(displayDir, 'UnitCharacterCardMapping.ts'), 'utf8');
+const bootstrapSrc = readFileSync(join(root, 'assets/scripts/app/TacticalBootstrap.ts'), 'utf8');
 
 if (!boardViewSrc.includes('setSelection(') || !boardViewSrc.includes('BoardSelectionVisuals')) {
   fail('TacticalBoardView missing shared selection visuals');
@@ -99,6 +102,29 @@ for (const stem of CHAR_CARD_V04_STEMS) {
   }
 }
 
+if (!charStripSrc.includes('setSelectionLinkedCard') || !visualsSrc.includes('drawSelectedCharCardFrame')) {
+  fail('CharacterCardHudStrip missing selection-linked card highlight');
+}
+if (
+  !charMapSrc.includes('resolveCharCardKeyForUnit') ||
+  !charMapSrc.includes('char_caocao') ||
+  !charMapSrc.includes('101')
+) {
+  fail('UnitCharacterCardMapping missing mock unitId/type → char card stub');
+}
+if (
+  !interactionSrc.includes('onSelectionChange') ||
+  !bootstrapSrc.includes('syncCharCardHighlight') ||
+  !bootstrapSrc.includes('resolveCharCardKeyForUnit')
+) {
+  fail('TacticalBootstrap/Interaction missing selection → char card strip wiring');
+}
+
+const localUnit = raw.units.find((u) => u.owner === 0 && u.hp > 0);
+if (!localUnit || localUnit.id !== 101) {
+  fail('demo_initial expected local player unit id=101 for char_caocao mapping stub');
+}
+
 ok(
-  `demo_initial units=${raw.units.length}, lockstep=${raw.lockstepFrame}; HUD char keys=${HUD_CHAR_KEYS.join(',')}; char v04 stems+PNGs ok; lockstep sync HUD static checks passed`,
+  `demo_initial units=${raw.units.length}, lockstep=${raw.lockstepFrame}; HUD char keys=${HUD_CHAR_KEYS.join(',')}; char v04 stems+PNGs ok; lockstep sync + char-card selection link static checks passed`,
 );
