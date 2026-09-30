@@ -41,7 +41,7 @@
 
 契約：`proto/` → `gen/go/`（`make proto` 可選再生；CI 使用已提交生成碼）。
 
-部署：`deploy/k8s/`（Roma StatefulSet + Headless Service）、`deploy/agones/`（Fleet / Buffer / Counter 骨架）、`deploy/docker/Dockerfile.service`（多階段 `CGO_ENABLED=0`）。
+部署：`deploy/k8s/`（Roma StatefulSet + Headless Service）、`deploy/agones/`（Fleet / Buffer / Counter 骨架）、`deploy/docker/Dockerfile.service`（多階段 `CGO_ENABLED=0`）。Agones **房間生命週期**（Allocate → Ready → Shutdown，`ROMA_AGONES_BACKEND=mock|sidecar`）見 [`docs/agones-room-lifecycle.md`](docs/agones-room-lifecycle.md)。
 
 ## 目錄結構
 

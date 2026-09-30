@@ -6,12 +6,15 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	commonv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/common/v1"
 	romav1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/roma/v1"
 	"github.com/iiooiioo888/qianjunpo-reborn/internal/roma"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/agones"
 	etcdreg "github.com/iiooiioo888/qianjunpo-reborn/pkg/discovery/etcd"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/observability/metrics"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/replay"
@@ -122,6 +125,19 @@ func main() {
 
 	store := roma.NewStore(nil)
 
+	var agonesCoord *agones.Coordinator
+	if os.Getenv("ROMA_AGONES_DISABLE") != "1" {
+		coord, err := agones.NewFromEnv()
+		if err != nil {
+			log.Printf("roma: agones coordinator disabled: %v", err)
+		} else {
+			agonesCoord = coord
+		}
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	if strings.TrimSpace(etcdEndpoints) != "" && os.Getenv("ETCD_DISABLE") != "1" {
 		reg, err := etcdreg.NewRomaRegistry(etcdEndpoints)
 		if err != nil {
@@ -146,10 +162,18 @@ func main() {
 
 		mux := http.NewServeMux()
 		mux.Handle("/metrics", metrics.Handler())
-		mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
+		mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"status":"ok","service":"roma","note":"authoritative tactical match in-memory"}`))
+			body := `{"status":"ok","service":"roma","note":"authoritative tactical match in-memory"`
+			if agonesCoord != nil {
+				body += "," + agonesHealthSnippet(r.Context(), agonesCoord)
+			}
+			body += "}"
+			_, _ = w.Write([]byte(body))
 		})
+		if agonesCoord != nil {
+			mountAgonesRoutes(mux, agonesCoord)
+		}
 		mux.HandleFunc("/v1/battles/replay", func(w http.ResponseWriter, r *http.Request) {
 			if r.Method != http.MethodGet {
 				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -175,7 +199,16 @@ func main() {
 			_, _ = w.Write(gz)
 		})
 		s := &http.Server{Addr: httpAddr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
-		log.Fatal(s.ListenAndServe())
+		go func() {
+			log.Printf("roma http on %s", httpAddr)
+			if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Printf("roma http exit: %v", err)
+			}
+		}()
+		<-ctx.Done()
+		shCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		_ = s.Shutdown(shCtx)
+		cancel()
 	}()
 
 	lis, err := net.Listen("tcp", grpcAddr)
@@ -185,7 +218,29 @@ func main() {
 	srv := grpc.NewServer()
 	romav1.RegisterRomaZoneServer(srv, &romaServer{store: store})
 	log.Printf("roma grpc on %s", grpcAddr)
-	log.Fatal(srv.Serve(lis))
+
+	if agonesCoord != nil {
+		go agonesCoord.RunHealthLoop(ctx)
+		if err := agonesCoord.BootstrapGameServer(ctx); err != nil {
+			log.Printf("roma: agones ready: %v", err)
+		}
+	}
+
+	go func() {
+		<-ctx.Done()
+		if agonesCoord != nil {
+			shCtx, cancel := context.WithTimeout(context.Background(), agones.LoadConfig().ShutdownTimeout)
+			if err := agonesCoord.ShutdownGameServer(shCtx); err != nil {
+				log.Printf("roma: agones shutdown: %v", err)
+			}
+			cancel()
+		}
+		srv.GracefulStop()
+	}()
+
+	if err := srv.Serve(lis); err != nil {
+		log.Printf("roma grpc exit: %v", err)
+	}
 }
 
 func parseShard(v string) (uint32, error) {

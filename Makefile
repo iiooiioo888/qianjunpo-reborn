@@ -1,4 +1,4 @@
-.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer test-edge-infer test-ai-rag proto proto-check build-services loadpredict aigc-worker aigc-stub-check
+.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer test-edge-infer test-ai-rag test-agones-room agones-room-demo proto proto-check build-services loadpredict aigc-worker aigc-stub-check
 
 COMPOSE ?= docker compose --profile dev
 PROTOC ?= protoc
@@ -45,6 +45,17 @@ edge-infer:
 
 test-edge-infer:
 	go test ./services/edge-infer/... -v -count=1
+
+test-agones-room:
+	go test ./pkg/agones/... -count=1
+
+agones-room-demo:
+	@ROMA_AGONES_BACKEND=mock ROMA_AGONES_ALLOCATOR=mock \
+		go run ./cmd/agones-room allocate -zone demo -shard 0
+	@ROMA_AGONES_BACKEND=mock ROMA_AGONES_ALLOCATOR=mock \
+		go run ./cmd/agones-room ready
+	@ROMA_AGONES_BACKEND=mock ROMA_AGONES_ALLOCATOR=mock \
+		go run ./cmd/agones-room shutdown
 
 test-ai-rag:
 	go test ./pkg/ai ./pkg/rag -v -count=1
