@@ -12,25 +12,8 @@ import (
 
 // HTTPAllocator calls the Agones GameServerAllocation API (or compatible proxy).
 type HTTPAllocator struct {
-	URL        string
-	Token      string
-	Namespace  string
-	FleetName  string
+	cfg        Config
 	HTTPClient *http.Client
-}
-
-type allocationRequest struct {
-	Namespace           string              `json:"namespace"`
-	GameServerSelectors []allocationSelector `json:"gameServerSelectors,omitempty"`
-	Metadata            *allocationMetadata `json:"metadata,omitempty"`
-}
-
-type allocationSelector struct {
-	MatchLabels map[string]string `json:"matchLabels"`
-}
-
-type allocationMetadata struct {
-	Labels map[string]string `json:"labels,omitempty"`
 }
 
 type allocationResponse struct {
@@ -44,10 +27,7 @@ type allocationResponse struct {
 // NewHTTPAllocator builds an allocator from Config.
 func NewHTTPAllocator(cfg Config) *HTTPAllocator {
 	return &HTTPAllocator{
-		URL:       cfg.AllocationURL,
-		Token:     cfg.AllocationToken,
-		Namespace: cfg.Namespace,
-		FleetName: cfg.FleetName,
+		cfg: cfg,
 		HTTPClient: &http.Client{
 			Timeout: cfg.AllocateTimeout,
 		},
@@ -55,34 +35,21 @@ func NewHTTPAllocator(cfg Config) *HTTPAllocator {
 }
 
 func (a *HTTPAllocator) Allocate(ctx context.Context, req AllocateRequest) (RoomIdentity, error) {
-	if strings.TrimSpace(a.URL) == "" {
+	if strings.TrimSpace(a.cfg.AllocationURL) == "" {
 		return RoomIdentity{}, fmt.Errorf("http allocator: ROMA_AGONES_ALLOCATION_URL is empty")
 	}
-	body := allocationRequest{
-		Namespace: a.Namespace,
-		GameServerSelectors: []allocationSelector{{
-			MatchLabels: map[string]string{
-				"agones.dev/fleet": a.FleetName,
-			},
-		}},
-		Metadata: &allocationMetadata{
-			Labels: map[string]string{
-				"qianjunpo.dev/zone":  req.ZoneID,
-				"qianjunpo.dev/shard": fmt.Sprintf("%d", req.Shard),
-			},
-		},
-	}
+	body := buildAllocationRequest(a.cfg, req)
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return RoomIdentity{}, err
 	}
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, a.URL, bytes.NewReader(raw))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, a.cfg.AllocationURL, bytes.NewReader(raw))
 	if err != nil {
 		return RoomIdentity{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
-	if a.Token != "" {
-		httpReq.Header.Set("Authorization", "Bearer "+a.Token)
+	if a.cfg.AllocationToken != "" {
+		httpReq.Header.Set("Authorization", "Bearer "+a.cfg.AllocationToken)
 	}
 	resp, err := a.HTTPClient.Do(httpReq)
 	if err != nil {
@@ -103,7 +70,7 @@ func (a *HTTPAllocator) Allocate(ctx context.Context, req AllocateRequest) (Room
 	}
 	return RoomIdentity{
 		Name:      out.GameServerName,
-		Namespace: a.Namespace,
+		Namespace: a.cfg.Namespace,
 		Address:   out.Address,
 		Port:      port,
 		RoomID:    fmt.Sprintf("room-%s-%d", req.ZoneID, req.Shard),

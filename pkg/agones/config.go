@@ -24,6 +24,12 @@ type Config struct {
 	HealthInterval   time.Duration
 	// GameServerPort is advertised on mock allocate responses (Roma gRPC).
 	GameServerPort int
+	// AllocationPlayersCounter enables players counter filter + Increment in HTTP allocate body.
+	AllocationPlayersCounter bool
+	// AllocationPlayersMinAvailable is selectors[].counters.players.minAvailable (default 1).
+	AllocationPlayersMinAvailable int
+	// AllocationPlayersIncrement is spec.counters.players.amount on allocate (default 1).
+	AllocationPlayersIncrement int
 }
 
 const (
@@ -47,7 +53,10 @@ func LoadConfig() Config {
 		ReadyTimeout:     durationEnv("ROMA_AGONES_READY_TIMEOUT", 15*time.Second),
 		ShutdownTimeout:  durationEnv("ROMA_AGONES_SHUTDOWN_TIMEOUT", 30*time.Second),
 		HealthInterval:   durationEnv("ROMA_AGONES_HEALTH_INTERVAL", 2*time.Second),
-		GameServerPort:   intEnv("ROMA_AGONES_GAMESERVER_PORT", 9092),
+		GameServerPort:                intEnv("ROMA_AGONES_GAMESERVER_PORT", 9092),
+		AllocationPlayersCounter:      boolEnv("ROMA_AGONES_ALLOCATION_PLAYERS_COUNTER", false),
+		AllocationPlayersMinAvailable: intEnv("ROMA_AGONES_ALLOCATION_PLAYERS_MIN_AVAILABLE", 1),
+		AllocationPlayersIncrement:    intEnv("ROMA_AGONES_ALLOCATION_PLAYERS_INCREMENT", 1),
 	}
 }
 
@@ -80,4 +89,19 @@ func intEnv(k string, def int) int {
 		return def
 	}
 	return n
+}
+
+func boolEnv(k string, def bool) bool {
+	v := strings.TrimSpace(os.Getenv(k))
+	if v == "" {
+		return def
+	}
+	switch strings.ToLower(v) {
+	case "1", "true", "yes", "on":
+		return true
+	case "0", "false", "no", "off":
+		return false
+	default:
+		return def
+	}
 }

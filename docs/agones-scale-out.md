@@ -67,13 +67,22 @@ Environment variables (full table in [agones-room-lifecycle.md](./agones-room-li
 | `ROMA_AGONES_FLEET` | Must match `metadata.name` in `fleet.yaml` (`roma-fleet`) |
 | `ROMA_AGONES_ALLOCATION_URL` | POST target for GameServerAllocation |
 | `ROMA_AGONES_ALLOCATOR` | `http` on cluster; `mock` in CI |
+| `ROMA_AGONES_ALLOCATION_PLAYERS_COUNTER` | `0` (default) legacy selectors only; `1` / `true` counter-aware body |
+| `ROMA_AGONES_ALLOCATION_PLAYERS_MIN_AVAILABLE` | `1` — `selectors[].counters.players.minAvailable` |
+| `ROMA_AGONES_ALLOCATION_PLAYERS_INCREMENT` | `1` — top-level `counters.players.amount` on successful allocate |
 
-**Current Go allocator** (`pkg/agones/http_allocator.go`) sends `gameServerSelectors` with label `agones.dev/fleet: <ROMA_AGONES_FLEET>`. To match `gameserverallocation-players.yaml`, extend the JSON body with:
+**Go allocator** (`pkg/agones/http_allocator.go`):
 
-- `selectors[].counters.players.minAvailable`
-- top-level `counters.players` with `action: Increment`
+- **Default (CI / legacy):** `gameServerSelectors` with `agones.dev/fleet: <ROMA_AGONES_FLEET>` only.
+- **Counter mode** (`ROMA_AGONES_ALLOCATION_PLAYERS_COUNTER=1`): JSON matches `gameserverallocation-players.yaml` — `scheduling: Packed`, `priorities` on `players`, Ready + Allocated `selectors` with `minAvailable`, and `counters.players` `Increment`.
 
-until that extension lands, use the YAML as the contract for pre-prod allocation services and integration tests against a real allocator.
+Pre-prod cluster Roma:
+
+```bash
+export ROMA_AGONES_ALLOCATOR=http
+export ROMA_AGONES_ALLOCATION_URL=https://<allocator>/gameserverallocation
+export ROMA_AGONES_ALLOCATION_PLAYERS_COUNTER=1
+```
 
 **Mock / local path** (no counter on cluster):
 
