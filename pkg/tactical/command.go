@@ -14,6 +14,7 @@ const (
 	KindMove   CommandKind = 1
 	KindAttack CommandKind = 2
 	KindPass   CommandKind = 3
+	KindAoE    CommandKind = 4
 )
 
 // Command is one player input for a lockstep frame.
@@ -21,7 +22,7 @@ type Command struct {
 	PlayerID uint8
 	Kind     CommandKind
 	UnitID   uint32
-	To       board.Coord // move destination or attack target cell
+	To       board.Coord // move destination, attack target cell, or AoE center
 }
 
 // Encode serializes a command for replay frames.

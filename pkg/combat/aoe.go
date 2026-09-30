@@ -31,7 +31,7 @@ func CollectAoECells(center board.Coord, radius int) []board.Coord {
 }
 
 // CollectAoETargets returns unit IDs on b within AoECells(center, radius), ascending by ID.
-// excludeID is omitted from results (0 = no exclusion). Stub only: no damage or skill resolution.
+// excludeID is omitted from results (0 = no exclusion). Target collection only; damage is applied in tactical/combat strike helpers.
 func CollectAoETargets(b *board.Board, center board.Coord, radius int, excludeID uint32) []uint32 {
 	if b == nil {
 		return nil
