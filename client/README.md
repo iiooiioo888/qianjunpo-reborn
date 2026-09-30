@@ -41,9 +41,13 @@
 
 ### Live 驗證
 
-1. `make compose-up`，`useLiveJanus = true`，`liveBattleId = default/0`。
-2. 瀏覽器預覽須走 **同域** Janus HTTP 鏡像（Dev：`/qjp/v1/…` 或 `:18093/v1/…`）；Cocos 預設 **不** 硬編 `127.0.0.1:8090`。若本地直連 Janus 可填 `janusHttpTacticalBase = http://127.0.0.1:8090`。
-3. 選取與高亮同 Mock；點合法格後 **預期**：`POST v1/tactical/command`（#50）；成功 HUD 顯示 `frame`／`state_hash`，快照輪詢後棋面更新；失敗顯示 `reject_reason` 或 HTTP 錯（**不假樂觀移動**）。
+1. `make compose-up`，`useLiveJanus = true`（`liveBattleId` 僅作 Enter 前 hint；實際 `battle_id` 由 **enter-battle** 回傳）。
+2. 瀏覽器預覽走 **同域** Janus HTTP（Dev：`/qjp/v1/…` 或 `:18093/v1/…`）。Compose 宿主機直打可填 `janusHttpTacticalBase = http://127.0.0.1:18090`。
+3. 啟動順序（`JanusLiveGatewayHttp.prepareJanusLiveSession`，對齊 [`docs/janus-http-mirror.md`](../docs/janus-http-mirror.md) #60）：
+   - `POST v1/tactical/connect` → `session_id`
+   - `POST v1/tactical/enter-battle` → `battle_id`、可選 `view_snapshot_json`（先套用再輪詢）
+   - `GET v1/tactical/snapshot`、`POST v1/tactical/command`（帶 `session_id`）
+4. 選取與高亮同 Mock；點合法格後 **預期**：指令 `accepted: true` 或真實 `reject_reason`／HTTP 錯（**不假樂觀移動**）。
 4. gRPC 等價（與後端測試相同）仍可用：
 
    ```bash
@@ -85,7 +89,8 @@ Mock 本地 `applyMockMove` 行為不變（`useLiveJanus = false`）。
 |------|------|
 | `logic/ClientMoveReachability.ts` | 合法格 BFS（`CLIENT_DEFAULT_MOVE_POINTS=4`） |
 | `logic/MockSnapshotMutator.ts` | Mock 本地套用移動 |
-| `network/TacticalCommandClient.ts` | `submitTacticalMove`（POST 鏡像或 stub） |
+| `network/JanusLiveGatewayHttp.ts` | Live：`connect` → `enter-battle`（HTTP #60） |
+| `network/TacticalCommandClient.ts` | `submitTacticalMove`（POST 鏡像） |
 | `display/TacticalBoardInteraction.ts` | 點選輸入 |
 | `display/TacticalBoardView.ts` | 高亮層 + `pixelToGrid` |
 | `display/TextureRegistryDev.ts` | mock/live 共用 preload + 換 stem 範例 |
@@ -97,7 +102,7 @@ Mock 本地 `applyMockMove` 行為不變（`useLiveJanus = false`）。
 | 模式 | `TacticalBootstrap` | 資料來源 |
 |------|---------------------|----------|
 | **Mock（預設）** | `useLiveJanus = false` | `resources/data/tactical/demo_initial.json`（`make client-snapshot`） |
-| **Live（開發）** | `useLiveJanus = true`，`liveBattleId = default/0` | Janus HTTP 開發鏡像 → Roma 權威 `Match` |
+| **Live（開發）** | `useLiveJanus = true` | HTTP connect → enter-battle → 快照／指令 → Roma `Match` |
 
 ### Mock 資料
 
@@ -108,34 +113,30 @@ make client-snapshot
 
 JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardSize=19`，`timeFlowRateParts` 為萬分比（10000=1.0x）。
 
-### Live 快照（gRPC 權威路徑）
+### Live 快照（瀏覽器 HTTP，#60）
 
-1. 啟動服務（Compose 預設 Janus gRPC `:9090`、HTTP `:8090`，Roma `:9092`）：
+1. `make compose-up`（Janus HTTP 容器 `:8090`，宿主機 **`:18090`**）。
 
-   ```bash
-   make compose-up
-   ```
-
-2. **EnterBattle** 與 **GetBattleSnapshot** 回傳 `view_snapshot_json`（與 mock 同 schema）。Roma 會填入 **live** `timeFlowRateParts`（PR #17 後與 timedilation 一致）。
+2. **全 HTTP 建局**（與 Cocos Live 相同順序）：
 
    ```bash
-   grpcurl -plaintext -d '{"access_token":"dev","target_zone":{"zone_id":"default","shard":0}}' \
-     localhost:9090 qianjunpo.gateway.v1.JanusGateway/EnterBattle
-   grpcurl -plaintext -d '{"battle_id":"default/0"}' \
-     localhost:9090 qianjunpo.gateway.v1.JanusGateway/GetBattleSnapshot
+   SESSION=$(curl -sS -X POST 'http://127.0.0.1:18090/v1/tactical/connect' \
+     -H 'Content-Type: application/json' \
+     -d '{"access_token":"dev","target_zone":{"zone_id":"default","shard":0}}' \
+     | jq -r '.session_id')
+   BATTLE=$(curl -sS -X POST 'http://127.0.0.1:18090/v1/tactical/enter-battle' \
+     -H 'Content-Type: application/json' \
+     -d "{\"session_id\":\"$SESSION\",\"access_token\":\"dev\",\"target_zone\":{\"zone_id\":\"default\",\"shard\":0}}" \
+     | jq -r '.battle_id')
+   curl -s "http://127.0.0.1:18090/v1/tactical/snapshot?battle_id=$BATTLE" | jq '.lockstepFrame'
    ```
 
-3. **Cocos 瀏覽器預覽**（HTTP 鏡像，與 gRPC 同源 JSON）：
-
-   ```bash
-   curl -s 'http://127.0.0.1:8090/v1/tactical/snapshot?battle_id=default/0' | jq '.timeFlowRateParts,.lockstepFrame'
-   ```
-
-   場景勾選 **`useLiveJanus`**，`liveBattleId` 填 `default/0`。預設 **同域** `v1/tactical/snapshot`；可選 **`janusHttpTacticalBase`** 覆寫（例如 `http://127.0.0.1:8090`）。Host／port 常數見 `JanusGatewayStub.ts` 的 `DEFAULT_NETWORK_STUB`（僅供覆寫參考，非瀏覽器預設 URL）。
+3. Cocos：勾選 **`useLiveJanus`**。預設同域 `v1/tactical/*`（`resolveTacticalHttpUrl`）；可選 **`janusHttpTacticalBase`**、`liveAccessToken`、`liveZoneId`／`liveZoneShard`、路徑覆寫 `janusHttpConnectPath`／`janusHttpEnterBattlePath`。
 
 ### Live 輪詢與 HUD
 
-- **`livePollIntervalMs`**（預設 **333ms**，約 3Hz；建議 **200–500ms**）：`useLiveJanus=true` 時以 `LiveViewSnapshotPoller` 週期呼叫 `fetchLiveViewSnapshot`；元件 `onDestroy` 會停止 timer。
+- **建局**：`prepareJanusLiveSession` 成功後才啟動 `LiveViewSnapshotPoller`；Enter 回傳的 `view_snapshot_json` 會先套用一次。
+- **`livePollIntervalMs`**（預設 **333ms**，約 3Hz；建議 **200–500ms**）：週期 `GET v1/tactical/snapshot`；`onDestroy` 停止 timer。
 - **`TimeFlowHudStub`**：每次成功快照呼叫 `updateFromSnapshot`，**僅**顯示 JSON 內 `timeFlowRateParts` 與 `lockstepFrame`（不插值、不造假速率）。
 - 輪詢失敗（戰局不存在、網路錯誤）：HUD 第三行顯示狀態並 **指數退避** 重試（1s→10s cap）；成功後清除。
 - **`TacticalBoardView`**：僅在幀／單位位置或 HP 變化時重繪單位層；地形成變才重繪棋盤。
@@ -144,15 +145,15 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 
 | 步驟 | Mock | Live |
 |------|------|------|
-| 準備 | `make client-snapshot` | `make compose-up` + 可選 EnterBattle |
-| Cocos | `useLiveJanus=false`，預覽 | `useLiveJanus=true`，`liveBattleId=default/0` |
-| 預期 | HUD 顯示 mock 幀／速率；單位 STANDARD Sprite 或占位；左上資源圖標列（Nearest） | HUD 隨 curl 快照中 `timeFlowRateParts` 更新；失敗時 HUD 橙字狀態 |
-| CLI | — | `curl -s 'http://127.0.0.1:8090/v1/tactical/snapshot?battle_id=default/0'` |
+| 準備 | `make client-snapshot` | `make compose-up` |
+| Cocos | `useLiveJanus=false`，預覽 | `useLiveJanus=true`（自動 connect→enter-battle） |
+| 預期 | HUD mock 幀／速率 | HUD 隨快照 `timeFlowRateParts` 更新；建局／輪詢失敗顯示真實 HTTP 錯 |
+| CLI | — | 見上 `curl` connect → enter-battle → snapshot |
 
 ### 仍為 stub／後續
 
 - Janus **TCP** framing（`:7000`）仍為 skeleton；正式客戶端應走 gRPC／未來 WebSocket。
-- Cocos 內尚未內建 gRPC；Live 預覽用 HTTP **快照 + 指令**鏡像（#50 `POST /v1/tactical/command`）。
+- Cocos 內尚未內建 gRPC；Live 預覽用 HTTP **connect + enter-battle + 快照 + 指令**（#60／#50）。
 - `ViewSnapshot` 尚未帶每單位移動點數；高亮使用客戶端常數 4。
 - Replay `TimeFlowRates` 串流尚未接入；目前僅 snapshot 內當幀 `timeFlowRateParts`。
 
@@ -162,7 +163,7 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 |------|------|
 | `assets/scripts/logic/` | 純資料：`ViewSnapshot`、合法格 BFS、Mock 移動 |
 | `assets/scripts/display/` | 棋盤、點選互動、單位 Sprite／占位、HUD |
-| `assets/scripts/network/` | 快照輪詢、`TacticalCommandClient` |
+| `assets/scripts/network/` | `JanusLiveGatewayHttp`、`LiveViewSnapshotPoller`、`TacticalCommandClient` |
 | `assets/scripts/app/` | `TacticalBootstrap` 場景入口 |
 | `assets/resources/data/tactical/` | Mock 戰局 JSON |
 | `assets/resources/textures/2d/` | 2D 像素貼圖（見目錄內 README） |

@@ -23,6 +23,10 @@ import {
 } from '../logic/MockSnapshotIntegrity';
 import { parseViewSnapshot } from '../logic/TacticalSnapshot';
 import { DEFAULT_NETWORK_STUB } from '../network/JanusGatewayStub';
+import {
+  formatJanusLivePrepareError,
+  prepareJanusLiveSession,
+} from '../network/JanusLiveGatewayHttp';
 import { LiveViewSnapshotPoller } from '../network/LiveViewSnapshotPoller';
 import { submitTacticalMove } from '../network/TacticalCommandClient';
 
@@ -60,7 +64,26 @@ export class TacticalBootstrap extends Component {
   @property
   janusHttpTacticalBase = '';
 
+  /** Live EnterBattle：`access_token`（與 compose Janus 一致，開發常用 `dev`）。 */
+  @property
+  liveAccessToken = 'dev';
+
+  @property
+  liveZoneId = 'default';
+
+  @property
+  liveZoneShard = 0;
+
+  /** 可選：覆寫 HTTP EnterBattle 路徑（預設 `v1/tactical/enter-battle`）。 */
+  @property
+  janusHttpEnterBattlePath = '';
+
+  /** 可選：覆寫 HTTP Connect 路徑（預設 `v1/tactical/connect`）。 */
+  @property
+  janusHttpConnectPath = '';
+
   private poller: LiveViewSnapshotPoller | null = null;
+  private liveSessionId = '';
   private boardView: TacticalBoardView | null = null;
   private boardInteraction: TacticalBoardInteraction | null = null;
   private hud: TimeFlowHudStub | null = null;
@@ -71,9 +94,13 @@ export class TacticalBootstrap extends Component {
 
   private liveNetworkCfg(): typeof DEFAULT_NETWORK_STUB {
     const base = this.janusHttpTacticalBase.trim();
+    const enterPath = this.janusHttpEnterBattlePath.trim();
+    const connectPath = this.janusHttpConnectPath.trim();
     return {
       ...DEFAULT_NETWORK_STUB,
       ...(base ? { janusHttpTacticalBase: base } : {}),
+      ...(enterPath ? { janusHttpEnterBattlePath: enterPath } : {}),
+      ...(connectPath ? { janusHttpConnectPath: connectPath } : {}),
     };
   }
 
@@ -218,7 +245,7 @@ export class TacticalBootstrap extends Component {
 
         const submit = await submitTacticalMove(this.liveNetworkCfg(), {
           battleId: this.liveBattleId,
-          sessionId: '',
+          sessionId: this.liveSessionId,
           playerId: unit.owner,
           unitId,
           toX: to.x,
@@ -248,39 +275,75 @@ export class TacticalBootstrap extends Component {
       iconStrip.buildStrip();
       charStrip.buildStrip();
       if (this.useLiveJanus) {
-        this.poller = new LiveViewSnapshotPoller({
-          cfg: this.liveNetworkCfg(),
-          battleId: this.liveBattleId,
-          intervalMs: this.livePollIntervalMs,
-          onSnapshot: (raw) => applySnapshot(raw, null),
-          onError: (err, retryMs) => {
-            console.warn('[TacticalBootstrap] live Janus poll failed', err.message, `(retry ~${retryMs}ms)`);
-            hud.setNetworkStatus(`Janus: ${err.message}（約 ${retryMs}ms 後重試）`);
-            const age = this.lastLiveSnapshotAtMs > 0 ? Date.now() - this.lastLiveSnapshotAtMs : retryMs;
-            hud.setLockstepSyncContext(
-              liveSyncContextFromPoll(age, this.livePollIntervalMs, 'error'),
+        const startLivePoller = () => {
+          this.poller = new LiveViewSnapshotPoller({
+            cfg: this.liveNetworkCfg(),
+            battleId: this.liveBattleId,
+            sessionId: this.liveSessionId,
+            intervalMs: this.livePollIntervalMs,
+            onSnapshot: (raw) => applySnapshot(raw, null),
+            onError: (err, retryMs) => {
+              console.warn(
+                '[TacticalBootstrap] live Janus poll failed',
+                err.message,
+                `(retry ~${retryMs}ms)`,
+              );
+              hud.setNetworkStatus(`Janus: ${err.message}（約 ${retryMs}ms 後重試）`);
+              const age =
+                this.lastLiveSnapshotAtMs > 0 ? Date.now() - this.lastLiveSnapshotAtMs : retryMs;
+              hud.setLockstepSyncContext(
+                liveSyncContextFromPoll(age, this.livePollIntervalMs, 'error'),
+              );
+            },
+          });
+          this.poller.start(true);
+          if (this.livePollAgeTimer !== null) {
+            clearInterval(this.livePollAgeTimer);
+          }
+          this.livePollAgeTimer = setInterval(() => {
+            if (!this.useLiveJanus || this.lastLiveSnapshotAtMs <= 0) {
+              return;
+            }
+            const snap = this.boardView?.getSnapshot();
+            if (!snap || !this.hud) {
+              return;
+            }
+            const age = Date.now() - this.lastLiveSnapshotAtMs;
+            const link = liveLinkStateFromPollAge(age, this.livePollIntervalMs);
+            this.hud.setLockstepSyncContext(
+              liveSyncContextFromPoll(age, this.livePollIntervalMs, link),
             );
-          },
-        });
-        this.poller.start(true);
-        if (this.livePollAgeTimer !== null) {
-          clearInterval(this.livePollAgeTimer);
-        }
-        this.livePollAgeTimer = setInterval(() => {
-          if (!this.useLiveJanus || this.lastLiveSnapshotAtMs <= 0) {
-            return;
+            this.hud.updateFromSnapshot(snap);
+          }, 250);
+        };
+
+        void (async () => {
+          hud.setNetworkStatus('Live：POST connect → enter-battle…');
+          try {
+            const prepared = await prepareJanusLiveSession({
+              cfg: this.liveNetworkCfg(),
+              accessToken: this.liveAccessToken,
+              clientVersion: DEFAULT_NETWORK_STUB.clientVersion,
+              targetZone: { zoneId: this.liveZoneId, shard: this.liveZoneShard },
+              battleIdHint: this.liveBattleId,
+            });
+            this.liveSessionId = prepared.sessionId;
+            this.liveBattleId = prepared.battleId;
+            if (prepared.initialSnapshot) {
+              applySnapshot(prepared.initialSnapshot, `Live：EnterBattle 已建局 ${prepared.battleId}`);
+            } else {
+              hud.setNetworkStatus(`Live：EnterBattle 已建局 ${prepared.battleId}（等待快照）`);
+            }
+            startLivePoller();
+          } catch (err) {
+            const msg = formatJanusLivePrepareError(err);
+            console.error('[TacticalBootstrap] live session prepare failed', err);
+            hud.setNetworkStatus(msg);
+            hud.setLockstepSyncContext(
+              liveSyncContextFromPoll(0, this.livePollIntervalMs, 'error'),
+            );
           }
-          const snap = this.boardView?.getSnapshot();
-          if (!snap || !this.hud) {
-            return;
-          }
-          const age = Date.now() - this.lastLiveSnapshotAtMs;
-          const link = liveLinkStateFromPollAge(age, this.livePollIntervalMs);
-          this.hud.setLockstepSyncContext(
-            liveSyncContextFromPoll(age, this.livePollIntervalMs, link),
-          );
-          this.hud.updateFromSnapshot(snap);
-        }, 250);
+        })();
         return;
       }
 

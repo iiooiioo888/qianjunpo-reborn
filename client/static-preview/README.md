@@ -15,7 +15,7 @@
 - 掛在 `/qjp/` → `/qjp/v1/tactical/snapshot?battle_id=default/0`
 - 掛在 `:18093` 根 → `/v1/tactical/snapshot?battle_id=default/0`
 
-Dev nginx 已將上述路徑反代到 Janus；頁面預設 `?live=1` 即拉此 URL（可用 `?liveUrl=` 覆寫）。
+Dev nginx 已將上述路徑反代到 Janus。`?live=1` 會先 **`POST v1/tactical/connect`** → **`POST v1/tactical/enter-battle`**（#60），再輪詢快照／發指令；可用 `?connectUrl=`、`?enterBattleUrl=` 覆寫路徑。
 
 子路徑部署時在 `index.html` 啟用：`<base href="/qjp/" />`。
 
@@ -49,13 +49,15 @@ cp client/assets/resources/data/tactical/demo_initial.json client/static-preview
 
 - 點己方單位（owner `0`）→ BFS 高亮（move **4**）。
 - Mock：點高亮格 → 非權威 `applyMockMove`（與 Cocos mock 一致）。
-- `?live=1`：點高亮格 → **同域** `POST v1/tactical/command`（#50）；成功後輪詢快照更新棋面；失敗顯示 `reject_reason`／HTTP 錯。仍可用 `localDrift` mock 疊加（手動改 JSON 後行為同前）。
+- `?live=1`：啟動時 connect → enter-battle；點高亮格 → **同域** `POST v1/tactical/command`（帶 `session_id`＋`battle_id`）；成功後輪詢快照；失敗顯示真實 HTTP／`reject_reason`。仍可用 `localDrift` mock 疊加。
 
 ### curl ↔ static-preview
 
 | curl | 頁面 |
 |------|------|
-| `GET …/v1/tactical/snapshot?battle_id=default/0` | 預設 `liveUrl`（`?liveUrl=` 覆寫） |
+| `POST …/v1/tactical/connect` | `live-gateway.js`（`?connectUrl=`） |
+| `POST …/v1/tactical/enter-battle` | 同上（`?enterBattleUrl=`） |
+| `GET …/v1/tactical/snapshot?battle_id=…` | 預設 `liveUrl`（Enter 後 `battle_id`） |
 | `POST …/v1/tactical/command` + Move body | 合法格點選（`?commandUrl=` 覆寫） |
 
 Compose 直打範例見 [`../README.md`](../README.md) 與 [`../../docs/janus-http-mirror.md`](../../docs/janus-http-mirror.md)；Dev 公開頁用同域 `/qjp/v1/…` 或 `:18093/v1/…`，勿對外使用 `:18090`／`:18092`。

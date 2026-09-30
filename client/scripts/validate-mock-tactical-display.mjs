@@ -137,6 +137,22 @@ if (
 ) {
   fail('TacticalBootstrap/Interaction missing selection → char card strip wiring');
 }
+if (
+  !bootstrapSrc.includes('prepareJanusLiveSession') ||
+  !bootstrapSrc.includes('useLiveJanus')
+) {
+  fail('TacticalBootstrap missing Live HTTP connect→enter-battle prepare');
+}
+const liveGatewaySrc = readFileSync(
+  join(root, 'assets/scripts/network/JanusLiveGatewayHttp.ts'),
+  'utf8',
+);
+if (
+  !liveGatewaySrc.includes('v1/tactical/connect') ||
+  !liveGatewaySrc.includes('v1/tactical/enter-battle')
+) {
+  fail('JanusLiveGatewayHttp missing #60 tactical connect/enter-battle paths');
+}
 
 const localUnit = raw.units.find((u) => u.owner === 0 && u.hp > 0);
 if (!localUnit || localUnit.id !== 101) {

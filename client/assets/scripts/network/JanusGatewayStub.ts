@@ -13,6 +13,10 @@ export interface TacticalNetworkConfig {
    * Example override: `http://127.0.0.1:8090` for curl-aligned local smoke tests.
    */
   janusHttpTacticalBase?: string;
+  /** Override EnterBattle path; default `v1/tactical/enter-battle`. */
+  janusHttpEnterBattlePath?: string;
+  /** Override Connect path; default `v1/tactical/connect`. */
+  janusHttpConnectPath?: string;
 }
 
 export const DEFAULT_NETWORK_STUB: TacticalNetworkConfig = {
