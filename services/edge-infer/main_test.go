@@ -23,12 +23,15 @@ func TestHealthMock(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code)
 	}
-	var h backend.Health
+	var h healthResponse
 	if err := json.NewDecoder(rr.Body).Decode(&h); err != nil {
 		t.Fatal(err)
 	}
 	if h.Backend != "mock" || h.Model != backend.MockModelID || !h.Ready {
 		t.Fatalf("%+v", h)
+	}
+	if h.NPCFallbackByReason == nil {
+		t.Fatal("expected npc_fallback_by_reason map in /health")
 	}
 }
 
