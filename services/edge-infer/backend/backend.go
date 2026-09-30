@@ -11,7 +11,7 @@ type InferRequest struct {
 	Prompt string
 }
 
-// InferResponse matches the HTTP API contract.
+// InferResponse is backend output; HTTP adds observability via pkg/ai.InferHTTPResponse.
 type InferResponse struct {
 	Text      string
 	Model     string

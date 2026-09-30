@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/ai"
 	"github.com/iiooiioo888/qianjunpo-reborn/services/edge-infer/backend"
 )
 
@@ -41,12 +42,15 @@ func TestInferMock(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatal(rr.Code)
 	}
-	var resp inferResponse
+	var resp ai.InferHTTPResponse
 	if err := json.NewDecoder(rr.Body).Decode(&resp); err != nil {
 		t.Fatal(err)
 	}
 	if resp.Model != backend.MockModelID || resp.Text == "" {
 		t.Fatalf("%+v", resp)
+	}
+	if resp.Source != ai.SourceEdge || resp.FallbackReason != "" || resp.FallbackDetail != "" {
+		t.Fatalf("observability fields: %+v", resp)
 	}
 }
 
