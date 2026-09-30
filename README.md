@@ -62,6 +62,11 @@
 | `pkg/timesync` | Phase 4：Wall/Sim 雙時間戳、跨區映射、跨區凍結 |
 | `pkg/anticheat` | Phase 4：特徵抽取 + 模型推理介面（假資料 E2E） |
 | `pkg/loadsample` | CPU／隊列／成長率／P99 採樣 + `Predictor`（LSTM 可插拔介面） |
+| `pkg/loadpredict` | Phase 5：30s 前瞻、预 scale 信號、假序列 `SeriesPredictor` |
+| `pkg/balance` | Phase 5：平衡批次模擬、勝率門檻 |
+| `pkg/contentops` | Phase 5：動態內容審核佇列 |
+| `pkg/observability/metrics` | Phase 5：Prometheus 指標 |
+| `pkg/observability/trace` | Phase 5：Janus→Roma 追蹤 |
 | `pkg/degrade` | L0–L5 降級狀態機與有序恢復 |
 | `pkg/cmdmerge` | 過載指令合併（move/build、P2 500ms 批次） |
 | `pkg/ai` | 戰略層（~5s mock）+ 戰術層 → `lockstep.CommandPacket` |
@@ -134,6 +139,46 @@ make compose-down
 ## 本階段未包含
 
 真實 Agones 叢集 apply、生產 TLS、Janus 10k 連線效能、下載多 GB 模型、Cocos 客戶端 UI 等。
+
+## Phase 5 — 生產調優骨架（白皮書 v6.0）
+
+Phase 5 在 Phase 1–4 之上加入 **可觀測性、負載預測、平衡自動化、AIGC／動態內容審核** 的 CI 友好腳手架（無真實 GPU 訓練、無 live Agones／Grafana 叢集）。
+
+| 元件 | 路徑 | 說明 |
+|------|------|------|
+| 負載預測 | `pkg/loadpredict`、`services/loadpredict` | 30s 前瞻、`≥90%` 負載 hook、`PreScaleSignal` 7–15 分鐘提前量 → Agones |
+| 時間恢復 | `pkg/timedilation` + `deploy/agones/README.md` | predict → scale → `time_flow_rate` 恢復 |
+| 平衡自動化 | `pkg/balance` | RL/MCTS `Agent` 介面、批次模擬、勝率門檻（預設 5% swing） |
+| 指標 | `pkg/observability/metrics` | `online_players`、`battle_latency_p99_ms`、`queue_len`、`time_flow_rate` |
+| 追蹤 | `pkg/observability/trace` | Janus→Roma OTel span 骨架 |
+| Grafana | `deploy/observability/` | 儀表板 JSON（手動 import） |
+| AIGC | `docs/aigc/PIPELINE.md`、`services/aigc-worker` | ComfyUI／IP-Adapter 占位 |
+| 動態內容 | `pkg/contentops` | LLM 產物 create／approve／rollback 記憶體佇列 |
+
+```bash
+go test ./pkg/loadpredict ./pkg/balance ./pkg/contentops ./pkg/observability/... -v
+go test ./pkg/integration -run Phase5 -v
+make build-services   # 含 loadpredict、aigc-worker
+make loadpredict      # :8095 /metrics /v1/forecast
+make aigc-worker      # :8096 占位 API
+python3 scripts/loadpredict/lstm_stub.py '{"queue":900,"cpu":88,"p99":420}'
+```
+
+### 結構化日誌欄位約定（Phase 5）
+
+服務日誌（標準 `log` 或日後 zap）應包含一致欄位名，便於 Loki／ELK 解析：
+
+| 欄位 | 含义 |
+|------|------|
+| `service` | `janus` / `roma` / `lares` / … |
+| `trace_id` | OpenTelemetry trace id（若已注入） |
+| `zone_id` | Roma 區服 |
+| `battle_id` | 戰局 id（Roma） |
+| `session_id` | Janus 連線 |
+| `time_flow_rate` | 萬分比或浮點（與 Prometheus `qjp_time_flow_rate` 對齊） |
+| `queue_len` | 指令佇列深度 |
+
+範例（概念）：`service=janus session_id=abc zone_id=default msg=connect_ok`
 
 ## 授權
 
