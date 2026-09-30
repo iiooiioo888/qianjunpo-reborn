@@ -54,3 +54,5 @@
 - `combat.ResolveStrikeDamage`：純函式版單次結算（供測試與文件對照）；戰術層 `applyStrike` 與單體 `KindAttack` 共用同一 RNG 消耗順序。
 - 戰術層 `(*tactical.Match).ApplyAoEStrike(attackerID, center, radius)`：對 `CollectAoETargets` 結果中的**敵方**單位升序逐個 `applyStrike`；友軍在範圍內略過。
 - 指令 `KindAoE`（`Command.To` = 範圍中心）：提交與 `ApplyAoEStrike` 前，對中心格套用與單體攻擊相同的 `combat.InAttackRange`／`combat.AttackLineClear`（遠程才檢 LOS；中心格占位單位 ID 作為射線忽略的 target）；失敗碼 `AOE_OUT_OF_RANGE`／`AOE_LOS_BLOCKED`。另驗證中心在盤內（`AOE_OUT_OF_BOUNDS`）且至少一名敵人在 splash（`AOE_NO_TARGETS`）。**不**改 `InAttackRange`／`AttackLineClear`／`CollectAoECells` 本體；單體 `validateAttack` 路徑不變。
+- **中心格占位**：近戰／遠程皆不可選施放者所在格（`InAttackRange` 要求 `d ≥ 1`）。中心可落在**友軍**格或空格；只要射程／LOS 合法且 splash 內有敵人即可施放，傷害僅對敵方單位升序 `applyStrike`，友軍在範圍內不扣血（整合測見 `TestApplyAoEStrikeFriendlyCenterSkipsAllies`、`TestSubmitKindAoEFriendlyCenterLockstepIntegration`）。
+- **遠程 AoE 與 LOS**：射線暢通時 `KindAoE` 與單體相同地通過 `AttackLineClear` 並在 lockstep 執行後對中心／splash 內敵人套傷；被第三方單位或地形擋住則 `AOE_LOS_BLOCKED`（暢通路徑見 `TestSubmitKindAoERangedLoSClearDamagesEnemy`，阻擋見 `TestSubmitKindAoELoSBlockedRejected`）。

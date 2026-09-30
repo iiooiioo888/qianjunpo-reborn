@@ -6,6 +6,7 @@ import (
 
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/combat"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/lockstep"
 )
 
 func TestMatchCollectAoETargets_stub(t *testing.T) {
@@ -98,6 +99,132 @@ func TestApplyAoEStrikeOutOfRangeRejected(t *testing.T) {
 	var ae AoEError
 	if !errors.As(err, &ae) || ae.Code != CodeAoEOutOfRange {
 		t.Fatalf("want AOE_OUT_OF_RANGE, got %v", err)
+	}
+}
+
+func TestApplyAoEStrikeFriendlyCenterSkipsAllies(t *testing.T) {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewMatchWithConfig(8, cfg)
+	const allyID uint32 = 102
+
+	attPos := board.Coord{X: 5, Y: 8}
+	allyPos := board.Coord{X: 6, Y: 8}
+	enemyPos := board.Coord{X: 7, Y: 8}
+
+	m.Board.ClearUnit(m.Units[UnitIDPlayer0].Pos)
+	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
+	attacker := defaultUnit(cfg, UnitIDPlayer0, 0, combat.UnitInfantry, attPos)
+	m.Units[UnitIDPlayer0] = &attacker
+	if !m.Board.SetUnit(attPos, UnitIDPlayer0) {
+		t.Fatal("place attacker")
+	}
+	ally := defaultUnit(cfg, allyID, 0, combat.UnitInfantry, allyPos)
+	m.Units[allyID] = &ally
+	if !m.Board.SetUnit(allyPos, allyID) {
+		t.Fatal("place ally")
+	}
+	defender := defaultUnit(cfg, UnitIDPlayer1, 1, combat.UnitCavalry, enemyPos)
+	m.Units[UnitIDPlayer1] = &defender
+	if !m.Board.SetUnit(enemyPos, UnitIDPlayer1) {
+		t.Fatal("place defender")
+	}
+
+	allyHPBefore := m.Units[allyID].Stats.HP.Raw()
+	enemyHPBefore := defender.Stats.HP.Raw()
+	if err := m.ApplyAoEStrike(UnitIDPlayer0, allyPos, combat.DefaultAoERadius); err != nil {
+		t.Fatal(err)
+	}
+	if m.Units[allyID].Stats.HP.Raw() != allyHPBefore {
+		t.Fatalf("ally took splash damage: before=%d after=%d", allyHPBefore, m.Units[allyID].Stats.HP.Raw())
+	}
+	if m.Units[UnitIDPlayer1].Stats.HP.Raw() >= enemyHPBefore {
+		t.Fatalf("expected enemy hp loss, before=%d after=%d", enemyHPBefore, m.Units[UnitIDPlayer1].Stats.HP.Raw())
+	}
+}
+
+func TestSubmitKindAoEFriendlyCenterLockstepIntegration(t *testing.T) {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewMatchWithConfig(9, cfg)
+	const allyID uint32 = 103
+
+	attPos := board.Coord{X: 5, Y: 8}
+	allyPos := board.Coord{X: 6, Y: 8}
+	enemyPos := board.Coord{X: 7, Y: 8}
+
+	m.Board.ClearUnit(m.Units[UnitIDPlayer0].Pos)
+	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
+	attacker := defaultUnit(cfg, UnitIDPlayer0, 0, combat.UnitInfantry, attPos)
+	m.Units[UnitIDPlayer0] = &attacker
+	if !m.Board.SetUnit(attPos, UnitIDPlayer0) {
+		t.Fatal("place attacker")
+	}
+	ally := defaultUnit(cfg, allyID, 0, combat.UnitInfantry, allyPos)
+	m.Units[allyID] = &ally
+	if !m.Board.SetUnit(allyPos, allyID) {
+		t.Fatal("place ally")
+	}
+	defender := defaultUnit(cfg, UnitIDPlayer1, 1, combat.UnitCavalry, enemyPos)
+	m.Units[UnitIDPlayer1] = &defender
+	if !m.Board.SetUnit(enemyPos, UnitIDPlayer1) {
+		t.Fatal("place defender")
+	}
+
+	enemyHPBefore := defender.Stats.HP.Raw()
+	if err := m.Submit(Command{
+		PlayerID: 0,
+		Kind:     KindAoE,
+		UnitID:   UnitIDPlayer0,
+		To:       allyPos,
+	}); err != nil {
+		t.Fatalf("submit aoe on friendly center: %v", err)
+	}
+	for i := 0; i <= lockstep.CommandDelayFrames; i++ {
+		m.StepLockstep()
+	}
+	if m.Units[UnitIDPlayer1].Stats.HP.Raw() >= enemyHPBefore {
+		t.Fatalf("lockstep aoe: expected enemy hp loss, before=%d after=%d", enemyHPBefore, m.Units[UnitIDPlayer1].Stats.HP.Raw())
+	}
+}
+
+func TestSubmitKindAoERangedLoSClearDamagesEnemy(t *testing.T) {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewMatchWithConfig(19, cfg)
+	archPos := board.Coord{X: 13, Y: 10}
+	enemyPos := m.Units[UnitIDPlayer1].Pos
+	if board.Chebyshev(archPos, enemyPos) != 3 {
+		t.Fatalf("setup: want chebyshev 3, got %d", board.Chebyshev(archPos, enemyPos))
+	}
+
+	m.Board.ClearUnit(m.Units[UnitIDPlayer0].Pos)
+	u := defaultUnit(cfg, UnitIDPlayer0, 0, combat.UnitArcher, archPos)
+	m.Units[UnitIDPlayer0] = &u
+	if !m.Board.SetUnit(archPos, UnitIDPlayer0) {
+		t.Fatal("place archer")
+	}
+
+	enemyHPBefore := m.Units[UnitIDPlayer1].Stats.HP.Raw()
+	if err := m.Submit(Command{
+		PlayerID: 0,
+		Kind:     KindAoE,
+		UnitID:   UnitIDPlayer0,
+		To:       enemyPos,
+	}); err != nil {
+		t.Fatalf("submit ranged aoe with clear LOS: %v", err)
+	}
+	for i := 0; i <= lockstep.CommandDelayFrames; i++ {
+		m.StepLockstep()
+	}
+	if m.Units[UnitIDPlayer1].Stats.HP.Raw() >= enemyHPBefore {
+		t.Fatalf("ranged aoe: expected hp loss, before=%d after=%d", enemyHPBefore, m.Units[UnitIDPlayer1].Stats.HP.Raw())
 	}
 }
 
