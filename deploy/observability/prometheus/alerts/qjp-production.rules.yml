@@ -1,0 +1,44 @@
+# Production alert skeleton for 千軍破·重生 (validated via `make promtool-check-rules`).
+# Thresholds are starting points — tune per cluster capacity.
+groups:
+  - name: qjp-production
+    rules:
+      - alert: QjpHighCPU
+        expr: rate(process_cpu_seconds_total[5m]) > 0.80
+        for: 5m
+        labels:
+          severity: warning
+          service: qianjunpo
+        annotations:
+          summary: "Process CPU above 80% (5m rate)"
+          description: "job={{ $labels.job }} instance={{ $labels.instance }} CPU rate={{ $value | humanizePercentage }}"
+
+      - alert: QjpQueueDepthHigh
+        expr: qjp_queue_len > 500
+        for: 2m
+        labels:
+          severity: warning
+          service: qianjunpo
+        annotations:
+          summary: "Command queue depth high"
+          description: "qjp_queue_len={{ $value }} (threshold 500) — timedilation may slow sim time"
+
+      - alert: QjpTimeFlowDegraded
+        expr: qjp_time_flow_rate < 0.50
+        for: 1m
+        labels:
+          severity: critical
+          service: qianjunpo
+        annotations:
+          summary: "Sim time flow degraded below 0.5x"
+          description: "qjp_time_flow_rate={{ $value }} — investigate overload or queue backlog"
+
+      - alert: QjpActiveRoomsHigh
+        expr: qjp_active_rooms > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: qianjunpo
+        annotations:
+          summary: "Active battle/room count high"
+          description: "qjp_active_rooms={{ $value }} on Roma partition — consider shard scale-out"

@@ -1,4 +1,7 @@
-.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer test-edge-infer test-ai-rag test-agones-room agones-room-demo proto proto-check build-services loadpredict aigc-worker aigc-stub-check
+.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer test-edge-infer test-ai-rag test-agones-room agones-room-demo proto proto-check build-services loadpredict aigc-worker aigc-stub-check observability-check promtool-check-rules check-observability
+
+OBS_ALERT_RULES := deploy/observability/prometheus/alerts/qjp-production.rules.yml
+PROMTOOL_IMAGE ?= prom/prometheus:v2.54.1
 
 COMPOSE ?= docker compose --profile dev
 PROTOC ?= protoc
@@ -105,3 +108,19 @@ compose-test:
 	@test -f .env || cp .env.example .env
 	$(COMPOSE) build app
 	$(COMPOSE) run --rm app make test
+
+observability-check:
+	go test ./pkg/observability/... -count=1
+
+promtool-check-rules:
+	@test -f $(OBS_ALERT_RULES)
+	@if command -v promtool >/dev/null 2>&1; then \
+		promtool check rules $(OBS_ALERT_RULES); \
+	elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then \
+		docker run --rm -v "$(CURDIR):/work:ro" $(PROMTOOL_IMAGE) \
+			promtool check rules /work/$(OBS_ALERT_RULES); \
+	else \
+		echo "promtool/docker not found; skipped (Go checks in observability-check still run)"; \
+	fi
+
+check-observability: observability-check promtool-check-rules

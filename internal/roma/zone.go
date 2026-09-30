@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/observability/metrics"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/tactical"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/timesync"
 )
@@ -67,6 +68,7 @@ func (s *Store) Join(zoneID string, shard uint32) (*BattleState, error) {
 		Match:   tactical.NewMatch(seed),
 	}
 	s.battles[id] = b
+	metrics.SetActiveRooms(len(s.battles))
 	return b, nil
 }
 
