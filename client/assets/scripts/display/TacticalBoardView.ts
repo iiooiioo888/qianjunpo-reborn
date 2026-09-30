@@ -1,4 +1,5 @@
 import { _decorator, Color, Component, Graphics, Node, UITransform } from 'cc';
+import { shouldRedrawGrid, shouldRedrawUnits } from '../logic/SnapshotDisplayDiff';
 import { parseViewSnapshot, ViewSnapshot } from '../logic/TacticalSnapshot';
 import { terrainFillColor } from './TerrainPalette';
 import { UnitPlaceholderView } from './UnitPlaceholderView';
@@ -24,9 +25,15 @@ export class TacticalBoardView extends Component {
   }
 
   applySnapshot(raw: unknown): void {
-    this.snapshot = parseViewSnapshot(raw);
-    this.redrawGrid();
-    this.redrawUnits();
+    const next = parseViewSnapshot(raw);
+    const prev = this.snapshot;
+    this.snapshot = next;
+    if (shouldRedrawGrid(prev, next)) {
+      this.redrawGrid();
+    }
+    if (shouldRedrawUnits(prev, next)) {
+      this.redrawUnits();
+    }
   }
 
   getSnapshot(): ViewSnapshot | null {
