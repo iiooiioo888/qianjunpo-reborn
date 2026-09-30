@@ -11,7 +11,10 @@ import (
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/rng"
 )
 
-const FormatVersion = 1
+const (
+	FormatVersion   = 2
+	FormatVersionV1 = 1
+)
 
 // FrameCommand is one lockstep frame's opaque payload.
 type FrameCommand struct {
@@ -26,6 +29,8 @@ type Recording struct {
 	InitialHash uint64
 	RNGSeed     rng.State
 	Frames      []FrameCommand
+	// TimeFlowRates holds per-lockstep-frame dilation (parts per 10000); len may equal Frames or be empty for legacy.
+	TimeFlowRates []uint32
 	FinalHash   uint64
 }
 
@@ -56,6 +61,18 @@ func (r *Recorder) AddFrame(fc FrameCommand) {
 	r.h.Write(fc.Payload)
 }
 
+// RecordTimeFlowRate stores dilation for the frame index equal to len(Frames)-1 after AddFrame.
+func (r *Recorder) RecordTimeFlowRate(rateParts uint32) {
+	idx := len(r.rec.Frames) - 1
+	if idx < 0 {
+		return
+	}
+	for len(r.rec.TimeFlowRates) <= idx {
+		r.rec.TimeFlowRates = append(r.rec.TimeFlowRates, 10000)
+	}
+	r.rec.TimeFlowRates[idx] = rateParts
+}
+
 // Finish sets final hash from initial + frame chain.
 func (r *Recorder) Finish(stateHash uint64) Recording {
 	r.rec.FinalHash = stateHash
@@ -80,7 +97,7 @@ func ComputeChainHash(rec Recording) uint64 {
 
 // Verify checks version and that final hash matches expected end state.
 func Verify(rec Recording) error {
-	if rec.Version != FormatVersion {
+	if rec.Version != FormatVersion && rec.Version != FormatVersionV1 {
 		return errors.New("unsupported replay version")
 	}
 	chain := ComputeChainHash(rec)
@@ -130,6 +147,12 @@ func Marshal(rec Recording) []byte {
 		buf.WriteByte(fc.Player)
 		writeU32(buf, uint32(len(fc.Payload)))
 		buf.Write(fc.Payload)
+	}
+	if rec.Version >= FormatVersion {
+		writeU32(buf, uint32(len(rec.TimeFlowRates)))
+		for _, rate := range rec.TimeFlowRates {
+			writeU32(buf, rate)
+		}
 	}
 	writeU64(buf, rec.FinalHash)
 	return buf.Bytes()
@@ -181,6 +204,19 @@ func Unmarshal(data []byte) (Recording, error) {
 			return rec, err
 		}
 		rec.Frames[i] = fc
+	}
+	if rec.Version >= FormatVersion {
+		rn, err := readU32(buf)
+		if err != nil {
+			return rec, err
+		}
+		rec.TimeFlowRates = make([]uint32, rn)
+		for i := 0; i < int(rn); i++ {
+			rec.TimeFlowRates[i], err = readU32(buf)
+			if err != nil {
+				return rec, err
+			}
+		}
 	}
 	rec.FinalHash, err = readU64(buf)
 	return rec, err

@@ -1,4 +1,4 @@
-.PHONY: test demo compose-up compose-down compose-test
+.PHONY: test demo compose-up compose-down compose-test edge-infer
 
 COMPOSE ?= docker compose --profile dev
 
@@ -7,6 +7,9 @@ test:
 
 demo:
 	go run ./cmd/demo
+
+edge-infer:
+	go run ./services/edge-infer
 
 compose-up:
 	@test -f .env || cp .env.example .env

@@ -41,3 +41,20 @@ func TestGzipRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestTimeFlowRateRoundTrip(t *testing.T) {
+	seed := rng.State{S0: 3, S1: 4}
+	rec := NewRecorder(10, seed)
+	rec.AddFrame(FrameCommand{Frame: 0, Player: 0, Payload: []byte{1}})
+	rec.RecordTimeFlowRate(1000)
+	rec.AddFrame(FrameCommand{Frame: 1, Player: 0, Payload: []byte{2}})
+	rec.RecordTimeFlowRate(15000)
+	done := rec.Finish(42)
+	back, err := Unmarshal(Marshal(done))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(back.TimeFlowRates) != 2 || back.TimeFlowRates[1] != 15000 {
+		t.Fatalf("rates=%v", back.TimeFlowRates)
+	}
+}
