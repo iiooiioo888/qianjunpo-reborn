@@ -19,6 +19,8 @@ make aigc-stub-check # curl /health only (CI-safe)
 
 ## Asset import path
 
+Git 美術目錄與命名規範見 [`art/README.md`](../../art/README.md)（審核前生成稿放各管線 `_wip/`）。
+
 1. Export PNG/WebP from ComfyUI or manual art to `assets/import/<category>/` (gitignored large blobs).
 2. Register manifest entry in `assets/import/manifest.json` (stub path — create locally).
 3. Senate ops approves via `pkg/contentops` queue before hot-reload into client bundles.
