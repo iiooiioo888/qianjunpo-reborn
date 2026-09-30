@@ -1,4 +1,4 @@
-.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer test-edge-infer test-ai-rag test-agones-room agones-room-demo validate-agones-manifests check-agones proto proto-check build-services loadpredict aigc-worker aigc-stub-check observability-check promtool-check-rules check-observability
+.PHONY: test demo match-play match-verify client-snapshot janus-roma-test janus-discovery-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer test-edge-infer test-ai-rag test-agones-room agones-room-demo validate-agones-manifests check-agones proto proto-check build-services loadpredict aigc-worker aigc-stub-check observability-check promtool-check-rules check-observability
 
 OBS_ALERT_RULES := deploy/observability/prometheus/alerts/qjp-production.rules.yml
 PROMTOOL_IMAGE ?= prom/prometheus:v2.54.1
@@ -34,6 +34,9 @@ client-snapshot:
 
 janus-roma-test:
 	go test ./services/janus -run TestJanusToRomaTacticalLockstepPath -v
+
+janus-discovery-test:
+	go test ./internal/janus -run 'TestNormalizeZoneID|TestDiscovery|TestParseZoneEndpointMap' -count=1
 
 timedilation-drill:
 	go test ./pkg/timedilation -run 'TestOverloadDrill|TestDegradeRecovers' -count=1

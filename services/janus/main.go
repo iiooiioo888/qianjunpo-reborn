@@ -44,11 +44,11 @@ func (g *janusGateway) Connect(ctx context.Context, req *gatewayv1.ConnectReques
 	if !ok {
 		return nil, fmt.Errorf("janus: unauthorized")
 	}
-	zone := req.GetTargetZone().GetZoneId()
-	if zone == "" {
-		zone = "default"
+	zone := janus.NormalizeZoneID(req.GetTargetZone().GetZoneId())
+	romaEP, err := g.disco.Lookup(ctx, zone)
+	if err != nil {
+		log.Printf("janus: Connect zone %q discovery degraded: %v", zone, err)
 	}
-	romaEP, _ := g.disco.Lookup(ctx, zone)
 	now := g.clock.Now()
 	sid := randomSessionID()
 	if g.heartbeat != nil {
@@ -94,7 +94,7 @@ func (g *janusGateway) EnterBattle(ctx context.Context, req *gatewayv1.EnterBatt
 	if zone == nil || zone.GetZoneId() == "" {
 		zone = &commonv1.ZoneRef{ZoneId: "default"}
 	}
-	romaEP, err := g.disco.Lookup(ctx, zone.GetZoneId())
+	romaEP, err := g.disco.Lookup(ctx, janus.NormalizeZoneID(zone.GetZoneId()))
 	if err != nil {
 		return nil, err
 	}
@@ -161,9 +161,20 @@ func main() {
 	laresAddr := env("JANUS_LARES_GRPC_ADDR", "lares:9091")
 	laresSecret := env("LARES_TOKEN_SECRET", "phase4-dev-secret")
 
+	staticZones := map[string]string{"default": romaDefault}
+	if raw := strings.TrimSpace(os.Getenv("JANUS_ROMA_ZONE_ENDPOINTS")); raw != "" {
+		parsed, err := janus.ParseZoneEndpointMap(raw)
+		if err != nil {
+			log.Fatalf("janus: %v", err)
+		}
+		for zone, ep := range parsed {
+			staticZones[zone] = ep
+		}
+	}
+
 	disco := &janus.Discovery{
 		Default: romaDefault,
-		Static:  map[string]string{"default": romaDefault},
+		Static:  staticZones,
 	}
 	var etcdCloser func()
 	if strings.TrimSpace(etcdEndpoints) != "" && os.Getenv("ETCD_DISABLE") != "1" {
