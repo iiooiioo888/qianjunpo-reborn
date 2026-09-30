@@ -1,13 +1,14 @@
-// Package main is a lightweight edge inference skeleton (Qwen2.5-3B mock).
+// Package main is the edge inference service (Qwen2.5-3B mock or Ollama backend).
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
-	"sync/atomic"
 	"time"
+
+	"github.com/iiooiioo888/qianjunpo-reborn/services/edge-infer/backend"
 )
 
 type inferRequest struct {
@@ -20,67 +21,71 @@ type inferResponse struct {
 	LatencyMs int64  `json:"latency_ms"`
 }
 
-var loadHook atomic.Bool
+type server struct {
+	backend backend.Backend
+	mock    *backend.MockBackend
+}
 
 func main() {
-	addr := env("EDGE_INFER_ADDR", ":8088")
+	cfg := loadConfig()
+	be, mock := newBackend(cfg)
+	srv := &server{backend: be, mock: mock}
+	addr := cfg.Addr
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", handleHealth)
-	mux.HandleFunc("/v1/infer", handleInfer)
-	mux.HandleFunc("/v1/load", handleLoad)
-	log.Printf("edge-infer listening on %s", addr)
+	mux.HandleFunc("/health", srv.handleHealth)
+	mux.HandleFunc("/v1/infer", srv.handleInfer)
+	mux.HandleFunc("/v1/load", srv.handleLoad)
+	log.Printf("edge-infer listening on %s backend=%s model=%s", addr, be.Name(), be.Model())
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
 
-func env(k, def string) string {
-	if v := os.Getenv(k); v != "" {
-		return v
-	}
-	return def
-}
-
-func handleHealth(w http.ResponseWriter, _ *http.Request) {
+func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	h := s.backend.Health(ctx)
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(`{"status":"ok","model":"qwen2.5-3b-mock"}`))
+	if h.Ready || h.Backend == "mock" {
+		w.WriteHeader(http.StatusOK)
+	} else {
+		// Soft fail: process stays up; callers may use NPC fallback.
+		w.WriteHeader(http.StatusOK)
+	}
+	_ = json.NewEncoder(w).Encode(h)
 }
 
-func handleLoad(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleLoad(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	loadHook.Store(true)
+	if s.mock != nil {
+		s.mock.Heavy.Store(true)
+	}
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func handleInfer(w http.ResponseWriter, r *http.Request) {
+func (s *server) handleInfer(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	start := time.Now()
 	var req inferRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	text := mockQwen(req.Prompt, loadHook.Load())
+	ctx, cancel := context.WithTimeout(r.Context(), 90*time.Second)
+	defer cancel()
+	out, err := s.backend.Infer(ctx, backend.InferRequest{Prompt: req.Prompt})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
 	resp := inferResponse{
-		Text:      text,
-		Model:     "qwen2.5-3b-mock",
-		LatencyMs: time.Since(start).Milliseconds(),
+		Text:      out.Text,
+		Model:     out.Model,
+		LatencyMs: out.LatencyMs,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
-}
-
-func mockQwen(prompt string, heavy bool) string {
-	if prompt == "" {
-		return "hold position"
-	}
-	if heavy {
-		return "flank east with cavalry: " + prompt
-	}
-	return "advance: " + prompt
 }
