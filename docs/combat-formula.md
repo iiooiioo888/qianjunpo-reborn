@@ -33,7 +33,7 @@
 
 - 目標格與攻擊者 Chebyshev 距離須滿足 `1 ≤ d ≤ Range`（`Range` 來自兵種目錄）。
 - **遠程**（目錄 `range > 1`，如弓兵）：另須 `combat.AttackLineClear`——沿 8 向直線步進的射線上每一格地形可通行，且除攻擊者／目標單位外不得有第三方單位占位（與 `pathfind.ExpandSegment` 同 trace）。
-- **近戰**（`range ≤ 1`）：僅 Chebyshev 距離，不檢查射線。
+- **近戰**（`range ≤ 1`）：僅 Chebyshev 距離，不檢查射線（`combat.RangedAttackNeedsLine` 為 false；與 #69／#72 遠程阻擋盤面對照時，同一直線延伸段上的第三方占位或不可通行地形**不**拒絕近戰 `KindAttack`，整合測見 `TestSubmitKindAttackMeleeLoSNotCheckedUnitOnLineSubmitDamagesEnemy`、`TestSubmitKindAttackMeleeLoSNotCheckedTerrainOnLineSubmitDamagesEnemy`）。
 - **遠程單體 `KindAttack` 與 LOS**：射線暢通時 `validateAttack` 通過並在 lockstep 執行後對目標套傷；被第三方單位或不可通行地形擋住則 `validate.CodeBlocked`（暢通見 `TestSubmitKindAttackRangedLoSClearDamagesEnemy`；單位占位阻擋見 `TestSubmitKindAttackLoSBlockedRejected`；射線上不可通行地形見 `TestSubmitKindAttackLoSTerrainBlockedRejected`；盤面與 #64 AoE 對稱）。
 
 ## 終局條件（`pkg/tactical`）
@@ -57,3 +57,4 @@
 - 指令 `KindAoE`（`Command.To` = 範圍中心）：提交與 `ApplyAoEStrike` 前，對中心格套用與單體攻擊相同的 `combat.InAttackRange`／`combat.AttackLineClear`（遠程才檢 LOS；中心格占位單位 ID 作為射線忽略的 target）；失敗碼 `AOE_OUT_OF_RANGE`／`AOE_LOS_BLOCKED`。另驗證中心在盤內（`AOE_OUT_OF_BOUNDS`）且至少一名敵人在 splash（`AOE_NO_TARGETS`）。**不**改 `InAttackRange`／`AttackLineClear`／`CollectAoECells` 本體；單體 `validateAttack` 路徑不變。
 - **中心格占位**：近戰／遠程皆不可選施放者所在格（`InAttackRange` 要求 `d ≥ 1`）。中心可落在**友軍**格或空格；只要射程／LOS 合法且 splash 內有敵人即可施放，傷害僅對敵方單位升序 `applyStrike`，友軍在範圍內不扣血（整合測見 `TestApplyAoEStrikeFriendlyCenterSkipsAllies`、`TestSubmitKindAoEFriendlyCenterLockstepIntegration`）。
 - **遠程 AoE 與 LOS**：射線暢通時 `KindAoE` 與單體相同地通過 `AttackLineClear` 並在 lockstep 執行後對中心／splash 內敵人套傷；被第三方單位或不可通行地形擋住則 `AOE_LOS_BLOCKED`（暢通見 `TestSubmitKindAoERangedLoSClearDamagesEnemy`；單位占位阻擋見 `TestSubmitKindAoELoSBlockedRejected`；射線上不可通行地形見 `TestSubmitKindAoELoSTerrainBlockedRejected`；盤面與 #69 KindAttack 地形測對稱）。
+- **近戰 AoE 與 LOS**：與單體近戰相同，不跑 `AttackLineClear`；對照遠程阻擋盤面見 `TestSubmitKindAoEMeleeLoSNotCheckedUnitOnLineSubmitDamagesEnemy`、`TestSubmitKindAoEMeleeLoSNotCheckedTerrainOnLineSubmitDamagesEnemy`。
