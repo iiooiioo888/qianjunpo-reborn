@@ -33,9 +33,10 @@ type BattleState struct {
 
 // Store keeps battles keyed by id per zone shard.
 type Store struct {
-	mu      sync.RWMutex
-	battles map[BattleID]*BattleState
-	clock   *timesync.Clock
+	mu       sync.RWMutex
+	battles  map[BattleID]*BattleState
+	clock    *timesync.Clock
+	dilation *regionDilation
 }
 
 // NewStore creates an empty partition store.
@@ -43,7 +44,7 @@ func NewStore(clock *timesync.Clock) *Store {
 	if clock == nil {
 		clock = timesync.NewClock(nil)
 	}
-	return &Store{battles: make(map[BattleID]*BattleState), clock: clock}
+	return &Store{battles: make(map[BattleID]*BattleState), clock: clock, dilation: newRegionDilation()}
 }
 
 // Join creates or returns a tactical duel for zone shard (in-memory only).

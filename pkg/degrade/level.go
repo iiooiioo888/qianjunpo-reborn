@@ -73,9 +73,12 @@ func LevelFromLoad(queueLen int, rateMilli int64) Level {
 	}
 }
 
-// Sync adjusts machine toward suggested level (escalate immediately, recover one step at a time via Recover).
+// SyncSuggested moves toward suggested level: escalate immediately, recover at most one level per call.
 func (m *Machine) SyncSuggested(suggested Level) {
 	for suggested > m.Current {
 		m.Escalate()
+	}
+	if suggested < m.Current {
+		m.Recover()
 	}
 }

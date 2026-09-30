@@ -38,6 +38,15 @@ func TestSyncSuggestedEscalatesImmediate(t *testing.T) {
 	}
 }
 
+func TestSyncSuggestedRecoversOneStep(t *testing.T) {
+	m := NewMachine()
+	m.EscalateTo(L3)
+	m.SyncSuggested(L0)
+	if m.Current != L2 {
+		t.Fatalf("got %v want L2", m.Current)
+	}
+}
+
 func TestLevelFromLoad(t *testing.T) {
 	if LevelFromLoad(100, 10000) != L0 {
 		t.Fatal("expected L0")
