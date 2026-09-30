@@ -2,6 +2,8 @@ import { _decorator, Component, JsonAsset, Node, resources, Widget } from 'cc';
 import { TacticalBoardView } from '../display/TacticalBoardView';
 import { TacticalBoardInteraction } from '../display/TacticalBoardInteraction';
 import { TimeFlowHudStub } from '../display/TimeFlowHudStub';
+import { CharacterCardHudStrip } from '../display/CharacterCardHudStrip';
+import { CharacterCardSpriteRegistry } from '../display/CharacterCardSpriteRegistry';
 import { IconSpriteRegistry } from '../display/IconSpriteRegistry';
 import { ResourceIconHudStrip } from '../display/ResourceIconHudStrip';
 import { UnitSpriteRegistry } from '../display/UnitSpriteRegistry';
@@ -81,6 +83,16 @@ export class TacticalBootstrap extends Component {
     iconWidget.top = 72;
     iconWidget.left = 16;
 
+    const charStripNode = new Node('CharacterCardStrip');
+    charStripNode.setParent(this.node);
+    charStripNode.setPosition(-320, 188, 0);
+    const charStrip = charStripNode.addComponent(CharacterCardHudStrip);
+    const charWidget = charStripNode.addComponent(Widget);
+    charWidget.isAlignTop = true;
+    charWidget.isAlignLeft = true;
+    charWidget.top = 112;
+    charWidget.left = 16;
+
     const applySnapshot = (raw: unknown) => {
       try {
         boardView.applySnapshot(raw);
@@ -149,8 +161,13 @@ export class TacticalBootstrap extends Component {
       }
     });
 
-    void Promise.all([UnitSpriteRegistry.preload(), IconSpriteRegistry.preload()]).then(() => {
+    void Promise.all([
+      UnitSpriteRegistry.preload(),
+      IconSpriteRegistry.preload(),
+      CharacterCardSpriteRegistry.preload(),
+    ]).then(() => {
       iconStrip.buildStrip();
+      charStrip.buildStrip();
       if (this.useLiveJanus) {
         this.poller = new LiveViewSnapshotPoller({
           cfg: DEFAULT_NETWORK_STUB,

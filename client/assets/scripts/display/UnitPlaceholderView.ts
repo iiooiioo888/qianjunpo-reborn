@@ -1,13 +1,14 @@
 import { _decorator, Color, Component, Graphics, Sprite, UITransform } from 'cc';
 import { ViewUnit } from '../logic/TacticalSnapshot';
 import { ownerAccentColor } from './TerrainPalette';
-import { UnitSpriteRegistry } from './UnitSpriteRegistry';
+import { boardUnitDisplaySize, UNIT_ART_CANVAS_PX } from './PixelSpriteUtil';
+import { UNIT_TEXTURE_KEYS, UnitSpriteRegistry } from './UnitSpriteRegistry';
 
 const { ccclass, property } = _decorator;
 
 /**
- * 戰術單位顯示：優先 `resources/textures/2d/units` PX2D v02 Sprite（Nearest）；
- * 缺圖時退回幾何占位。
+ * 戰術單位顯示：優先 `UnitSpriteRegistry`（鍵 infantry/cavalry 等）+ Nearest；
+ * 缺圖時退回幾何占位。v03 128×128 畫布時仍用整數倍縮入 cellSize。
  */
 @ccclass('UnitPlaceholderView')
 export class UnitPlaceholderView extends Component {
@@ -34,9 +35,21 @@ export class UnitPlaceholderView extends Component {
   }
 
   drawUnit(unit: ViewUnit): void {
-    const sf = UnitSpriteRegistry.getSpriteFrame(unit.type);
-    if (sf) {
-      this.drawSpriteToken(sf);
+    if (!this.sprite) {
+      this.sprite = this.getComponent(Sprite) ?? this.addComponent(Sprite);
+      this.sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+    }
+    const applied = UnitSpriteRegistry.applyUnitToSprite(
+      this.sprite,
+      unit.type,
+      this.cellSize,
+      UNIT_ART_CANVAS_PX,
+    );
+    if (applied) {
+      if (this.g) {
+        this.g.clear();
+        this.g.enabled = false;
+      }
       this.redrawSelectionRing(this.g);
       return;
     }
@@ -54,23 +67,6 @@ export class UnitPlaceholderView extends Component {
     g.stroke();
   }
 
-  private drawSpriteToken(sf: NonNullable<ReturnType<typeof UnitSpriteRegistry.getSpriteFrame>>): void {
-    if (!this.sprite) {
-      this.sprite = this.getComponent(Sprite) ?? this.addComponent(Sprite);
-      this.sprite.sizeMode = Sprite.SizeMode.CUSTOM;
-    }
-    this.sprite.enabled = true;
-    this.sprite.spriteFrame = sf;
-    const ui = this.getComponent(UITransform);
-    if (ui) {
-      ui.setContentSize(this.cellSize, this.cellSize);
-    }
-    if (this.g) {
-      this.g.clear();
-      this.g.enabled = false;
-    }
-  }
-
   private drawGraphicsPlaceholder(unit: ViewUnit): void {
     if (this.sprite) {
       this.sprite.enabled = false;
@@ -82,7 +78,8 @@ export class UnitPlaceholderView extends Component {
     g.enabled = true;
     g.clear();
     const s = this.cellSize;
-    const pad = 4;
+    const artDisplay = boardUnitDisplaySize(UNIT_ART_CANVAS_PX, s);
+    const pad = Math.max(2, Math.floor((s - artDisplay) / 2));
     const fill = ownerAccentColor(unit.owner);
     g.fillColor = fill;
     g.rect(pad, pad, s - pad * 2, s - pad * 2);
@@ -92,7 +89,8 @@ export class UnitPlaceholderView extends Component {
     g.rect(pad, pad, s - pad * 2, s - pad * 2);
     g.stroke();
     g.fillColor = new Color(255, 255, 255, 180);
-    if (unit.type === 2) {
+    const key = UnitSpriteRegistry.resolveKeyForUnitType(unit.type);
+    if (key === UNIT_TEXTURE_KEYS.cavalry) {
       g.moveTo(s / 2, pad + 2);
       g.lineTo(s - pad - 2, s / 2);
       g.lineTo(s / 2, s - pad - 2);
