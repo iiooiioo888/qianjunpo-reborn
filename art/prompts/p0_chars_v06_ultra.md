@@ -1,7 +1,8 @@
-# P0 batch1 — 角色卡 AIGC 提示詞 v06（ultra · **canonical**）
+# P0 batch1 — 角色卡 AIGC 提示詞 v06（ultra · **historical**）
 
-> **Canonical for generation**：ComfyUI／worker／人工重跑 **僅引用本檔**。  
-> Supersedes：[`p0_chars_v05_detail.md`](./p0_chars_v05_detail.md) · [`p0_chars_v04.md`](./p0_chars_v04.md)（兩檔頂部已標 **superseded by v06**）。
+> **Historical only**：生成 **僅用** **[`PROMPT_STANDARD_char_card_v1.md`](./PROMPT_STANDARD_char_card_v1.md)**（A→E 鎖定結構；本檔 v06 細節已吸收為 STANDARD §5 **Examples**）。  
+> 勿新增 `p0_chars_v07_*`；修訂 STANDARD 或 Examples 即可。  
+> 對照：[`p0_chars_v05_detail.md`](./p0_chars_v05_detail.md) · [`p0_chars_v04.md`](./p0_chars_v04.md)
 
 ## 座標系（320×400）
 

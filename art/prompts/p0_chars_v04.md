@@ -1,7 +1,7 @@
 # P0 batch1 — 角色卡 AIGC 提示詞 v04
 
-> **已取代（generation）**：本檔 **不得** 再作為生成依據。請改用 **[`p0_chars_v06_ultra.md`](./p0_chars_v06_ultra.md)**（canonical）。  
-> 歷史鏈：v05 曾取代 v04 作細化版；**v06 現已取代 v04／v05 全部生成用途**。
+> **Historical only**：本檔 **不得** 作為生成依據。Canonical：**[`PROMPT_STANDARD_char_card_v1.md`](./PROMPT_STANDARD_char_card_v1.md)**。  
+> 歷史鏈：v05 → v04 細化；v06 ultra 曾為過渡 canonical；現由 **STANDARD v1** 鎖定結構（範例見 STANDARD §5）。
 
 ## 硬門檻（全角色共用）
 
@@ -29,4 +29,4 @@
 
 ## 正提示（v04 短版 — 已過時）
 
-各角色請改 copy **`p0_chars_v06_ultra.md`** 內之 single-string positive。
+各角色請改 copy **`PROMPT_STANDARD_char_card_v1.md` §5 Examples**。

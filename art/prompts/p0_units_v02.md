@@ -1,4 +1,6 @@
-# P0 — 2D 單位 v02
+# P0 — 2D 單位 v02（**historical**）
+
+> 生成 canonical：**[`PROMPT_STANDARD_unit_sprite_v1.md`](./PROMPT_STANDARD_unit_sprite_v1.md)**。本檔僅保留 v02 路徑／調色備忘。
 
 - **風格**：卡通像素（cartoon pixel）；統一造型、一圖一主體
 - **調色**：`#8B4513` / `#CD5C5C` / `#DAA520`；背景 `#1A1410`

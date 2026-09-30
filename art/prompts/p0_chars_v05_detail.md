@@ -1,7 +1,7 @@
 # P0 batch1 — 角色卡 AIGC 提示詞 v05（detail）
 
-> **已取代（generation）**：本檔 **不得** 再作為生成依據。Canonical：**[`p0_chars_v06_ultra.md`](./p0_chars_v06_ultra.md)**。  
-> 歷史：v05 曾 **[取代 v04](./p0_chars_v04.md)** 作細化生成；現由 **v06 ultra** 全面 supersede。
+> **Historical only**：**不得** 作為生成依據。Canonical：**[`PROMPT_STANDARD_char_card_v1.md`](./PROMPT_STANDARD_char_card_v1.md)**（曹操／張飛／周瑜填寫範例在 STANDARD §5，非新版本）。  
+> 歷史：v05 曾取代 [v04](./p0_chars_v04.md)；後有 [v06 ultra](./p0_chars_v06_ultra.md) — 均已 archive。
 
 ## 硬門檻（Hard gate — 全角色）
 
@@ -71,4 +71,4 @@
 ## 交叉引用
 
 - 批次說明：[`p0_batch1_chars_notes.md`](./p0_batch1_chars_notes.md)
-- **生成請只用**：[`p0_chars_v06_ultra.md`](./p0_chars_v06_ultra.md)
+- **生成請只用**：[`PROMPT_STANDARD_char_card_v1.md`](./PROMPT_STANDARD_char_card_v1.md)
