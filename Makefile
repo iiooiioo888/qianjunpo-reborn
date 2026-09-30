@@ -1,4 +1,4 @@
-.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
+.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer test-edge-infer test-ai-rag proto proto-check build-services loadpredict aigc-worker aigc-stub-check
 
 COMPOSE ?= docker compose --profile dev
 PROTOC ?= protoc
@@ -42,6 +42,12 @@ compose-e2e-test:
 
 edge-infer:
 	go run ./services/edge-infer
+
+test-edge-infer:
+	go test ./services/edge-infer/... -v -count=1
+
+test-ai-rag:
+	go test ./pkg/ai ./pkg/rag -v -count=1
 
 proto:
 	@command -v $(PROTOC) >/dev/null || (echo "install protoc to regenerate; checked-in gen/go is CI default" && exit 0)

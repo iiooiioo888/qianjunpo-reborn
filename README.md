@@ -37,7 +37,7 @@
 | **Lares** | `services/lares` | Access/Refresh 雙令牌 |
 | **Senate** | `services/senate` | 維運 gRPC/HTTP |
 | **ChatServer** | `services/chatserver` | 聊天 gRPC/HTTP |
-| **edge-infer** | `services/edge-infer` | Phase 3 邊緣推理 mock |
+| **edge-infer** | `services/edge-infer` | Phase 3 邊緣推理（`mock` / `ollama` 可切換） |
 
 契約：`proto/` → `gen/go/`（`make proto` 可選再生；CI 使用已提交生成碼）。
 
@@ -70,7 +70,7 @@
 | `pkg/degrade` | L0–L5 降級狀態機與有序恢復 |
 | `pkg/cmdmerge` | 過載指令合併（move/build、P2 500ms 批次） |
 | `pkg/ai` | 戰略層（~5s mock）+ 戰術層 → `lockstep.CommandPacket` |
-| `pkg/rag` | RAG Top-K 介面 + 記憶體假向量庫（Top-5 延遲目標見套件註解） |
+| `pkg/rag` | 三國志種子語料 + Top-5 檢索（`HashBagEmbedder`）；詳見 `docs/ai-edge-rag.md` |
 | `proto/` / `gen/go/` | gRPC/Protobuf 契約與生成 Go 存根 |
 | `services/*` | 微服務可執行骨架 |
 | `pkg/tactical` | Phase 2 垂直切片：19×19 戰術對局、權威驗證、戰鬥、回放 |
@@ -111,7 +111,9 @@ go run ./cmd/match play -seed 0xcafe -out /tmp/match.rgz
 go run ./cmd/match verify -in /tmp/match.rgz
 make proto         # 可選：需本機 protoc；否則使用已提交的 gen/go
 make build-services
-make edge-infer    # 啟動 :8088 邊緣推理 mock（/health、/v1/infer、/v1/load）
+make edge-infer    # 預設 mock；Ollama：EDGE_INFER_BACKEND=ollama make edge-infer
+make test-edge-infer
+make test-ai-rag
 go test ./pkg/timesync ./pkg/anticheat ./internal/lares -v
 go test ./pkg/timedilation -v
 go test ./pkg/ai ./pkg/integration -v
