@@ -47,7 +47,7 @@
    - `POST v1/tactical/connect` → `session_id`
    - `POST v1/tactical/enter-battle` → `battle_id`、可選 `view_snapshot_json`（先套用再輪詢）
    - `GET v1/tactical/snapshot`、`POST v1/tactical/command`（帶 `session_id`）
-4. 選取與高亮同 Mock；點合法格後 **預期**：指令 `accepted: true` 或真實 `reject_reason`／HTTP 錯（**不假樂觀移動**）。
+4. 選取與高亮同 Mock；點合法格後 **預期**：指令 `accepted: true` 或 HUD 顯示真實 `reject_reason`／HTTP／網路錯，並可一鍵 **「重試戰術指令」**（**不假樂觀移動**；成功後清除錯誤）。
 4. gRPC 等價（與後端測試相同）仍可用：
 
    ```bash

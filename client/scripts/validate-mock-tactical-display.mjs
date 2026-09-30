@@ -153,6 +153,21 @@ if (
 ) {
   fail('JanusLiveGatewayHttp missing #60 tactical connect/enter-battle paths');
 }
+if (
+  !hudSrc.includes('liveCommandRetry') ||
+  !hudSrc.includes('重試戰術指令') ||
+  !bootstrapSrc.includes('liveCommandRetry') ||
+  !bootstrapSrc.includes('pendingLiveCommandError')
+) {
+  fail('TimeFlowHudStub/TacticalBootstrap missing Live tactical command retry HUD');
+}
+const staticPreviewApp = readFileSync(join(root, 'static-preview/app.js'), 'utf8');
+if (
+  !staticPreviewApp.includes('pendingCommandFailure') ||
+  !staticPreviewApp.includes('LIVE_LABEL_COMMAND_RETRY')
+) {
+  fail('static-preview missing Live command failure retry UX');
+}
 
 const localUnit = raw.units.find((u) => u.owner === 0 && u.hp > 0);
 if (!localUnit || localUnit.id !== 101) {
