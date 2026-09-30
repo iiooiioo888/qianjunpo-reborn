@@ -1,6 +1,6 @@
 # P0 角色卡 — v03e landmark + 320×400 尺寸閘
 
-> **v03e** 取代 v02 薄筆記中關於 landmark 與尺寸的說明；**PR #20** 的 pose 鎖定筆記仍適用於統一骨架，但 **landmark 佔位 + 精確 320×400** 為強制閘門（不通過即重製／裁切修正）。
+> **v03e** 取代 v02 薄筆記中關於 landmark 與尺寸的說明；**PR #20** 的 pose 鎖定筆記仍適用於統一骨架，但 **landmark 佔位 + 精確 320×400** 為強制閘門（不通過即重製／裁切修正）。**Identity／調色 canonical**：見 `p0_chars_v04_identity.md`（單段 positive 含 inline avoid）。
 
 ## Hard size gate
 
