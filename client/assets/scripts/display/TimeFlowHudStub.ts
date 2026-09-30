@@ -1,4 +1,9 @@
 import { _decorator, Color, Component, Label, Node, UITransform } from 'cc';
+import {
+  formatLockstepFrameLine,
+  HudLockstepSyncContext,
+  mockSyncContextFromBootstrap,
+} from './LockstepHudFormat';
 import { timeFlowRateToFloat, ViewSnapshot } from '../logic/TacticalSnapshot';
 
 const { ccclass, property } = _decorator;
@@ -9,6 +14,8 @@ const { ccclass, property } = _decorator;
  */
 @ccclass('TimeFlowHudStub')
 export class TimeFlowHudStub extends Component {
+  private lastSync: HudLockstepSyncContext = mockSyncContextFromBootstrap('connected');
+
   @property(Label)
   rateLabel: Label | null = null;
 
@@ -52,14 +59,28 @@ export class TimeFlowHudStub extends Component {
     }
   }
 
+  /** 更新 mock／live 同步語境（影響 lockstep 第二行，不覆寫第三行 overlay）。 */
+  setLockstepSyncContext(ctx: HudLockstepSyncContext): void {
+    this.lastSync = ctx;
+    if (this.frameLabel && this.lastSnapshot) {
+      this.frameLabel.string = formatLockstepFrameLine(this.lastSnapshot, this.lastSync);
+    }
+  }
+
+  private lastSnapshot: ViewSnapshot | null = null;
+
   /** 每次 mock／live 快照成功後呼叫；`timeFlowRateParts` 為 Roma 權威顯示值。 */
-  updateFromSnapshot(snap: ViewSnapshot): void {
+  updateFromSnapshot(snap: ViewSnapshot, sync?: HudLockstepSyncContext): void {
+    this.lastSnapshot = snap;
+    if (sync) {
+      this.lastSync = sync;
+    }
     const rate = timeFlowRateToFloat(snap.timeFlowRateParts);
     if (this.rateLabel) {
       this.rateLabel.string = `time_flow_rate: ${rate.toFixed(2)}x (${snap.timeFlowRateParts}/10000)`;
     }
     if (this.frameLabel) {
-      this.frameLabel.string = `lockstep frame: ${snap.lockstepFrame}  hash: ${snap.initialStateHash}`;
+      this.frameLabel.string = formatLockstepFrameLine(snap, this.lastSync);
     }
   }
 

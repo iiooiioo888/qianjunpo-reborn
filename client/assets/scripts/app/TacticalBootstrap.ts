@@ -1,6 +1,12 @@
 import { _decorator, Component, JsonAsset, Node, resources, Widget } from 'cc';
 import { TacticalBoardView } from '../display/TacticalBoardView';
 import { TacticalBoardInteraction } from '../display/TacticalBoardInteraction';
+import {
+  HudSyncLinkState,
+  liveLinkStateFromPollAge,
+  liveSyncContextFromPoll,
+  mockSyncContextFromBootstrap,
+} from '../display/LockstepHudFormat';
 import { TimeFlowHudStub } from '../display/TimeFlowHudStub';
 import { CharacterCardHudStrip } from '../display/CharacterCardHudStrip';
 import { ResourceIconHudStrip } from '../display/ResourceIconHudStrip';
@@ -52,10 +58,16 @@ export class TacticalBootstrap extends Component {
   private hud: TimeFlowHudStub | null = null;
   private mockSnapshotRaw: unknown | null = null;
   private textureHudNote: string | null = null;
+  private lastLiveSnapshotAtMs = 0;
+  private livePollAgeTimer: ReturnType<typeof setInterval> | null = null;
 
   onDestroy(): void {
     this.poller?.stop();
     this.poller = null;
+    if (this.livePollAgeTimer !== null) {
+      clearInterval(this.livePollAgeTimer);
+      this.livePollAgeTimer = null;
+    }
   }
 
   onLoad(): void {
@@ -114,7 +126,22 @@ export class TacticalBootstrap extends Component {
         boardView.applySnapshot(raw);
         const applied = boardView.getSnapshot();
         if (applied) {
-          hud.updateFromSnapshot(applied);
+          const syncLink: HudSyncLinkState =
+            networkStatus != null &&
+            (networkStatus.includes('失敗') ||
+              networkStatus.includes('Janus:') ||
+              networkStatus.includes('拒絕'))
+              ? 'error'
+              : 'connected';
+          if (this.useLiveJanus) {
+            this.lastLiveSnapshotAtMs = Date.now();
+            hud.updateFromSnapshot(
+              applied,
+              liveSyncContextFromPoll(0, this.livePollIntervalMs, syncLink),
+            );
+          } else {
+            hud.updateFromSnapshot(applied, mockSyncContextFromBootstrap(syncLink));
+          }
           const status =
             networkStatus ??
             (this.textureHudNote && !this.useLiveJanus ? this.textureHudNote : null);
@@ -194,9 +221,31 @@ export class TacticalBootstrap extends Component {
           onError: (err, retryMs) => {
             console.warn('[TacticalBootstrap] live Janus poll failed', err.message, `(retry ~${retryMs}ms)`);
             hud.setNetworkStatus(`Janus: ${err.message}（約 ${retryMs}ms 後重試）`);
+            const age = this.lastLiveSnapshotAtMs > 0 ? Date.now() - this.lastLiveSnapshotAtMs : retryMs;
+            hud.setLockstepSyncContext(
+              liveSyncContextFromPoll(age, this.livePollIntervalMs, 'error'),
+            );
           },
         });
         this.poller.start(true);
+        if (this.livePollAgeTimer !== null) {
+          clearInterval(this.livePollAgeTimer);
+        }
+        this.livePollAgeTimer = setInterval(() => {
+          if (!this.useLiveJanus || this.lastLiveSnapshotAtMs <= 0) {
+            return;
+          }
+          const snap = this.boardView?.getSnapshot();
+          if (!snap || !this.hud) {
+            return;
+          }
+          const age = Date.now() - this.lastLiveSnapshotAtMs;
+          const link = liveLinkStateFromPollAge(age, this.livePollIntervalMs);
+          this.hud.setLockstepSyncContext(
+            liveSyncContextFromPoll(age, this.livePollIntervalMs, link),
+          );
+          this.hud.updateFromSnapshot(snap);
+        }, 250);
         return;
       }
 

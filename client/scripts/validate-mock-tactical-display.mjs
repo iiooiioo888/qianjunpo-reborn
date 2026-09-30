@@ -54,6 +54,8 @@ const boardViewSrc = readFileSync(join(displayDir, 'TacticalBoardView.ts'), 'utf
 const interactionSrc = readFileSync(join(displayDir, 'TacticalBoardInteraction.ts'), 'utf8');
 const unitViewSrc = readFileSync(join(displayDir, 'UnitPlaceholderView.ts'), 'utf8');
 const visualsSrc = readFileSync(join(displayDir, 'BoardSelectionVisuals.ts'), 'utf8');
+const hudSrc = readFileSync(join(displayDir, 'TimeFlowHudStub.ts'), 'utf8');
+const lockstepHudSrc = readFileSync(join(displayDir, 'LockstepHudFormat.ts'), 'utf8');
 
 if (!boardViewSrc.includes('setSelection(') || !boardViewSrc.includes('BoardSelectionVisuals')) {
   fail('TacticalBoardView missing shared selection visuals');
@@ -67,7 +69,14 @@ if (!unitViewSrc.includes('SelectionRing') || !unitViewSrc.includes('drawUnitSel
 if (!visualsSrc.includes('drawLegalMoveCell')) {
   fail('BoardSelectionVisuals missing legal cell helper');
 }
+if (
+  !hudSrc.includes('formatLockstepFrameLine') ||
+  !hudSrc.includes('setLockstepSyncContext') ||
+  !lockstepHudSrc.includes('sync: mock')
+) {
+  fail('TimeFlowHudStub missing lockstep sync HUD line (LockstepHudFormat)');
+}
 
 ok(
-  `demo_initial units=${raw.units.length}, lockstep=${raw.lockstepFrame}; HUD char keys=${HUD_CHAR_KEYS.join(',')}; selection UX static checks passed`,
+  `demo_initial units=${raw.units.length}, lockstep=${raw.lockstepFrame}; HUD char keys=${HUD_CHAR_KEYS.join(',')}; lockstep sync HUD static checks passed`,
 );
