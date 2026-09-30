@@ -1,6 +1,7 @@
 # P0 batch1 — 角色卡 AIGC 提示詞 v04
 
 > **Historical only**：本檔 **不得** 作為生成依據。Canonical：**[`PROMPT_STANDARD_char_card_v1.md`](./PROMPT_STANDARD_char_card_v1.md)**。  
+> **Identity landmark batch（320×400 過審稿）**：全文 positive 與調色閘見 **[`p0_chars_v04_identity.md`](./p0_chars_v04_identity.md)**；逐檔 copy-paste 見同目錄 `PX2D_CHAR_*_v04.txt`。  
 > 歷史鏈：v05 → v04 細化；v06 ultra 曾為過渡 canonical；現由 **STANDARD v1** 鎖定結構（範例見 STANDARD §5）。
 
 ## 硬門檻（全角色共用）
