@@ -3,7 +3,7 @@
  * 靜態檢查 mock 快照與 registry 鍵對齊（無 Cocos）。
  * 在倉庫根目錄：node client/scripts/validate-mock-tactical-display.mjs
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,6 +12,11 @@ const snapshotPath = join(root, 'assets/resources/data/tactical/demo_initial.jso
 
 const KNOWN_UNIT_TYPES = new Set([0, 2]);
 const HUD_CHAR_KEYS = ['char_caocao', 'char_zhangfei', 'char_wu_placeholder'];
+const CHAR_CARD_V04_STEMS = [
+  'PX2D_CHAR_WEI_Caocao_ex_v04',
+  'PX2D_CHAR_SHU_Zhangfei_ex_v04',
+  'PX2D_CHAR_WU_Placeholder_01_v04',
+];
 
 function fail(msg) {
   console.error(`validate-mock-tactical-display: FAIL — ${msg}`);
@@ -77,6 +82,23 @@ if (
   fail('TimeFlowHudStub missing lockstep sync HUD line (LockstepHudFormat)');
 }
 
+const registrySrc = readFileSync(join(displayDir, 'CharacterCardSpriteRegistry.ts'), 'utf8');
+for (const stem of CHAR_CARD_V04_STEMS) {
+  if (!registrySrc.includes(`'${stem}'`)) {
+    fail(`CharacterCardSpriteRegistry missing default stem ${stem}`);
+  }
+}
+if (registrySrc.includes('_v02')) {
+  fail('CharacterCardSpriteRegistry still references _v02 character stems');
+}
+const charsDir = join(root, 'assets/resources/textures/2d/chars');
+for (const stem of CHAR_CARD_V04_STEMS) {
+  const png = join(charsDir, `${stem}.png`);
+  if (!existsSync(png)) {
+    fail(`missing ${png} — run bash client/scripts/sync-wip-char-textures.sh`);
+  }
+}
+
 ok(
-  `demo_initial units=${raw.units.length}, lockstep=${raw.lockstepFrame}; HUD char keys=${HUD_CHAR_KEYS.join(',')}; lockstep sync HUD static checks passed`,
+  `demo_initial units=${raw.units.length}, lockstep=${raw.lockstepFrame}; HUD char keys=${HUD_CHAR_KEYS.join(',')}; char v04 stems+PNGs ok; lockstep sync HUD static checks passed`,
 );

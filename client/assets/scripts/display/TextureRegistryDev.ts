@@ -12,12 +12,12 @@ export interface TexturePreloadReport {
 }
 
 /**
- * Mock／Live 預覽前：在此 `registerResourcePath` 換 v03 或 client 極簡占位 stem，再 `preloadTacticalDisplayTextures()`。
+ * Mock／Live 預覽前：在此 `registerResourcePath` 換 stem 或 client 極簡占位，再 `preloadTacticalDisplayTextures()`。
  *
- * 過審後一行換圖範例（取消註解、放入 PNG、重新預覽）：
+ * 覆寫 stem 範例（取消註解、放入 PNG、重新預覽）：
  * ```ts
  * UnitSpriteRegistry.registerResourcePath(UNIT_TEXTURE_KEYS.infantry, 'PX2D_unit_infantry_v03');
- * CharacterCardSpriteRegistry.registerResourcePath(CHAR_CARD_TEXTURE_KEYS.char_caocao, 'PX2D_CHAR_WEI_Caocao_ex_v03');
+ * CharacterCardSpriteRegistry.registerResourcePath(CHAR_CARD_TEXTURE_KEYS.char_caocao, 'PX2D_CHAR_WEI_Caocao_ex_v04');
  * ```
  *
  * 本地極簡占位（非 art，128×128 / 320×400）檔名範例見 `assets/resources/textures/2d/README.md`。
