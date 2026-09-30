@@ -1,0 +1,128 @@
+[
+  {
+    "file": "characters/PX2D_CHAR_WEI_Caocao_ex_v01.png",
+    "ok": true,
+    "bytes": 953299,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "characters/PX2D_CHAR_SHU_Zhangfei_ex_v01.png",
+    "ok": true,
+    "bytes": 1031376,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "characters/PX2D_CHAR_WU_Placeholder_01_v01.png",
+    "ok": true,
+    "bytes": 1097435,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "units/PX2D_unit_infantry_v01.png",
+    "ok": true,
+    "bytes": 1220032,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "units/PX2D_unit_cavalry_v01.png",
+    "ok": true,
+    "bytes": 1249541,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "icons/PX2D_icon_res_wood_32.png",
+    "ok": true,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan",
+    "retry": true
+  },
+  {
+    "file": "icons/PX2D_icon_res_food_32.png",
+    "ok": true,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan",
+    "retry": true
+  },
+  {
+    "file": "icons/PX2D_icon_res_iron_32.png",
+    "ok": true,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan",
+    "retry": true
+  },
+  {
+    "file": "icons/PX2D_icon_res_stone_32.png",
+    "ok": true,
+    "bytes": 1188010,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "icons/PX2D_icon_res_gold_32.png",
+    "ok": true,
+    "bytes": 1254352,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "icons/PX2D_icon_bld_lumber_32.png",
+    "ok": true,
+    "bytes": 1262556,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "icons/PX2D_icon_bld_barracks_32.png",
+    "ok": true,
+    "bytes": 1200505,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "icons/PX2D_icon_bld_academy_32.png",
+    "ok": true,
+    "bytes": 1205786,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "icons/PX2D_icon_bld_warehouse_32.png",
+    "ok": true,
+    "bytes": 1205006,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "icons/PX2D_icon_bld_keep_32.png",
+    "ok": true,
+    "bytes": 1219616,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "icons/PX2D_icon_army_32.png",
+    "ok": true,
+    "bytes": 1201114,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "icons/PX2D_icon_formation_32.png",
+    "ok": true,
+    "bytes": 1211112,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  },
+  {
+    "file": "icons/PX2D_icon_battle_report_32.png",
+    "ok": true,
+    "bytes": 1241824,
+    "model": "wan2.7-image",
+    "endpoint": "token-plan"
+  }
+]
