@@ -1,7 +1,8 @@
 import { resolveAppUrl } from './paths.js';
 
 /** Bundled mock for offline / deploy-web-preview (static-preview only). */
-export const MOCK_SNAPSHOT_PATH = 'mock/demo_initial.json';
+export const MOCK_SNAPSHOT_URL = 'mock/demo_initial.json';
+export const MOCK_SNAPSHOT_PATH = MOCK_SNAPSHOT_URL;
 
 /**
  * Same-origin Janus mirror (relative to page base: /qjp/v1/… or :18093 /v1/…).
