@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>千軍破 · 戰術棋盤 static-preview</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>《千軍破》戰術棋盤 · static-preview</h1>
+      <p class="sub">
+        純靜態預覽（非 Cocos）。預設 mock JSON；<code>?live=1</code> 拉 Janus 開發鏡像。
+      </p>
+      <section class="hud" aria-live="polite">
+        <p id="hud-rate">timeFlowRateParts: —</p>
+        <p id="hud-frame">lockstep frame: —</p>
+        <p id="hud-mode"></p>
+        <p id="hud-status">Loading…</p>
+      </section>
+      <div class="board-panel">
+        <canvas id="board" width="560" height="560" aria-label="19 by 19 tactical board"></canvas>
+        <div id="char-cards" aria-label="Character cards v04"></div>
+      </div>
+      <footer>
+        詳見 <a href="./README.md">README.md</a>（本地 <code>npx serve</code>、Dev <code>/qjp/</code> 掛載）。
+      </footer>
+    </div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
