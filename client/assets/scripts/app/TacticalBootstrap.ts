@@ -53,6 +53,13 @@ export class TacticalBootstrap extends Component {
   @property
   localPlayerId = 0;
 
+  /**
+   * 可選：Janus tactical HTTP 根（如 `http://127.0.0.1:8090`）。
+   * 留空 → 瀏覽器預覽用同域相對 `v1/tactical/…`（對齊 Dev `/qjp/v1/` 或 `:18093/v1/`）。
+   */
+  @property
+  janusHttpTacticalBase = '';
+
   private poller: LiveViewSnapshotPoller | null = null;
   private boardView: TacticalBoardView | null = null;
   private boardInteraction: TacticalBoardInteraction | null = null;
@@ -61,6 +68,14 @@ export class TacticalBootstrap extends Component {
   private textureHudNote: string | null = null;
   private lastLiveSnapshotAtMs = 0;
   private livePollAgeTimer: ReturnType<typeof setInterval> | null = null;
+
+  private liveNetworkCfg(): typeof DEFAULT_NETWORK_STUB {
+    const base = this.janusHttpTacticalBase.trim();
+    return {
+      ...DEFAULT_NETWORK_STUB,
+      ...(base ? { janusHttpTacticalBase: base } : {}),
+    };
+  }
 
   onDestroy(): void {
     this.poller?.stop();
@@ -201,7 +216,7 @@ export class TacticalBootstrap extends Component {
           return;
         }
 
-        const submit = await submitTacticalMove(DEFAULT_NETWORK_STUB, {
+        const submit = await submitTacticalMove(this.liveNetworkCfg(), {
           battleId: this.liveBattleId,
           sessionId: '',
           playerId: unit.owner,
@@ -210,10 +225,14 @@ export class TacticalBootstrap extends Component {
           toY: to.y,
         });
         if (submit.accepted) {
-          hud.setNetworkStatus(`Live：指令已接受 frame=${submit.lockstepFrame ?? '?'}`);
+          const hashPart =
+            submit.stateHash != null ? ` hash=${submit.stateHash}` : '';
+          hud.setNetworkStatus(
+            `Live：指令已接受 frame=${submit.lockstepFrame ?? '?'}${hashPart}`,
+          );
           this.boardInteraction?.clearSelection();
         } else if (submit.stubOnly) {
-          hud.setNetworkStatus(submit.rejectReason ?? 'Live：指令已記錄（stub）');
+          hud.setNetworkStatus(submit.rejectReason ?? 'Live：HTTP 指令鏡像未部署');
           console.info('[TacticalBootstrap] live submit stub — use grpcurl SubmitTacticalCommand');
         } else {
           hud.setNetworkStatus(`Live 拒絕：${submit.rejectReason ?? 'unknown'}`);
@@ -230,7 +249,7 @@ export class TacticalBootstrap extends Component {
       charStrip.buildStrip();
       if (this.useLiveJanus) {
         this.poller = new LiveViewSnapshotPoller({
-          cfg: DEFAULT_NETWORK_STUB,
+          cfg: this.liveNetworkCfg(),
           battleId: this.liveBattleId,
           intervalMs: this.livePollIntervalMs,
           onSnapshot: (raw) => applySnapshot(raw, null),

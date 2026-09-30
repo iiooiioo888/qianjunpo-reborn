@@ -7,6 +7,12 @@ export interface TacticalNetworkConfig {
   janusGrpcPort: number;
   janusHttpPort: number;
   clientVersion: string;
+  /**
+   * Optional override for Janus tactical HTTP mirror base.
+   * Empty / unset → same-origin relative `v1/tactical/…` (Dev `/qjp/v1/…` or `:18093/v1/…`).
+   * Example override: `http://127.0.0.1:8090` for curl-aligned local smoke tests.
+   */
+  janusHttpTacticalBase?: string;
 }
 
 export const DEFAULT_NETWORK_STUB: TacticalNetworkConfig = {
@@ -15,6 +21,16 @@ export const DEFAULT_NETWORK_STUB: TacticalNetworkConfig = {
   janusHttpPort: 8090,
   clientVersion: '0.1.0-shell',
 };
+
+/** Resolve Janus tactical HTTP path (same-origin relative by default). */
+export function resolveTacticalHttpUrl(cfg: TacticalNetworkConfig, pathAndQuery: string): string {
+  const path = pathAndQuery.startsWith('/') ? pathAndQuery.slice(1) : pathAndQuery;
+  const base = cfg.janusHttpTacticalBase?.trim();
+  if (base) {
+    return `${base.replace(/\/$/, '')}/${path}`;
+  }
+  return path;
+}
 
 /** Dev HTTP mirror of JanusGateway.GetBattleSnapshot (browser-friendly). */
 export async function fetchLiveViewSnapshot(
@@ -26,7 +42,7 @@ export async function fetchLiveViewSnapshot(
   if (sessionId) {
     q.set('session_id', sessionId);
   }
-  const url = `http://${cfg.janusHost}:${cfg.janusHttpPort}/v1/tactical/snapshot?${q.toString()}`;
+  const url = resolveTacticalHttpUrl(cfg, `v1/tactical/snapshot?${q.toString()}`);
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Janus snapshot HTTP ${res.status}: ${await res.text()}`);

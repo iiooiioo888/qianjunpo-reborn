@@ -10,6 +10,9 @@ export const MOCK_SNAPSHOT_PATH = MOCK_SNAPSHOT_URL;
  */
 export const DEFAULT_LIVE_SNAPSHOT_URL = 'v1/tactical/snapshot?battle_id=default/0';
 
+/** Same-origin POST mirror (#50); override with `?commandUrl=`. */
+export const DEFAULT_LIVE_COMMAND_URL = 'v1/tactical/command';
+
 /** Local player owner id in duel mock (owner 0). */
 export const LOCAL_PLAYER_OWNER = 0;
 
@@ -30,8 +33,10 @@ export function parseBootConfig() {
   const live = params.get('live') === '1' || params.get('live') === 'true';
   const liveUrlRaw = params.get('liveUrl') || DEFAULT_LIVE_SNAPSHOT_URL;
   const liveUrl = resolveAppUrl(liveUrlRaw);
+  const commandUrlRaw = params.get('commandUrl') || DEFAULT_LIVE_COMMAND_URL;
+  const commandUrl = resolveAppUrl(commandUrlRaw);
   const showCards = params.get('cards') !== '0';
-  return { live, liveUrl, liveUrlRaw, showCards };
+  return { live, liveUrl, liveUrlRaw, commandUrl, commandUrlRaw, showCards };
 }
 
 export function mockSnapshotUrl() {

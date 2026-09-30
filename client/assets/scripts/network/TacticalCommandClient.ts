@@ -3,22 +3,39 @@ import {
   SubmitMoveResult,
   TacticalCommandKind,
 } from '../logic/TacticalCommandKinds';
-import { TacticalNetworkConfig } from './JanusGatewayStub';
+import { resolveTacticalHttpUrl, TacticalNetworkConfig } from './JanusGatewayStub';
+
+export interface SubmitTacticalCommandPayload extends SubmitMovePayload {
+  kind: number;
+}
+
+function parseCommandResponse(json: {
+  accepted?: boolean;
+  reject_reason?: string;
+  lockstep_frame?: number;
+  state_hash?: number;
+}): SubmitMoveResult {
+  return {
+    accepted: Boolean(json.accepted),
+    rejectReason: json.reject_reason,
+    lockstepFrame: json.lockstep_frame,
+    stateHash: json.state_hash,
+  };
+}
 
 /**
- * Janus SubmitTacticalCommand (gRPC) — browser preview has no gRPC yet.
- * Optional dev POST mirror (same host as snapshot); if missing, returns stubOnly.
+ * Janus SubmitTacticalCommand — browser uses same-origin POST mirror (#50).
  */
-export async function submitTacticalMove(
+export async function submitTacticalCommand(
   cfg: TacticalNetworkConfig,
-  payload: SubmitMovePayload,
+  payload: SubmitTacticalCommandPayload,
 ): Promise<SubmitMoveResult> {
-  const url = `http://${cfg.janusHost}:${cfg.janusHttpPort}/v1/tactical/command`;
+  const url = resolveTacticalHttpUrl(cfg, 'v1/tactical/command');
   const body = {
     session_id: payload.sessionId,
     battle_id: payload.battleId,
     player_id: payload.playerId,
-    kind: TacticalCommandKind.Move,
+    kind: payload.kind,
     unit_id: payload.unitId,
     to_x: payload.toX,
     to_y: payload.toY,
@@ -30,7 +47,7 @@ export async function submitTacticalMove(
       body: JSON.stringify(body),
     });
     if (res.status === 404 || res.status === 405) {
-      console.info('[TacticalCommandClient] no HTTP command mirror; stub payload', body);
+      console.info('[TacticalCommandClient] no HTTP command mirror; payload', body);
       return {
         accepted: false,
         stubOnly: true,
@@ -45,19 +62,22 @@ export async function submitTacticalMove(
       accepted?: boolean;
       reject_reason?: string;
       lockstep_frame?: number;
+      state_hash?: number;
     };
-    return {
-      accepted: Boolean(json.accepted),
-      rejectReason: json.reject_reason,
-      lockstepFrame: json.lockstep_frame,
-    };
+    return parseCommandResponse(json);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.info('[TacticalCommandClient] submit failed; stub payload', body, msg);
+    console.warn('[TacticalCommandClient] submit failed', body, msg);
     return {
       accepted: false,
-      stubOnly: true,
-      rejectReason: `網路錯誤（已記錄指令）：${msg}`,
+      rejectReason: `網路錯誤：${msg}`,
     };
   }
+}
+
+export async function submitTacticalMove(
+  cfg: TacticalNetworkConfig,
+  payload: SubmitMovePayload,
+): Promise<SubmitMoveResult> {
+  return submitTacticalCommand(cfg, { ...payload, kind: TacticalCommandKind.Move });
 }
