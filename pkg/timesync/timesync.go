@@ -1,6 +1,3 @@
-// Package timesync implements cross-region Wall/Sim dual timestamps and zone mapping
-// for Phase 4 (whitepaper v6.0 — 國戰與部署). Simulation ticks remain authoritative for
-// lockstep; wall clock is for I/O boundaries only.
 package timesync
 
 import (
@@ -12,6 +9,11 @@ import (
 type DualTime struct {
 	WallUnixMs int64
 	SimTick    int64
+}
+
+// Equal reports whether wall and sim match.
+func (d DualTime) Equal(o DualTime) bool {
+	return d.WallUnixMs == o.WallUnixMs && d.SimTick == o.SimTick
 }
 
 // Clock advances sim tick monotonically; wall time comes from injectable source.
@@ -61,6 +63,15 @@ func (m *Mapper) MapCrossZone(src, dst ZoneID, srcSimTick int64) (int64, error) 
 	}
 	_ = src
 	return srcSimTick + off, nil
+}
+
+// MapCrossZoneDual maps sim tick and preserves wall time at handoff (wall is not remapped).
+func (m *Mapper) MapCrossZoneDual(src, dst ZoneID, at DualTime) (DualTime, error) {
+	sim, err := m.MapCrossZone(src, dst, at.SimTick)
+	if err != nil {
+		return DualTime{}, err
+	}
+	return DualTime{WallUnixMs: at.WallUnixMs, SimTick: sim}, nil
 }
 
 // FreezePolicy pauses sim advancement while a cross-zone move is in flight.
