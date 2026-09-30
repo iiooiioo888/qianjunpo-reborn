@@ -7,6 +7,10 @@ type DamageRules struct {
 	// ArmorK enables ratio mitigation: dmg = max(0, atk * K / (K + def)).
 	// Zero keeps legacy dmg = max(0, atk - def).
 	ArmorK int64 `json:"armor_k"`
+	// CritRate: on hit, roll in [0, den); crit when roll < num. Zero num/den disables crit.
+	CritRate Ratio `json:"crit_rate"`
+	// CritMul multiplies post-mitigation damage on crit (e.g. 150/100). Ignored when crit disabled.
+	CritMul Ratio `json:"crit_mul"`
 }
 
 // Damage applies simple ATK - DEF clamped at zero (FP64).
@@ -36,4 +40,37 @@ func (c Config) ResolveDamage(atk, def fixed.Fixed) fixed.Fixed {
 		return Damage(atk, def)
 	}
 	return DamageArmor(atk, def, fixed.FromInt(c.Damage.ArmorK))
+}
+
+// CritEnabled reports whether crit_rate is configured for this rules snapshot.
+func (c Config) CritEnabled() bool {
+	return c.Damage.CritRate.Num > 0 && c.Damage.CritRate.Den > 0
+}
+
+// RollCrit is deterministic: roll mod den < num.
+func RollCrit(roll uint64, rate Ratio) bool {
+	if rate.Num <= 0 || rate.Den <= 0 {
+		return false
+	}
+	return roll%uint64(rate.Den) < uint64(rate.Num)
+}
+
+// ApplyCritMultiplier scales damage by crit_mul; invalid mul returns dmg unchanged.
+func ApplyCritMultiplier(dmg fixed.Fixed, mul Ratio) fixed.Fixed {
+	if dmg.Raw() <= 0 || mul.Num <= 0 || mul.Den <= 0 {
+		return dmg
+	}
+	fx, err := mul.ToFixed()
+	if err != nil {
+		return dmg
+	}
+	return dmg.Mul(fx)
+}
+
+// ApplyCritToDamage optionally multiplies dmg when roll passes crit_rate.
+func (c Config) ApplyCritToDamage(dmg fixed.Fixed, roll uint64) fixed.Fixed {
+	if !c.CritEnabled() || !RollCrit(roll, c.Damage.CritRate) {
+		return dmg
+	}
+	return ApplyCritMultiplier(dmg, c.Damage.CritMul)
 }

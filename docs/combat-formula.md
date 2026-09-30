@@ -21,7 +21,10 @@
 2. 傷害（`combat.ResolveDamage`，由 `damage.armor_k` 決定）：
    - `armor_k = 0`（預設）：`Damage = max(0, FinalATK − defender.BaseDEF)`
    - `armor_k > 0`：`Damage = max(0, FinalATK × K / (K + defender.BaseDEF))`
-3. `HP' = HP − Damage`
+3. 暴擊（可選，`damage.crit_rate` / `damage.crit_mul`；預設未配置則關閉、不消耗 RNG）：
+   - `crit_rate` 為整數比 `num/den`：戰術層以 `roll % den < num` 判定暴擊
+   - 暴擊時 `Damage = Damage × crit_mul`（整數比，FP64）
+4. `HP' = HP − Damage`
 
 戰術層攻擊距離：目標格與攻擊者 Chebyshev 距離須滿足 `1 ≤ d ≤ Range`（`Range` 來自兵種目錄）。
 
