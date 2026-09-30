@@ -4,7 +4,7 @@
 
 > 產線與 ComfyUI／worker 對接說明見 [`docs/aigc/PIPELINE.md`](../docs/aigc/PIPELINE.md)。本目錄負責 **檔案落位、命名與審核狀態**；`assets/import/` 仍為引擎匯入與 manifest 的執行層（見 PIPELINE「Asset import path」）。
 
-Notion 美術專區（任務、風格板、審核紀錄）：**Notion「🎨 千軍破美術」**（連結由團隊在 Notion 內維護；檔名與資產 ID 須與本 README 一致）。
+Notion 美術專區（任務、風格板、審核紀錄）：[美術首頁](https://app.notion.com/p/3eb3a44d333d81f6ba0dc8ab43e20164)（🎨 千軍破美術）；文檔總覽見 [Notion 文檔總覽](https://app.notion.com/p/3eb3a44d333d8114a5dbd891c9e831b4)。檔名與資產 ID 須與本 README 及 Notion 登記一致。
 
 ---
 
@@ -49,7 +49,7 @@ Notion 美術專區（任務、風格板、審核紀錄）：**Notion「🎨 千
 | `MDL_` | `MDL_cavalry_low_v01.glb` | 3D 匯出模型 |
 | `VFX_` | `VFX_arrow_trail_v01.png` | 3D／特效相關貼圖或序列 |
 
-完整 ID 登記表以 Notion「🎨 千軍破美術」為準；新增前缀前請在 Notion 登記，避免與程式內容鍵衝突。
+完整 ID 登記表以 [美術首頁](https://app.notion.com/p/3eb3a44d333d81f6ba0dc8ab43e20164) 為準；新增前缀前請在 Notion 登記，避免與程式內容鍵衝突。
 
 ---
 
@@ -84,7 +84,7 @@ Notion 美術專區（任務、風格板、審核紀錄）：**Notion「🎨 千
 
 1. **AIGC 或草稿** 一律先放入對應管線的 `art/<管線>/_wip/`（或 `art/prompts/` 記錄參數）。
 2. **未過審** 的生成圖 **不得** 直接放入 `characters/`、`tiles/` 等正式目錄。
-3. 美術／營運在 Notion「🎨 千軍破美術」標記通過後：
+3. 美術／營運在 [美術首頁](https://app.notion.com/p/3eb3a44d333d81f6ba0dc8ab43e20164) 標記通過後：
    - 將檔案 **移動**（非僅複製）到正式目錄並確認檔名符合資產 ID；
    - 刪除或清空 `_wip` 中對應舊稿，避免重複 ID；
    - 依 [`docs/aigc/PIPELINE.md`](../docs/aigc/PIPELINE.md) 必要時再匯出至 `assets/import/` 並更新 manifest。
@@ -103,4 +103,5 @@ Notion 美術專區（任務、風格板、審核紀錄）：**Notion「🎨 千
 ## 相關文件
 
 - [AIGC 產線 stub](../docs/aigc/PIPELINE.md) — worker、ComfyUI、匯入 `assets/import/`
-- Notion「🎨 千軍破美術」— 風格、任務、審核狀態（主資料源）
+- [Notion 美術首頁](https://app.notion.com/p/3eb3a44d333d81f6ba0dc8ab43e20164) — 風格、任務、審核狀態（主資料源）
+- [Notion 文檔總覽](https://app.notion.com/p/3eb3a44d333d8114a5dbd891c9e831b4) — 項目文檔索引
