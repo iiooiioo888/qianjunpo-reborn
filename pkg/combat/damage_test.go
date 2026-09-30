@@ -77,12 +77,66 @@ func TestDefaultConfigCritDisabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if cfg.HitEnabled() {
+		t.Fatal("embedded default must not enable hit roll")
+	}
 	if cfg.CritEnabled() {
 		t.Fatal("embedded default must not enable crit")
 	}
 	base := fixed.FromInt(20)
+	if got := cfg.ApplyHitToDamage(base, 0); got.Raw() != base.Raw() {
+		t.Fatalf("hit off: got %d want %d", got.Raw(), base.Raw())
+	}
 	if got := cfg.ApplyCritToDamage(base, 0); got.Raw() != base.Raw() {
 		t.Fatalf("crit off: got %d want %d", got.Raw(), base.Raw())
+	}
+}
+
+func TestRollHitDeterministic(t *testing.T) {
+	rate := Ratio{Num: 3, Den: 4}
+	if !RollHit(0, rate) {
+		t.Fatal("roll 0 should hit")
+	}
+	if !RollHit(2, rate) {
+		t.Fatal("roll 2 should hit")
+	}
+	if RollHit(3, rate) {
+		t.Fatal("roll 3 should miss")
+	}
+}
+
+func TestApplyHitToDamageFromConfig(t *testing.T) {
+	data := []byte(`{
+  "version": 1,
+  "damage": {
+    "hit_rate": {"num": 1, "den": 2}
+  },
+  "counters": {
+    "matrix": [
+      [{"num": 100, "den": 100}, {"num": 100, "den": 100}, {"num": 100, "den": 100}],
+      [{"num": 100, "den": 100}, {"num": 100, "den": 100}, {"num": 100, "den": 100}],
+      [{"num": 100, "den": 100}, {"num": 100, "den": 100}, {"num": 100, "den": 100}]
+    ]
+  },
+  "units": {
+    "infantry": {"base_hp": 1, "base_atk": 1, "base_def": 1, "move": 1, "range": 1, "cost_food": 0, "cost_gold": 0},
+    "archer": {"base_hp": 1, "base_atk": 1, "base_def": 1, "move": 1, "range": 1, "cost_food": 0, "cost_gold": 0},
+    "cavalry": {"base_hp": 1, "base_atk": 1, "base_def": 1, "move": 1, "range": 1, "cost_food": 0, "cost_gold": 0}
+  }
+}`)
+	cfg, err := LoadBytes(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.HitEnabled() {
+		t.Fatal("expected hit roll enabled")
+	}
+	base := fixed.FromInt(20)
+	if got := cfg.ApplyHitToDamage(base, 0); got.Raw() != base.Raw() {
+		t.Fatalf("hit roll 0: got %d want %d", got.Raw(), base.Raw())
+	}
+	if got := cfg.ApplyHitToDamage(base, 1); got.Raw() != 0 {
+		t.Fatalf("miss roll 1: got %d want 0", got.Raw())
 	}
 }
 

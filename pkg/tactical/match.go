@@ -262,7 +262,10 @@ func (m *Match) apply(cmd Command) {
 		}
 		atk := combat.FinalATK(u.Stats, defender.Stats, m.counters)
 		dmg := m.combatCfg.ResolveDamage(atk, defender.Stats.BaseDEF)
-		if m.combatCfg.CritEnabled() {
+		if m.combatCfg.HitEnabled() {
+			dmg = m.combatCfg.ApplyHitToDamage(dmg, m.RNG.NextUint64())
+		}
+		if m.combatCfg.CritEnabled() && dmg.Raw() > 0 {
 			dmg = m.combatCfg.ApplyCritToDamage(dmg, m.RNG.NextUint64())
 		}
 		defender.Stats.HP = defender.Stats.HP.Sub(dmg)

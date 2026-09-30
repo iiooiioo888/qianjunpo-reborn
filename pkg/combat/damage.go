@@ -7,6 +7,8 @@ type DamageRules struct {
 	// ArmorK enables ratio mitigation: dmg = max(0, atk * K / (K + def)).
 	// Zero keeps legacy dmg = max(0, atk - def).
 	ArmorK int64 `json:"armor_k"`
+	// HitRate: before crit, roll in [0, den); hit when roll < num. Zero num/den disables miss roll (always hit).
+	HitRate Ratio `json:"hit_rate"`
 	// CritRate: on hit, roll in [0, den); crit when roll < num. Zero num/den disables crit.
 	CritRate Ratio `json:"crit_rate"`
 	// CritMul multiplies post-mitigation damage on crit (e.g. 150/100). Ignored when crit disabled.
@@ -42,17 +44,39 @@ func (c Config) ResolveDamage(atk, def fixed.Fixed) fixed.Fixed {
 	return DamageArmor(atk, def, fixed.FromInt(c.Damage.ArmorK))
 }
 
+// HitEnabled reports whether hit_rate is configured for this rules snapshot.
+func (c Config) HitEnabled() bool {
+	return c.Damage.HitRate.Num > 0 && c.Damage.HitRate.Den > 0
+}
+
 // CritEnabled reports whether crit_rate is configured for this rules snapshot.
 func (c Config) CritEnabled() bool {
 	return c.Damage.CritRate.Num > 0 && c.Damage.CritRate.Den > 0
 }
 
+// RollHit is deterministic: roll mod den < num (same rule shape as crit).
+func RollHit(roll uint64, rate Ratio) bool {
+	return rollPass(roll, rate)
+}
+
 // RollCrit is deterministic: roll mod den < num.
 func RollCrit(roll uint64, rate Ratio) bool {
+	return rollPass(roll, rate)
+}
+
+func rollPass(roll uint64, rate Ratio) bool {
 	if rate.Num <= 0 || rate.Den <= 0 {
 		return false
 	}
 	return roll%uint64(rate.Den) < uint64(rate.Num)
+}
+
+// ApplyHitToDamage returns zero on miss when hit_rate is enabled; otherwise returns dmg unchanged.
+func (c Config) ApplyHitToDamage(dmg fixed.Fixed, roll uint64) fixed.Fixed {
+	if !c.HitEnabled() || RollHit(roll, c.Damage.HitRate) {
+		return dmg
+	}
+	return fixed.Zero
 }
 
 // ApplyCritMultiplier scales damage by crit_mul; invalid mul returns dmg unchanged.
