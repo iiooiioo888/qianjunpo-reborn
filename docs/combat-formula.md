@@ -34,7 +34,7 @@
 - 目標格與攻擊者 Chebyshev 距離須滿足 `1 ≤ d ≤ Range`（`Range` 來自兵種目錄）。
 - **遠程**（目錄 `range > 1`，如弓兵）：另須 `combat.AttackLineClear`——沿 8 向直線步進的射線上每一格地形可通行，且除攻擊者／目標單位外不得有第三方單位占位（與 `pathfind.ExpandSegment` 同 trace）。
 - **近戰**（`range ≤ 1`）：僅 Chebyshev 距離，不檢查射線。
-- **遠程單體 `KindAttack` 與 LOS**：射線暢通時 `validateAttack` 通過並在 lockstep 執行後對目標套傷；被第三方單位或地形擋住則 `validate.CodeBlocked`（暢通見 `TestSubmitKindAttackRangedLoSClearDamagesEnemy`，阻擋見 `TestSubmitKindAttackLoSBlockedRejected`；盤面與 #64 AoE 對稱）。
+- **遠程單體 `KindAttack` 與 LOS**：射線暢通時 `validateAttack` 通過並在 lockstep 執行後對目標套傷；被第三方單位或不可通行地形擋住則 `validate.CodeBlocked`（暢通見 `TestSubmitKindAttackRangedLoSClearDamagesEnemy`；單位占位阻擋見 `TestSubmitKindAttackLoSBlockedRejected`；射線上不可通行地形見 `TestSubmitKindAttackLoSTerrainBlockedRejected`；盤面與 #64 AoE 對稱）。
 
 ## 終局條件（`pkg/tactical`）
 
