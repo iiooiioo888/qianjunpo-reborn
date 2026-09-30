@@ -10,6 +10,10 @@ option go_package = "github.com/iiooiioo888/qianjunpo-reborn/gen/go/gateway/v1;g
 service JanusGateway {
   rpc Connect(ConnectRequest) returns (ConnectResponse);
   rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  // Forwards to Roma authoritative tactical / lockstep battle partition.
+  rpc EnterBattle(EnterBattleRequest) returns (EnterBattleResponse);
+  rpc SubmitTacticalCommand(SubmitTacticalCommandRequest) returns (SubmitTacticalCommandResponse);
+  rpc StepTacticalLockstep(StepTacticalLockstepRequest) returns (StepTacticalLockstepResponse);
 }
 
 message ConnectRequest {
@@ -31,4 +35,46 @@ message HeartbeatRequest {
 
 message HeartbeatResponse {
   qianjunpo.common.v1.DualTimestamp server_time = 1;
+}
+
+message EnterBattleRequest {
+  string session_id = 1;
+  string access_token = 2;
+  qianjunpo.common.v1.ZoneRef target_zone = 3;
+}
+
+message EnterBattleResponse {
+  string battle_id = 1;
+  qianjunpo.common.v1.DualTimestamp sim_time = 2;
+  uint64 initial_state_hash = 3;
+}
+
+message SubmitTacticalCommandRequest {
+  string session_id = 1;
+  string battle_id = 2;
+  uint32 player_id = 3;
+  uint32 kind = 4;
+  uint32 unit_id = 5;
+  int32 to_x = 6;
+  int32 to_y = 7;
+}
+
+message SubmitTacticalCommandResponse {
+  bool accepted = 1;
+  string reject_reason = 2;
+  uint64 state_hash = 3;
+  uint64 lockstep_frame = 4;
+}
+
+message StepTacticalLockstepRequest {
+  string session_id = 1;
+  string battle_id = 2;
+  uint32 steps = 3;
+}
+
+message StepTacticalLockstepResponse {
+  uint64 lockstep_frame = 1;
+  uint64 state_hash = 2;
+  bool finished = 3;
+  uint32 winner = 4;
 }

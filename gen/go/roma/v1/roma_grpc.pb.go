@@ -19,9 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	RomaZone_JoinZone_FullMethodName       = "/qianjunpo.roma.v1.RomaZone/JoinZone"
-	RomaZone_GetBattleState_FullMethodName = "/qianjunpo.roma.v1.RomaZone/GetBattleState"
-	RomaZone_SubmitCommand_FullMethodName  = "/qianjunpo.roma.v1.RomaZone/SubmitCommand"
+	RomaZone_JoinZone_FullMethodName              = "/qianjunpo.roma.v1.RomaZone/JoinZone"
+	RomaZone_GetBattleState_FullMethodName        = "/qianjunpo.roma.v1.RomaZone/GetBattleState"
+	RomaZone_SubmitCommand_FullMethodName         = "/qianjunpo.roma.v1.RomaZone/SubmitCommand"
+	RomaZone_SubmitTacticalCommand_FullMethodName = "/qianjunpo.roma.v1.RomaZone/SubmitTacticalCommand"
+	RomaZone_StepLockstep_FullMethodName          = "/qianjunpo.roma.v1.RomaZone/StepLockstep"
 )
 
 // RomaZoneClient is the client API for RomaZone service.
@@ -34,6 +36,9 @@ type RomaZoneClient interface {
 	JoinZone(ctx context.Context, in *JoinZoneRequest, opts ...grpc.CallOption) (*JoinZoneResponse, error)
 	GetBattleState(ctx context.Context, in *GetBattleStateRequest, opts ...grpc.CallOption) (*BattleState, error)
 	SubmitCommand(ctx context.Context, in *SubmitCommandRequest, opts ...grpc.CallOption) (*SubmitCommandResponse, error)
+	// Phase 2 deepen: authoritative pkg/tactical lockstep path.
+	SubmitTacticalCommand(ctx context.Context, in *SubmitTacticalCommandRequest, opts ...grpc.CallOption) (*SubmitTacticalCommandResponse, error)
+	StepLockstep(ctx context.Context, in *StepLockstepRequest, opts ...grpc.CallOption) (*StepLockstepResponse, error)
 }
 
 type romaZoneClient struct {
@@ -74,6 +79,26 @@ func (c *romaZoneClient) SubmitCommand(ctx context.Context, in *SubmitCommandReq
 	return out, nil
 }
 
+func (c *romaZoneClient) SubmitTacticalCommand(ctx context.Context, in *SubmitTacticalCommandRequest, opts ...grpc.CallOption) (*SubmitTacticalCommandResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitTacticalCommandResponse)
+	err := c.cc.Invoke(ctx, RomaZone_SubmitTacticalCommand_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *romaZoneClient) StepLockstep(ctx context.Context, in *StepLockstepRequest, opts ...grpc.CallOption) (*StepLockstepResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StepLockstepResponse)
+	err := c.cc.Invoke(ctx, RomaZone_StepLockstep_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RomaZoneServer is the server API for RomaZone service.
 // All implementations must embed UnimplementedRomaZoneServer
 // for forward compatibility.
@@ -84,6 +109,9 @@ type RomaZoneServer interface {
 	JoinZone(context.Context, *JoinZoneRequest) (*JoinZoneResponse, error)
 	GetBattleState(context.Context, *GetBattleStateRequest) (*BattleState, error)
 	SubmitCommand(context.Context, *SubmitCommandRequest) (*SubmitCommandResponse, error)
+	// Phase 2 deepen: authoritative pkg/tactical lockstep path.
+	SubmitTacticalCommand(context.Context, *SubmitTacticalCommandRequest) (*SubmitTacticalCommandResponse, error)
+	StepLockstep(context.Context, *StepLockstepRequest) (*StepLockstepResponse, error)
 	mustEmbedUnimplementedRomaZoneServer()
 }
 
@@ -102,6 +130,12 @@ func (UnimplementedRomaZoneServer) GetBattleState(context.Context, *GetBattleSta
 }
 func (UnimplementedRomaZoneServer) SubmitCommand(context.Context, *SubmitCommandRequest) (*SubmitCommandResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SubmitCommand not implemented")
+}
+func (UnimplementedRomaZoneServer) SubmitTacticalCommand(context.Context, *SubmitTacticalCommandRequest) (*SubmitTacticalCommandResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitTacticalCommand not implemented")
+}
+func (UnimplementedRomaZoneServer) StepLockstep(context.Context, *StepLockstepRequest) (*StepLockstepResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StepLockstep not implemented")
 }
 func (UnimplementedRomaZoneServer) mustEmbedUnimplementedRomaZoneServer() {}
 func (UnimplementedRomaZoneServer) testEmbeddedByValue()                  {}
@@ -178,6 +212,42 @@ func _RomaZone_SubmitCommand_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RomaZone_SubmitTacticalCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitTacticalCommandRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RomaZoneServer).SubmitTacticalCommand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RomaZone_SubmitTacticalCommand_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RomaZoneServer).SubmitTacticalCommand(ctx, req.(*SubmitTacticalCommandRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _RomaZone_StepLockstep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StepLockstepRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RomaZoneServer).StepLockstep(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RomaZone_StepLockstep_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RomaZoneServer).StepLockstep(ctx, req.(*StepLockstepRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RomaZone_ServiceDesc is the grpc.ServiceDesc for RomaZone service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -196,6 +266,14 @@ var RomaZone_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SubmitCommand",
 			Handler:    _RomaZone_SubmitCommand_Handler,
+		},
+		{
+			MethodName: "SubmitTacticalCommand",
+			Handler:    _RomaZone_SubmitTacticalCommand_Handler,
+		},
+		{
+			MethodName: "StepLockstep",
+			Handler:    _RomaZone_StepLockstep_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

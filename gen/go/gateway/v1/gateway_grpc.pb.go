@@ -19,8 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	JanusGateway_Connect_FullMethodName   = "/qianjunpo.gateway.v1.JanusGateway/Connect"
-	JanusGateway_Heartbeat_FullMethodName = "/qianjunpo.gateway.v1.JanusGateway/Heartbeat"
+	JanusGateway_Connect_FullMethodName               = "/qianjunpo.gateway.v1.JanusGateway/Connect"
+	JanusGateway_Heartbeat_FullMethodName             = "/qianjunpo.gateway.v1.JanusGateway/Heartbeat"
+	JanusGateway_EnterBattle_FullMethodName           = "/qianjunpo.gateway.v1.JanusGateway/EnterBattle"
+	JanusGateway_SubmitTacticalCommand_FullMethodName = "/qianjunpo.gateway.v1.JanusGateway/SubmitTacticalCommand"
+	JanusGateway_StepTacticalLockstep_FullMethodName  = "/qianjunpo.gateway.v1.JanusGateway/StepTacticalLockstep"
 )
 
 // JanusGatewayClient is the client API for JanusGateway service.
@@ -31,6 +34,10 @@ const (
 type JanusGatewayClient interface {
 	Connect(ctx context.Context, in *ConnectRequest, opts ...grpc.CallOption) (*ConnectResponse, error)
 	Heartbeat(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
+	// Forwards to Roma authoritative tactical / lockstep battle partition.
+	EnterBattle(ctx context.Context, in *EnterBattleRequest, opts ...grpc.CallOption) (*EnterBattleResponse, error)
+	SubmitTacticalCommand(ctx context.Context, in *SubmitTacticalCommandRequest, opts ...grpc.CallOption) (*SubmitTacticalCommandResponse, error)
+	StepTacticalLockstep(ctx context.Context, in *StepTacticalLockstepRequest, opts ...grpc.CallOption) (*StepTacticalLockstepResponse, error)
 }
 
 type janusGatewayClient struct {
@@ -61,6 +68,36 @@ func (c *janusGatewayClient) Heartbeat(ctx context.Context, in *HeartbeatRequest
 	return out, nil
 }
 
+func (c *janusGatewayClient) EnterBattle(ctx context.Context, in *EnterBattleRequest, opts ...grpc.CallOption) (*EnterBattleResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EnterBattleResponse)
+	err := c.cc.Invoke(ctx, JanusGateway_EnterBattle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *janusGatewayClient) SubmitTacticalCommand(ctx context.Context, in *SubmitTacticalCommandRequest, opts ...grpc.CallOption) (*SubmitTacticalCommandResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitTacticalCommandResponse)
+	err := c.cc.Invoke(ctx, JanusGateway_SubmitTacticalCommand_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *janusGatewayClient) StepTacticalLockstep(ctx context.Context, in *StepTacticalLockstepRequest, opts ...grpc.CallOption) (*StepTacticalLockstepResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StepTacticalLockstepResponse)
+	err := c.cc.Invoke(ctx, JanusGateway_StepTacticalLockstep_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // JanusGatewayServer is the server API for JanusGateway service.
 // All implementations must embed UnimplementedJanusGatewayServer
 // for forward compatibility.
@@ -69,6 +106,10 @@ func (c *janusGatewayClient) Heartbeat(ctx context.Context, in *HeartbeatRequest
 type JanusGatewayServer interface {
 	Connect(context.Context, *ConnectRequest) (*ConnectResponse, error)
 	Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
+	// Forwards to Roma authoritative tactical / lockstep battle partition.
+	EnterBattle(context.Context, *EnterBattleRequest) (*EnterBattleResponse, error)
+	SubmitTacticalCommand(context.Context, *SubmitTacticalCommandRequest) (*SubmitTacticalCommandResponse, error)
+	StepTacticalLockstep(context.Context, *StepTacticalLockstepRequest) (*StepTacticalLockstepResponse, error)
 	mustEmbedUnimplementedJanusGatewayServer()
 }
 
@@ -84,6 +125,15 @@ func (UnimplementedJanusGatewayServer) Connect(context.Context, *ConnectRequest)
 }
 func (UnimplementedJanusGatewayServer) Heartbeat(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Heartbeat not implemented")
+}
+func (UnimplementedJanusGatewayServer) EnterBattle(context.Context, *EnterBattleRequest) (*EnterBattleResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnterBattle not implemented")
+}
+func (UnimplementedJanusGatewayServer) SubmitTacticalCommand(context.Context, *SubmitTacticalCommandRequest) (*SubmitTacticalCommandResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitTacticalCommand not implemented")
+}
+func (UnimplementedJanusGatewayServer) StepTacticalLockstep(context.Context, *StepTacticalLockstepRequest) (*StepTacticalLockstepResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StepTacticalLockstep not implemented")
 }
 func (UnimplementedJanusGatewayServer) mustEmbedUnimplementedJanusGatewayServer() {}
 func (UnimplementedJanusGatewayServer) testEmbeddedByValue()                      {}
@@ -142,6 +192,60 @@ func _JanusGateway_Heartbeat_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _JanusGateway_EnterBattle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnterBattleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JanusGatewayServer).EnterBattle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: JanusGateway_EnterBattle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JanusGatewayServer).EnterBattle(ctx, req.(*EnterBattleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JanusGateway_SubmitTacticalCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitTacticalCommandRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JanusGatewayServer).SubmitTacticalCommand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: JanusGateway_SubmitTacticalCommand_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JanusGatewayServer).SubmitTacticalCommand(ctx, req.(*SubmitTacticalCommandRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JanusGateway_StepTacticalLockstep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StepTacticalLockstepRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JanusGatewayServer).StepTacticalLockstep(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: JanusGateway_StepTacticalLockstep_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JanusGatewayServer).StepTacticalLockstep(ctx, req.(*StepTacticalLockstepRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // JanusGateway_ServiceDesc is the grpc.ServiceDesc for JanusGateway service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -156,6 +260,18 @@ var JanusGateway_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Heartbeat",
 			Handler:    _JanusGateway_Heartbeat_Handler,
+		},
+		{
+			MethodName: "EnterBattle",
+			Handler:    _JanusGateway_EnterBattle_Handler,
+		},
+		{
+			MethodName: "SubmitTacticalCommand",
+			Handler:    _JanusGateway_SubmitTacticalCommand_Handler,
+		},
+		{
+			MethodName: "StepTacticalLockstep",
+			Handler:    _JanusGateway_StepTacticalLockstep_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
