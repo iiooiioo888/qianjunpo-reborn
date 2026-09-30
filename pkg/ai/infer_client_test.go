@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestInferClientMockHTTP(t *testing.T) {
@@ -33,6 +34,30 @@ func TestInferClientNPCFallback(t *testing.T) {
 	out := c.Infer(context.Background(), "guard", "defend")
 	if out.Text != NPCFallback("guard") {
 		t.Fatalf("%q", out.Text)
+	}
+}
+
+func TestInferClientSlowInferFallsBackWithinDeadline(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Slower than client HTTPTimeout; short enough not to stall test teardown.
+		time.Sleep(300 * time.Millisecond)
+		_ = json.NewEncoder(w).Encode(map[string]string{"text": "late"})
+	}))
+	defer srv.Close()
+
+	c := &InferClient{
+		BaseURL:        srv.URL,
+		RequestTimeout: 200 * time.Millisecond,
+		HTTPTimeout:    150 * time.Millisecond,
+	}
+	start := time.Now()
+	out := c.Infer(context.Background(), "guard", "hold")
+	elapsed := time.Since(start)
+	if out.Text != NPCFallback("guard") {
+		t.Fatalf("expected NPC fallback, got %q", out.Text)
+	}
+	if elapsed > 500*time.Millisecond {
+		t.Fatalf("fallback took too long: %v", elapsed)
 	}
 }
 

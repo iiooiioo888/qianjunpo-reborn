@@ -46,3 +46,29 @@ func TestOllamaHealthDegraded(t *testing.T) {
 		t.Fatalf("%+v", h)
 	}
 }
+
+func TestOllamaHealthProbeTimesOut(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/tags" {
+			<-r.Context().Done()
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+
+	be := &OllamaBackend{
+		BaseURL:            srv.URL,
+		ModelName:          "qwen2.5:3b",
+		HealthProbeTimeout: 80 * time.Millisecond,
+	}
+	start := time.Now()
+	h := be.Health(context.Background())
+	elapsed := time.Since(start)
+	if h.Ready || h.Status != "degraded" {
+		t.Fatalf("%+v", h)
+	}
+	if elapsed > 400*time.Millisecond {
+		t.Fatalf("health probe should fail fast, took %v", elapsed)
+	}
+}

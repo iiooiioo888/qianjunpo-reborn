@@ -11,12 +11,17 @@ import (
 	"time"
 )
 
+// DefaultHealthProbeTimeout caps Ollama /api/tags probes (separate from long infer calls).
+const DefaultHealthProbeTimeout = 2 * time.Second
+
 // OllamaBackend calls an OpenAI-compatible chat API (Ollama default :11434/v1).
 type OllamaBackend struct {
 	BaseURL    string
 	ModelName  string
 	HTTPClient *http.Client
-	Clock      Clock
+	// HealthProbeTimeout limits /api/tags latency; zero uses DefaultHealthProbeTimeout.
+	HealthProbeTimeout time.Duration
+	Clock              Clock
 }
 
 func (o *OllamaBackend) Name() string  { return "ollama" }
@@ -27,6 +32,23 @@ func (o *OllamaBackend) client() *http.Client {
 		return o.HTTPClient
 	}
 	return &http.Client{Timeout: 120 * time.Second}
+}
+
+func (o *OllamaBackend) healthProbeTimeout(ctx context.Context) time.Duration {
+	if o.HealthProbeTimeout > 0 {
+		return o.HealthProbeTimeout
+	}
+	if deadline, ok := ctx.Deadline(); ok {
+		if d := time.Until(deadline); d > 0 {
+			return d
+		}
+		return time.Millisecond
+	}
+	return DefaultHealthProbeTimeout
+}
+
+func (o *OllamaBackend) healthClient(ctx context.Context) *http.Client {
+	return &http.Client{Timeout: o.healthProbeTimeout(ctx)}
 }
 
 func (o *OllamaBackend) clock() Clock {
@@ -49,7 +71,7 @@ func (o *OllamaBackend) Health(ctx context.Context) Health {
 		h.Detail = err.Error()
 		return h
 	}
-	resp, err := o.client().Do(req)
+	resp, err := o.healthClient(ctx).Do(req)
 	if err != nil {
 		h.Status = "degraded"
 		h.Detail = "ollama unreachable: " + err.Error()
