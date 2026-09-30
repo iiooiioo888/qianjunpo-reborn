@@ -30,9 +30,16 @@ func (c *RAGInferClient) InferWithContext(ctx context.Context, persona, userProm
 		}
 	}
 	if c.Infer == nil {
-		return npcResult(persona, FallbackReasonNoInferClient, "")
+		return npcFallbackResult(persona, FallbackReasonNoInferClient, "", c.shouldLogFallback())
 	}
 	return c.Infer.Infer(ctx, persona, augmented)
+}
+
+func (c *RAGInferClient) shouldLogFallback() bool {
+	if c.Infer != nil {
+		return c.Infer.shouldLogFallback()
+	}
+	return true
 }
 
 func buildRAGPrompt(contextBlock, persona, userPrompt string) string {

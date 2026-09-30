@@ -151,16 +151,21 @@ func TestRAGInferWiring(t *testing.T) {
 }
 
 func TestRAGInferNoInferClient(t *testing.T) {
-	store, err := DefaultRAGInferClient("http://example.com")
-	if err != nil {
-		t.Fatal(err)
-	}
-	store.Infer = nil
-	out := store.InferWithContext(context.Background(), "merchant", "escort wagons")
-	if out.Source != SourceNPC || out.FallbackReason != FallbackReasonNoInferClient {
-		t.Fatalf("%+v", out)
-	}
-	if out.Text != NPCFallback("merchant") {
-		t.Fatalf("%q", out.Text)
+	logs := withSlogCapture(t, func() {
+		store, err := DefaultRAGInferClient("http://example.com")
+		if err != nil {
+			t.Fatal(err)
+		}
+		store.Infer = nil
+		out := store.InferWithContext(context.Background(), "merchant", "escort wagons")
+		if out.Source != SourceNPC || out.FallbackReason != FallbackReasonNoInferClient {
+			t.Fatalf("%+v", out)
+		}
+		if out.Text != NPCFallback("merchant") {
+			t.Fatalf("%q", out.Text)
+		}
+	})
+	if !strings.Contains(logs, "fallback_reason") {
+		t.Fatalf("expected structured fallback log, got %q", logs)
 	}
 }

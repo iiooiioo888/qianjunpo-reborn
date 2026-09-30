@@ -97,7 +97,13 @@ When `backend=ollama` and Ollama is down, `/health` returns HTTP 200 with `statu
 
 Legacy aliases still resolve (e.g. `cao_cao` → `char_caocao`, `zhang_fei` / `zhangfei` → `char_zhangfei`). Generic tactical roles `guard`, `scout`, `strategist`, `merchant` remain for non-card NPCs. Older general ids (`guan_yu`, `liu_bei`, …) keep their lines but are not v04 card keys. Spaces/hyphens normalize to underscores. Unknown personas get `"For the realm!"`.
 
-On NPC fallback, `InferClient` emits structured `slog` (`ai infer npc fallback`). Set `LogFallback=false` on the client to silence in tests.
+On NPC fallback, `InferClient` and `RAGInferClient` emit structured `slog` at info level (`msg=ai infer npc fallback`) with `source=npc`, `fallback_reason`, and `fallback_detail` (optional `persona`). Example log line:
+
+```text
+{"time":"…","level":"INFO","msg":"ai infer npc fallback","source":"npc","fallback_reason":"http_non_ok_status","fallback_detail":"502:backend_infer_failed","persona":"scout"}
+```
+
+Set `InferClient.LogFallback=false` to silence in tests.
 
 When edge `/v1/infer` fails, the service returns JSON `{"error","code":"backend_infer_failed"}` with HTTP 502; the client maps status + code into `FallbackDetail`.
 

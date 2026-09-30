@@ -104,14 +104,24 @@ func edgeResult(text string) InferResult {
 	}
 }
 
+// logNPCFallback records observability fields aligned with InferResult JSON (source, fallback_reason, fallback_detail).
 func logNPCFallback(persona string, reason FallbackReason, detail string) {
 	attrs := []any{
-		slog.String("persona", persona),
-		slog.String("reason", string(reason)),
 		slog.String("source", SourceNPC),
+		slog.String("fallback_reason", string(reason)),
 	}
 	if detail != "" {
-		attrs = append(attrs, slog.String("detail", detail))
+		attrs = append(attrs, slog.String("fallback_detail", detail))
+	}
+	if persona != "" {
+		attrs = append(attrs, slog.String("persona", persona))
 	}
 	slog.Default().Info("ai infer npc fallback", attrs...)
+}
+
+func npcFallbackResult(persona string, reason FallbackReason, detail string, log bool) InferResult {
+	if log {
+		logNPCFallback(persona, reason, detail)
+	}
+	return npcResult(persona, reason, detail)
 }
