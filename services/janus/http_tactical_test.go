@@ -32,6 +32,137 @@ type janusRomaHTTPFixture struct {
 	InitialStateHash uint64
 }
 
+func TestHTTPTacticalConnectMirror(t *testing.T) {
+	fix := startJanusGatewayRomaOnly(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	raw := []byte(`{"access_token":"test-token","target_zone":{"zone_id":"default","shard":0}}`)
+	res, err := http.Post(srv.URL+"/v1/tactical/connect", "application/json", bytes.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d: %s", res.StatusCode, b)
+	}
+	var out connectJSON
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.SessionID == "" {
+		t.Fatal("expected non-empty session_id")
+	}
+	if out.ServerTime == nil || out.ServerTime.WallUnixMs == 0 {
+		t.Fatal("expected server_time in connect response")
+	}
+}
+
+func TestHTTPTacticalEnterBattleMirror(t *testing.T) {
+	fix := startJanusGatewayRomaOnly(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	sessionRaw := []byte(`{"access_token":"test-token","target_zone":{"zone_id":"default","shard":0}}`)
+	sessionRes, err := http.Post(srv.URL+"/v1/tactical/connect", "application/json", bytes.NewReader(sessionRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sessionRes.Body.Close()
+	var connectOut connectJSON
+	if err := json.NewDecoder(sessionRes.Body).Decode(&connectOut); err != nil {
+		t.Fatal(err)
+	}
+
+	enterBody := map[string]interface{}{
+		"session_id":   connectOut.SessionID,
+		"access_token": "test-token",
+		"target_zone":  map[string]interface{}{"zone_id": "default", "shard": 0},
+	}
+	enterRaw, _ := json.Marshal(enterBody)
+	enterRes, err := http.Post(srv.URL+"/v1/tactical/enter-battle", "application/json", bytes.NewReader(enterRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer enterRes.Body.Close()
+	if enterRes.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(enterRes.Body)
+		t.Fatalf("status %d: %s", enterRes.StatusCode, b)
+	}
+	var enterOut enterBattleJSON
+	if err := json.NewDecoder(enterRes.Body).Decode(&enterOut); err != nil {
+		t.Fatal(err)
+	}
+	if enterOut.BattleID == "" {
+		t.Fatal("expected battle_id from HTTP EnterBattle")
+	}
+	if enterOut.InitialStateHash == 0 {
+		t.Fatal("expected initial_state_hash")
+	}
+	if len(enterOut.ViewSnapshotJSON) == 0 {
+		t.Fatal("expected view_snapshot_json")
+	}
+}
+
+func TestHTTPTacticalEnterBattleThenCommandAccepted(t *testing.T) {
+	fix := startJanusGatewayRomaOnly(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	sessionRes, err := http.Post(
+		srv.URL+"/v1/tactical/connect",
+		"application/json",
+		bytes.NewReader([]byte(`{"access_token":"test-token","target_zone":{"zone_id":"default","shard":0}}`)),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sessionRes.Body.Close()
+	var connectOut connectJSON
+	if err := json.NewDecoder(sessionRes.Body).Decode(&connectOut); err != nil {
+		t.Fatal(err)
+	}
+
+	enterRaw, _ := json.Marshal(map[string]interface{}{
+		"session_id":   connectOut.SessionID,
+		"access_token": "test-token",
+		"target_zone":  map[string]interface{}{"zone_id": "default", "shard": 0},
+	})
+	enterRes, err := http.Post(srv.URL+"/v1/tactical/enter-battle", "application/json", bytes.NewReader(enterRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer enterRes.Body.Close()
+	var enterOut enterBattleJSON
+	if err := json.NewDecoder(enterRes.Body).Decode(&enterOut); err != nil {
+		t.Fatal(err)
+	}
+
+	cmdRaw, _ := json.Marshal(map[string]interface{}{
+		"session_id": connectOut.SessionID,
+		"battle_id":  enterOut.BattleID,
+		"player_id":  0,
+		"kind":       uint32(tactical.KindMove),
+		"unit_id":    tactical.UnitIDPlayer0,
+		"to_x":       5,
+		"to_y":       8,
+	})
+	cmdRes, err := http.Post(srv.URL+"/v1/tactical/command", "application/json", bytes.NewReader(cmdRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cmdRes.Body.Close()
+	if cmdRes.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(cmdRes.Body)
+		t.Fatalf("status %d: %s", cmdRes.StatusCode, b)
+	}
+	var cmdOut tacticalCommandJSON
+	if err := json.NewDecoder(cmdRes.Body).Decode(&cmdOut); err != nil {
+		t.Fatal(err)
+	}
+	if !cmdOut.Accepted {
+		t.Fatalf("expected accepted command after HTTP EnterBattle, reason=%q", cmdOut.RejectReason)
+	}
+}
+
 func TestHTTPTacticalCommandMirror(t *testing.T) {
 	fix := startJanusGatewayWithEnterBattle(t)
 	srv := newTacticalHTTPServer(t, fix.GW, tacticalHTTPOptions{

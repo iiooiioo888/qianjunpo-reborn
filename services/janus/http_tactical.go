@@ -8,10 +8,12 @@ import (
 	"os"
 	"strings"
 
+	commonv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/common/v1"
 	gatewayv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/gateway/v1"
 )
 
 const maxTacticalCommandBodyBytes = 16 << 10
+const maxGatewayMirrorBodyBytes = 16 << 10
 
 type tacticalCommandBody struct {
 	SessionID string `json:"session_id"`
@@ -28,6 +30,41 @@ type tacticalCommandJSON struct {
 	RejectReason  string `json:"reject_reason,omitempty"`
 	LockstepFrame uint64 `json:"lockstep_frame,omitempty"`
 	StateHash     uint64 `json:"state_hash,omitempty"`
+}
+
+type zoneRefJSON struct {
+	ZoneID string `json:"zone_id"`
+	Shard  uint32 `json:"shard"`
+}
+
+type dualTimeJSON struct {
+	WallUnixMs int64 `json:"wall_unix_ms"`
+	SimTick    int64 `json:"sim_tick"`
+}
+
+type connectBody struct {
+	ClientVersion string       `json:"client_version"`
+	AccessToken   string       `json:"access_token"`
+	TargetZone    *zoneRefJSON `json:"target_zone"`
+}
+
+type connectJSON struct {
+	SessionID    string        `json:"session_id"`
+	ServerTime   *dualTimeJSON `json:"server_time,omitempty"`
+	RomaEndpoint string        `json:"roma_endpoint,omitempty"`
+}
+
+type enterBattleBody struct {
+	SessionID   string       `json:"session_id"`
+	AccessToken string       `json:"access_token"`
+	TargetZone  *zoneRefJSON `json:"target_zone"`
+}
+
+type enterBattleJSON struct {
+	BattleID         string          `json:"battle_id"`
+	InitialStateHash uint64          `json:"initial_state_hash"`
+	SimTime          *dualTimeJSON   `json:"sim_time,omitempty"`
+	ViewSnapshotJSON json.RawMessage `json:"view_snapshot_json,omitempty"`
 }
 
 type tacticalHTTPOptions struct {
@@ -66,6 +103,107 @@ func registerTacticalHTTPRoutes(mux *http.ServeMux, gw *janusGateway, opts tacti
 	})
 	mux.HandleFunc("/v1/tactical/command", func(w http.ResponseWriter, r *http.Request) {
 		handleTacticalCommand(w, r, gw, opts.CommandMirrorEnabled)
+	})
+	mux.HandleFunc("/v1/tactical/connect", func(w http.ResponseWriter, r *http.Request) {
+		handleTacticalConnect(w, r, gw)
+	})
+	mux.HandleFunc("/v1/tactical/enter-battle", func(w http.ResponseWriter, r *http.Request) {
+		handleTacticalEnterBattle(w, r, gw)
+	})
+}
+
+func zoneRefFromJSON(z *zoneRefJSON) *commonv1.ZoneRef {
+	if z == nil {
+		return &commonv1.ZoneRef{ZoneId: "default"}
+	}
+	zoneID := strings.TrimSpace(z.ZoneID)
+	if zoneID == "" {
+		zoneID = "default"
+	}
+	return &commonv1.ZoneRef{ZoneId: zoneID, Shard: z.Shard}
+}
+
+func dualTimeJSONFromProto(ts *commonv1.DualTimestamp) *dualTimeJSON {
+	if ts == nil {
+		return nil
+	}
+	return &dualTimeJSON{
+		WallUnixMs: ts.GetWallUnixMs(),
+		SimTick:    ts.GetSimTick(),
+	}
+}
+
+func writeGatewayMirrorJSON(w http.ResponseWriter, status int, payload interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func decodeGatewayMirrorBody(w http.ResponseWriter, r *http.Request, dest interface{}) bool {
+	r.Body = http.MaxBytesReader(w, r.Body, maxGatewayMirrorBodyBytes)
+	if err := json.NewDecoder(r.Body).Decode(dest); err != nil {
+		if err == io.EOF {
+			http.Error(w, "empty body", http.StatusBadRequest)
+			return false
+		}
+		http.Error(w, "invalid JSON body", http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+func handleTacticalConnect(w http.ResponseWriter, r *http.Request, gw *janusGateway) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var body connectBody
+	if !decodeGatewayMirrorBody(w, r, &body) {
+		return
+	}
+	resp, err := gw.Connect(r.Context(), &gatewayv1.ConnectRequest{
+		ClientVersion: body.ClientVersion,
+		AccessToken:   body.AccessToken,
+		TargetZone:    zoneRefFromJSON(body.TargetZone),
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	writeGatewayMirrorJSON(w, http.StatusOK, connectJSON{
+		SessionID:    resp.GetSessionId(),
+		ServerTime:   dualTimeJSONFromProto(resp.GetServerTime()),
+		RomaEndpoint: resp.GetRomaEndpoint(),
+	})
+}
+
+func handleTacticalEnterBattle(w http.ResponseWriter, r *http.Request, gw *janusGateway) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var body enterBattleBody
+	if !decodeGatewayMirrorBody(w, r, &body) {
+		return
+	}
+	resp, err := gw.EnterBattle(r.Context(), &gatewayv1.EnterBattleRequest{
+		SessionId:   body.SessionID,
+		AccessToken: body.AccessToken,
+		TargetZone:  zoneRefFromJSON(body.TargetZone),
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	var viewSnap json.RawMessage
+	if raw := resp.GetViewSnapshotJson(); len(raw) > 0 {
+		viewSnap = json.RawMessage(raw)
+	}
+	writeGatewayMirrorJSON(w, http.StatusOK, enterBattleJSON{
+		BattleID:         resp.GetBattleId(),
+		InitialStateHash: resp.GetInitialStateHash(),
+		SimTime:          dualTimeJSONFromProto(resp.GetSimTime()),
+		ViewSnapshotJSON: viewSnap,
 	})
 }
 
