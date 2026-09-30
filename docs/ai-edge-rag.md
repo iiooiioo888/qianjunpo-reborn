@@ -51,7 +51,17 @@ When `backend=ollama` and Ollama is down, `/health` returns HTTP 200 with `statu
 | `FallbackReason` | Non-empty when `Source=npc` (`timeout`, `http_non_ok_status`, `no_infer_client`, …) |
 | `FallbackDetail` | Optional (`502:backend_infer_failed`, transport error text) |
 
-Persona keys for `NPCFallback` include `guard`, `scout`, `strategist`, `merchant`, and general ids such as `cao_cao`, `zhang_fei`, `guan_yu` (spaces/hyphens normalized). Unknown personas get `"For the realm!"`.
+**Registry-aligned persona keys** (match `client` `CharacterCardSpriteRegistry` / `UnitSpriteRegistry`):
+
+| Key | Client registry |
+|-----|-----------------|
+| `char_caocao` | v04 曹操卡 |
+| `char_zhangfei` | v04 張飛卡 |
+| `char_wu_placeholder` | v04 吳占位卡 |
+| `infantry` | 步兵單位貼圖 |
+| `cavalry` | 騎兵單位貼圖 |
+
+Legacy aliases still resolve (e.g. `cao_cao` → `char_caocao`, `zhang_fei` / `zhangfei` → `char_zhangfei`). Generic tactical roles `guard`, `scout`, `strategist`, `merchant` remain for non-card NPCs. Older general ids (`guan_yu`, `liu_bei`, …) keep their lines but are not v04 card keys. Spaces/hyphens normalize to underscores. Unknown personas get `"For the realm!"`.
 
 On NPC fallback, `InferClient` emits structured `slog` (`ai infer npc fallback`). Set `LogFallback=false` on the client to silence in tests.
 
