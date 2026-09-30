@@ -158,7 +158,8 @@ func main() {
 		metrics.Register(nil)
 		metrics.SetTimeFlowRate(int64(timedilation.MaxRate))
 		metrics.BattleLatencyP99.Set(12)
-		metrics.QueueLen.Set(0)
+		metrics.SetQueueLen(0)
+		metrics.SetActiveRooms(0)
 
 		mux := http.NewServeMux()
 		mux.Handle("/metrics", metrics.Handler())

@@ -34,6 +34,7 @@ func (rd *regionDilation) tick(sample loadsample.Sample) timedilation.Rate {
 	rd.rate = rec.Rate
 	rd.clock.Advance(timedilation.DefaultControllerConfig().TickInterval)
 	metrics.SetTimeFlowRate(int64(rd.rate))
+	metrics.SetQueueLen(sample.QueueLength)
 	return rd.rate
 }
 

@@ -173,14 +173,15 @@ Phase 5 在 Phase 1–4 之上加入 **可觀測性、負載預測、平衡自�
 | 負載預測 | `pkg/loadpredict`、`services/loadpredict` | 30s 前瞻、`≥90%` 負載 hook、`PreScaleSignal` 7–15 分鐘提前量 → Agones |
 | 時間恢復 | `pkg/timedilation` + `deploy/agones/README.md` | predict → scale → `time_flow_rate` 恢復 |
 | 平衡自動化 | `pkg/balance` | RL/MCTS `Agent` 介面、批次模擬、勝率門檻（預設 5% swing） |
-| 指標 | `pkg/observability/metrics` | `online_players`、`battle_latency_p99_ms`、`queue_len`、`time_flow_rate` |
+| 指標 | `pkg/observability/metrics` | `online_players`、`battle_latency_p99_ms`、`queue_len`、`time_flow_rate`、`active_rooms`、`process_cpu_seconds_total` |
 | 追蹤 | `pkg/observability/trace` | Janus→Roma OTel span 骨架 |
-| Grafana | `deploy/observability/` | 儀表板 JSON（手動 import） |
+| Grafana / 告警 | `deploy/observability/` | 儀表板 JSON、`prometheus/alerts/`；`make check-observability` |
 | AIGC | `docs/aigc/PIPELINE.md`、`services/aigc-worker` | ComfyUI／IP-Adapter 占位 |
 | 動態內容 | `pkg/contentops` | LLM 產物 create／approve／rollback 記憶體佇列 |
 
 ```bash
 go test ./pkg/loadpredict ./pkg/balance ./pkg/contentops ./pkg/observability/... -v
+make check-observability
 go test ./pkg/integration -run Phase5 -v
 make build-services   # 含 loadpredict、aigc-worker
 make loadpredict      # :8095 /metrics /v1/forecast
