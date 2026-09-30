@@ -17,6 +17,15 @@ test:
 demo:
 	go run ./cmd/demo
 
+match-play:
+	go run ./cmd/match play -seed 0xcafe
+
+match-verify:
+	@tmp=$$(mktemp /tmp/match-XXXX.rgz); \
+	go run ./cmd/match play -seed 0xcafe -out $$tmp && \
+	go run ./cmd/match verify -in $$tmp; \
+	rm -f $$tmp
+
 edge-infer:
 	go run ./services/edge-infer
 
