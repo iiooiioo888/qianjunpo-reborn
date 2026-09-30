@@ -3,6 +3,7 @@ import { fetchLiveViewSnapshot, TacticalNetworkConfig } from './JanusGatewayStub
 export interface LiveSnapshotPollerOptions {
   cfg: TacticalNetworkConfig;
   battleId: string;
+  sessionId?: string;
   /** Polling period on success (ms). Default 333 ≈ 3 Hz; use 200–500 for live HUD. */
   intervalMs?: number;
   onSnapshot: (raw: unknown) => void;
@@ -58,7 +59,11 @@ export class LiveViewSnapshotPoller {
     }
     this.inFlight = true;
     try {
-      const raw = await fetchLiveViewSnapshot(this.opts.cfg, this.opts.battleId);
+      const raw = await fetchLiveViewSnapshot(
+        this.opts.cfg,
+        this.opts.battleId,
+        this.opts.sessionId ?? '',
+      );
       this.backoffMs = 0;
       this.opts.onSnapshot(raw);
       this.schedule(this.intervalMs);

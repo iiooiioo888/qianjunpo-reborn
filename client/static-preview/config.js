@@ -1,4 +1,5 @@
 import { resolveAppUrl } from './paths.js';
+import { parseLiveGatewayConfig } from './live-gateway.js';
 
 /** Bundled mock for offline / deploy-web-preview (static-preview only). */
 export const MOCK_SNAPSHOT_URL = 'mock/demo_initial.json';
@@ -36,7 +37,8 @@ export function parseBootConfig() {
   const commandUrlRaw = params.get('commandUrl') || DEFAULT_LIVE_COMMAND_URL;
   const commandUrl = resolveAppUrl(commandUrlRaw);
   const showCards = params.get('cards') !== '0';
-  return { live, liveUrl, liveUrlRaw, commandUrl, commandUrlRaw, showCards };
+  const liveGateway = parseLiveGatewayConfig(params);
+  return { live, liveUrl, liveUrlRaw, commandUrl, commandUrlRaw, showCards, liveGateway };
 }
 
 export function mockSnapshotUrl() {

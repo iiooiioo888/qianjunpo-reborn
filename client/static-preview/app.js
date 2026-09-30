@@ -14,6 +14,7 @@ import {
 } from './hud.js';
 import { applyMockMove } from './mock-move.js';
 import { computeLegalMoveDestinations } from './reachability.js';
+import { prepareLiveJanusSession } from './live-gateway.js';
 
 const boot = parseBootConfig();
 
@@ -39,6 +40,8 @@ let syncCtx = {
 let lastPollAt = 0;
 let pollTimer = null;
 let localDrift = false;
+let liveSessionId = '';
+let liveBattleId = battleIdFromLiveUrl(boot.liveUrlRaw);
 
 function setStatus(text, isError = false) {
   els.status.textContent = text;
@@ -97,19 +100,28 @@ function battleIdFromLiveUrl(liveUrlRaw) {
   }
 }
 
+function liveSnapshotUrlForBattle(battleId) {
+  const raw = boot.liveUrlRaw;
+  if (raw.includes('battle_id=')) {
+    return resolveAppUrl(raw.replace(/battle_id=[^&]+/, `battle_id=${encodeURIComponent(battleId)}`));
+  }
+  const sep = raw.includes('?') ? '&' : '?';
+  return resolveAppUrl(`${raw}${sep}battle_id=${encodeURIComponent(battleId)}`);
+}
+
 async function submitLiveCommand(unitId, to) {
   const unit = snapshot?.units.find((u) => u.id === unitId && u.hp > 0);
   if (!unit) {
     return { accepted: false, rejectReason: 'unit missing' };
   }
   const body = {
-    battle_id: battleIdFromLiveUrl(boot.liveUrlRaw),
+    battle_id: liveBattleId,
     player_id: unit.owner,
     kind: 1,
     unit_id: unitId,
     to_x: to.x,
     to_y: to.y,
-    session_id: '',
+    session_id: liveSessionId,
   };
   const res = await fetch(boot.commandUrl, {
     method: 'POST',
@@ -132,7 +144,10 @@ async function submitLiveCommand(unitId, to) {
 async function pollLive() {
   const started = performance.now();
   try {
-    const res = await fetch(boot.liveUrl, { cache: 'no-store', mode: 'cors' });
+    const res = await fetch(liveSnapshotUrlForBattle(liveBattleId), {
+      cache: 'no-store',
+      mode: 'cors',
+    });
     if (!res.ok) {
       throw new Error(`live HTTP ${res.status}`);
     }
@@ -168,8 +183,26 @@ async function pollLive() {
 
 function startLive() {
   syncCtx.source = 'live';
-  void pollLive();
-  pollTimer = window.setInterval(() => void pollLive(), LIVE_POLL_INTERVAL_MS);
+  void (async () => {
+    setStatus('Live：正在 EnterBattle（HTTP）…');
+    try {
+      const prepared = await prepareLiveJanusSession(boot.liveGateway, liveBattleId);
+      liveSessionId = prepared.sessionId;
+      liveBattleId = prepared.battleId;
+      if (prepared.initialSnapshot) {
+        snapshot = validateSnapshot(prepared.initialSnapshot);
+        render();
+      }
+      setStatus(`Live：EnterBattle 已建局 ${liveBattleId}；開始快照輪詢。`);
+      await pollLive();
+      pollTimer = window.setInterval(() => void pollLive(), LIVE_POLL_INTERVAL_MS);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      syncCtx = { source: 'live', link: 'error', pollIntervalMs: LIVE_POLL_INTERVAL_MS };
+      refreshHud();
+      setStatus(msg, true);
+    }
+  })();
 }
 
 function unitAt(x, y) {
