@@ -11,6 +11,8 @@ import (
 // AoE error codes for stub skill wiring (submit-time validation).
 const (
 	CodeAoEOutOfBounds = "AOE_OUT_OF_BOUNDS"
+	CodeAoEOutOfRange  = "AOE_OUT_OF_RANGE"
+	CodeAoELoSBlocked  = "AOE_LOS_BLOCKED"
 	CodeAoENoTargets   = "AOE_NO_TARGETS"
 )
 
@@ -59,8 +61,24 @@ func validateAoECenter(center board.Coord) error {
 	return nil
 }
 
+// validateAoECast checks center bounds and the same range / LOS rules as single-target attacks.
+func (m *Match) validateAoECast(attacker *Unit, center board.Coord) error {
+	if err := validateAoECenter(center); err != nil {
+		return err
+	}
+	if !combat.InAttackRange(attacker.Pos, center, attacker.Stats.Range) {
+		return AoEError{Code: CodeAoEOutOfRange, Message: "aoe center out of attack range"}
+	}
+	centerUnitID := m.Board.GetUnit(center)
+	if combat.RangedAttackNeedsLine(attacker.Stats.Range) &&
+		!combat.AttackLineClear(m.Board, attacker.Pos, center, attacker.ID, centerUnitID) {
+		return AoEError{Code: CodeAoELoSBlocked, Message: "aoe line of sight blocked"}
+	}
+	return nil
+}
+
 func (m *Match) validateAoE(cmd Command, attacker *Unit) error {
-	if err := validateAoECenter(cmd.To); err != nil {
+	if err := m.validateAoECast(attacker, cmd.To); err != nil {
 		return err
 	}
 	if len(m.enemyAoETargets(attacker, cmd.To, combat.DefaultAoERadius)) == 0 {
@@ -75,12 +93,12 @@ func (m *Match) ApplyAoEStrike(attackerID uint32, center board.Coord, radius int
 	if m == nil {
 		return fmt.Errorf("tactical: nil match")
 	}
-	if err := validateAoECenter(center); err != nil {
-		return err
-	}
 	attacker := m.Units[attackerID]
 	if attacker == nil || attacker.Stats.HP.Raw() <= 0 {
 		return validate.MoveError{Code: validate.CodeWrongStart, Message: "aoe attacker invalid"}
+	}
+	if err := m.validateAoECast(attacker, center); err != nil {
+		return err
 	}
 	targets := m.enemyAoETargets(attacker, center, radius)
 	if len(targets) == 0 {
