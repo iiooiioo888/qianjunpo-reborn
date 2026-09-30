@@ -117,8 +117,8 @@ promtool-check-rules:
 	@if command -v promtool >/dev/null 2>&1; then \
 		promtool check rules $(OBS_ALERT_RULES); \
 	elif command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then \
-		docker run --rm -v "$(CURDIR):/work:ro" $(PROMTOOL_IMAGE) \
-			promtool check rules /work/$(OBS_ALERT_RULES); \
+		docker run --rm --entrypoint promtool -v "$(CURDIR):/work:ro" $(PROMTOOL_IMAGE) \
+			check rules /work/$(OBS_ALERT_RULES); \
 	else \
 		echo "promtool/docker not found; skipped (Go checks in observability-check still run)"; \
 	fi
