@@ -48,7 +48,7 @@ func TestJanusToRomaTacticalLockstepPath(t *testing.T) {
 	gw := &janusGateway{
 		clock: timesync.NewClock(nil),
 		limit: janus.NewRateLimiter(10000),
-		disco: &janus.Discovery{Endpoints: map[string]string{"default": romaTarget}},
+		disco: &janus.Discovery{Static: map[string]string{"default": romaTarget}, Default: romaTarget},
 		auth:  janus.StaticAuth{},
 		roma:  janus.NewRomaClient(),
 	}

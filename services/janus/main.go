@@ -5,16 +5,17 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	commonv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/common/v1"
 	gatewayv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/gateway/v1"
 	"github.com/iiooiioo888/qianjunpo-reborn/internal/janus"
+	etcdreg "github.com/iiooiioo888/qianjunpo-reborn/pkg/discovery/etcd"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/observability/metrics"
 	qjptrace "github.com/iiooiioo888/qianjunpo-reborn/pkg/observability/trace"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/timesync"
@@ -129,15 +130,46 @@ func main() {
 	httpAddr := env("JANUS_HTTP_ADDR", ":8090")
 	etcdEndpoints := env("ETCD_ENDPOINTS", "etcd:2379")
 	romaDefault := env("ROMA_GRPC_ADDR", "roma:9092")
+	laresAddr := env("JANUS_LARES_GRPC_ADDR", "lares:9091")
+	laresSecret := env("LARES_TOKEN_SECRET", "phase4-dev-secret")
+
+	disco := &janus.Discovery{
+		Default: romaDefault,
+		Static:  map[string]string{"default": romaDefault},
+	}
+	var etcdCloser func()
+	if strings.TrimSpace(etcdEndpoints) != "" && os.Getenv("ETCD_DISABLE") != "1" {
+		reg, err := etcdreg.NewRomaRegistry(etcdEndpoints)
+		if err != nil {
+			log.Printf("janus: etcd client failed (%v); static roma fallback only", err)
+		} else {
+			disco.Etcd = &janus.EtcdResolver{Reg: reg}
+			etcdCloser = func() { _ = reg.Close() }
+		}
+	}
+
+	auth, err := janus.NewLaresAuth(laresAddr, laresSecret)
+	if err != nil {
+		log.Printf("janus: lares auth dial failed (%v); static dev auth fallback", err)
+		auth = nil
+	}
+	var authHook janus.AuthHook
+	if auth != nil {
+		authHook = auth
+	} else {
+		authHook = janus.StaticAuth{}
+	}
 
 	gw := &janusGateway{
 		clock: timesync.NewClock(nil),
 		limit: janus.NewRateLimiter(1000),
-		disco: &janus.Discovery{Endpoints: map[string]string{"default": romaDefault}},
-		auth:  janus.StaticAuth{},
+		disco: disco,
+		auth:  authHook,
 		roma:  janus.NewRomaClient(),
 	}
-	_ = etcdEndpoints // placeholder for future etcd registration
+	if etcdCloser != nil {
+		defer etcdCloser()
+	}
 
 	go serveTCPBridge(tcpAddr, gw)
 	go serveHTTP(httpAddr)
@@ -148,11 +180,10 @@ func main() {
 	}
 	srv := grpc.NewServer()
 	gatewayv1.RegisterJanusGatewayServer(srv, gw)
-	log.Printf("janus grpc=%s tcp-bridge=%s roma=%s etcd=%s", grpcAddr, tcpAddr, romaDefault, etcdEndpoints)
+	log.Printf("janus grpc=%s tcp-bridge=%s roma=%s etcd=%s lares=%s", grpcAddr, tcpAddr, romaDefault, etcdEndpoints, laresAddr)
 	log.Fatal(srv.Serve(lis))
 }
 
-// serveTCPBridge accepts connections and immediately closes after ack (skeleton).
 func serveTCPBridge(addr string, gw *janusGateway) {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -163,15 +194,8 @@ func serveTCPBridge(addr string, gw *janusGateway) {
 		if err != nil {
 			continue
 		}
-		go handleTCPConn(conn, gw)
+		go janus.ServeTCPBridge(conn, gw)
 	}
-}
-
-func handleTCPConn(conn net.Conn, gw *janusGateway) {
-	defer conn.Close()
-	_, _ = conn.Write([]byte("JANUS_OK\n"))
-	_, _ = gw.Connect(context.Background(), &gatewayv1.ConnectRequest{AccessToken: "tcp", TargetZone: &commonv1.ZoneRef{ZoneId: "default"}})
-	_, _ = io.ReadAll(conn)
 }
 
 func serveHTTP(addr string) {

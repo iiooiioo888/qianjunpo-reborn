@@ -32,23 +32,7 @@ func (r *RateLimiter) Allow() bool {
 	return true
 }
 
-// Discovery resolves Roma endpoints from etcd (placeholder — returns static map).
-type Discovery struct {
-	Endpoints map[string]string
-}
-
-// Lookup returns a Roma gRPC target for zone id.
-func (d *Discovery) Lookup(_ context.Context, zoneID string) (string, error) {
-	if d == nil || d.Endpoints == nil {
-		return "roma:9092", nil
-	}
-	if ep, ok := d.Endpoints[zoneID]; ok {
-		return ep, nil
-	}
-	return d.Endpoints["default"], nil
-}
-
-// AuthHook validates access tokens via Lares (placeholder interface).
+// AuthHook validates access tokens via Lares.
 type AuthHook interface {
 	ValidateAccess(ctx context.Context, token string) (playerID uint64, ok bool)
 }

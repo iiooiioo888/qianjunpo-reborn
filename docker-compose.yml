@@ -100,6 +100,8 @@ services:
     environment:
       ROMA_GRPC_ADDR: ":9092"
       ROMA_HTTP_ADDR: ":8092"
+      ROMA_ADVERTISE_ADDR: roma:9092
+      ROMA_ZONE_ID: default
       ETCD_ENDPOINTS: etcd:2379
       REDIS_URL: redis://redis:6379/0
     ports:
@@ -128,6 +130,9 @@ services:
       JANUS_TCP_ADDR: ":7000"
       JANUS_HTTP_ADDR: ":8090"
       ETCD_ENDPOINTS: etcd:2379
+      ROMA_GRPC_ADDR: roma:9092
+      JANUS_LARES_GRPC_ADDR: lares:9091
+      LARES_TOKEN_SECRET: ${LARES_TOKEN_SECRET:-phase4-dev-secret}
       REDIS_URL: redis://redis:6379/0
     ports:
       - "19090:9090"
