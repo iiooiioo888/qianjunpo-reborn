@@ -1,8 +1,8 @@
 # 千軍破·重生（qianjunpo-reborn）
 
-《千軍破》復刻專案的 **確定性模擬核心**（Phase 1）。目標是在 Go 邏輯層內以定點數與可重播 RNG 建立可鎖步、可回滾的戰局狀態機基礎。
+《千軍破》復刻專案的 **確定性模擬與戰棋核心**（Phase 1 + Phase 2）。Go 邏輯層以定點數（FP64）、可重播 RNG 與權威棋盤驗證建立可鎖步、可回滾的戰局基礎。
 
-> **Go 版本**：簡報建議 Go 1.24+；目前 CI／開發環境使用 **Go 1.22.2**（見 `go version`）。模組 `go` 指令設為 `1.22` 以相容現有工具鏈。
+> **Go 版本**：簡報建議 Go 1.24+；目前 CI／開發環境使用 **Go 1.22.2**。模組 `go` 指令設為 `1.22` 以相容現有工具鏈。
 
 ## 目錄結構
 
@@ -13,6 +13,12 @@
 | `pkg/hash` | FNV-1a 64-bit 狀態哈希（Desync 檢測） |
 | `pkg/lockstep` | 鎖步常數、指令延遲 3 幀、樂觀空包 |
 | `pkg/sim` | 最小戰局引擎、快照、回滾重模擬 |
+| `pkg/board` | 19×19 棋盤、地形、八向鄰格、切比雪夫距離 |
+| `pkg/pathfind` | A\*、JPS、並查集連通快檢 |
+| `pkg/validate` | 伺服器權威移動驗證 |
+| `pkg/cmdqueue` | 熱／溫／冷隊列與 P0/P1/P2 優先級 |
+| `pkg/combat` | 兵種克制矩陣與 FP64 攻防 |
+| `pkg/replay` | 戰鬥回放（哈希鏈 + gzip） |
 | `cmd/demo` | 雙客戶端同種子同輸入哈希對照 |
 
 ## 鎖步與時間模型
@@ -24,11 +30,11 @@
 
 ## 技術約束
 
-- 邏輯層 **禁止浮點**；`FromFloat` 僅供初始化配置
-- 乘法使用 128-bit 中間結果；除零回傳 `MaxValue`
-- RNG 與狀態哈希可序列化／比對，支援快照與回滾
+- 戰棋邏輯與戰鬥數值使用 **整數格點 + FP64 定點**；邏輯層禁止浮點運算（`FromFloat` 僅供初始化）
+- 尋路與棋盤判定為確定性整數演算法
+- RNG 與狀態哈希可序列化／比對，支援快照、回滾與回放驗證
 
-## 執行測試與 Demo
+## 本機測試與 Demo
 
 ```bash
 make test          # 等同 go test ./...
@@ -36,9 +42,27 @@ make demo          # 雙客戶端確定性演示
 go test ./... -v   # 詳細輸出
 ```
 
+## Docker Compose（dev）
+
+依賴服務（Redis AOF、MySQL 8、可選 etcd）與可建置的 `app` 映像（預設在容器內跑 `make test`）。
+
+```bash
+cp .env.example .env    # 設定本地 MYSQL_ROOT_PASSWORD
+make compose-up         # 啟動 redis / mysql / etcd（profile dev）
+make compose-test       # 建置 app 並在容器內執行測試
+make compose-down       # 關閉堆疊
+```
+
+手動：
+
+```bash
+docker compose --profile dev up -d redis mysql
+docker compose --profile dev build app
+```
+
 ## 本階段未包含
 
-19×19 棋盤完整玩法、A*、微服務、Cocos 客戶端、時間膨脹、AI 等（見技術白皮書後續階段）。
+時間膨脹、AI、完整 Janus/Roma/Lares 微服務業務、K8s/Agones、Cocos 客戶端等（見技術白皮書後續階段）。
 
 ## 授權
 
