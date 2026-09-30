@@ -139,12 +139,22 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 | `assets/resources/textures/2d/` | 2D 像素貼圖（見目錄內 README） |
 | `scripts/sync-wip-unit-textures.sh` | 自 `art/2d/_wip/units` 複製 v02（不改 art） |
 | `scripts/sync-wip-icon-textures.sh` | 自 `art/2d/_wip/icons` 複製 13 枚 PX2D 圖標（不改 art） |
+| `scripts/sync-wip-char-textures.sh` | 自 `art/2d/_wip/characters` 複製 v02 角色卡至 `textures/2d/chars/`（可選，v03 前可僅占位） |
 
 ## 美術（卡通像素風）
 
-- 單位：自 **`art/2d/_wip/units`** 複製 v02 至 `assets/resources/textures/2d/units/`（見 `textures/2d/README.md`）。
-- 圖標：`bash client/scripts/sync-wip-icon-textures.sh` → `textures/2d/icons/`；執行期由 **`IconSpriteRegistry`** + **`PixelSpriteUtil`** 設 **Nearest**；戰術場景 HUD 下方有 **`ResourceIconHudStrip`**（五資源預覽，缺圖時 Sprite 關閉、不 crash）。
-- Sprite **Nearest**、關 mipmap；棋盤格與 32px 圖標請 **整數倍** 縮放。
+貼圖路徑由 Registry 邏輯鍵解析（換 v03 只改登記／檔名）。細節見 **`assets/resources/textures/2d/README.md`**。
+
+| Registry | 目錄 | 鍵例 |
+|----------|------|------|
+| **`UnitSpriteRegistry`** | `textures/2d/units/` | `infantry`, `cavalry` |
+| **`CharacterCardSpriteRegistry`** | `textures/2d/chars/` | `char_caocao`, `char_zhangfei` |
+| **`IconSpriteRegistry`** | `textures/2d/icons/` | `ICON_ASSET_IDS.resFood` 等 |
+
+- 單位：v02 同步 `sync-wip-unit-textures.sh`；v03 目標畫布 **128×128**，棋盤 **`UnitPlaceholderView`** + `boardUnitDisplaySize`（整數倍，Nearest）。
+- 角色卡：v03 目標 **320×400**；HUD **`CharacterCardHudStrip`** 預覽三鍵，缺圖色塊占位。
+- 圖標：**`ResourceIconHudStrip`**；缺圖時 Sprite 關閉、不 crash。
+- 覆寫路徑：`UnitSpriteRegistry.registerResourcePath` / `CharacterCardSpriteRegistry.registerResourcePath` 後再 `preload()`。
 - 正式 `art/2d/**` 過審流程見 [`../art/2d/README.md`](../art/2d/README.md)；**勿**將 `_wip` 提升為正式夾。
 
 ## 建置產物
