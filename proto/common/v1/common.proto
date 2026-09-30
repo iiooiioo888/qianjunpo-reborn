@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package qianjunpo.common.v1;
+
+option go_package = "github.com/iiooiioo888/qianjunpo-reborn/gen/go/common/v1;commonv1";
+
+// DualTimestamp pairs wall-clock with deterministic simulation tick (see pkg/timesync).
+message DualTimestamp {
+  int64 wall_unix_ms = 1;
+  int64 sim_tick = 2;
+}
+
+message ZoneRef {
+  string zone_id = 1;
+  uint32 shard = 2;
+}
+
+message PlayerRef {
+  uint64 player_id = 1;
+  string account_id = 2;
+}

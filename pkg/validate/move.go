@@ -18,14 +18,14 @@ func (e MoveError) Error() string {
 }
 
 const (
-	CodeOutOfBounds   = "OUT_OF_BOUNDS"
-	CodeWrongStart    = "WRONG_START"
-	CodeExceedsMove   = "EXCEEDS_MOVE"
-	CodeNotAdjacent   = "NOT_ADJACENT"
-	CodeBlocked       = "BLOCKED"
-	CodeOccupied      = "OCCUPIED"
-	CodeNoPath        = "NO_PATH"
-	CodePathTooLong   = "PATH_TOO_LONG"
+	CodeOutOfBounds = "OUT_OF_BOUNDS"
+	CodeWrongStart  = "WRONG_START"
+	CodeExceedsMove = "EXCEEDS_MOVE"
+	CodeNotAdjacent = "NOT_ADJACENT"
+	CodeBlocked     = "BLOCKED"
+	CodeOccupied    = "OCCUPIED"
+	CodeNoPath      = "NO_PATH"
+	CodePathTooLong = "PATH_TOO_LONG"
 )
 
 // MoveRequest is server-authoritative move validation input.
@@ -33,7 +33,7 @@ type MoveRequest struct {
 	UnitID     uint32
 	From       board.Coord
 	To         board.Coord
-	MovePoints int // max Chebyshev steps along path
+	MovePoints int           // max Chebyshev steps along path
 	Path       []board.Coord // optional explicit path; if empty, pathfinder fills it
 }
 

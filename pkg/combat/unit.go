@@ -38,12 +38,12 @@ func DefaultCounters() CounterMatrix {
 
 // UnitStats holds deterministic combat numbers.
 type UnitStats struct {
-	ID       uint32
-	Type     UnitType
-	BaseATK  fixed.Fixed
-	BaseDEF  fixed.Fixed
-	HP       fixed.Fixed
-	Move     int
+	ID      uint32
+	Type    UnitType
+	BaseATK fixed.Fixed
+	BaseDEF fixed.Fixed
+	HP      fixed.Fixed
+	Move    int
 }
 
 // FinalATK computes attack after counter matrix.

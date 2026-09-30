@@ -63,11 +63,11 @@ func (q *fifoQueue) len() int { return len(q.items) }
 
 // Queue multiplexes hot/warm/cold with P0/P1/P2 ordering inside each temperature.
 type Queue struct {
-	cfg   Config
-	hot   [3]fifoQueue
-	warm  [3]fifoQueue
-	cold  [3]fifoQueue
-	seq   uint64
+	cfg  Config
+	hot  [3]fifoQueue
+	warm [3]fifoQueue
+	cold [3]fifoQueue
+	seq  uint64
 }
 
 // New creates queues with per-priority FIFO lanes.

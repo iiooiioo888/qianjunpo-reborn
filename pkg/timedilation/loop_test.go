@@ -19,7 +19,7 @@ func TestControlLoopRecordsReplayRates(t *testing.T) {
 		if i > 2 {
 			sample.QueueLength = LowWatermark
 		}
-	 tick := loop.Tick(sample)
+		tick := loop.Tick(sample)
 		rec.AddFrame(replay.FrameCommand{Frame: tick.BattleFrame, Player: 0, Payload: []byte{byte(i)}})
 		rec.RecordTimeFlowRate(uint32(tick.Rate))
 		clock.Advance(100 * time.Millisecond)

@@ -1,8 +1,47 @@
 # 千軍破·重生（qianjunpo-reborn）
 
-《千軍破》復刻專案的 **確定性模擬與戰棋核心**（Phase 1 + Phase 2）。Go 邏輯層以定點數（FP64）、可重播 RNG 與權威棋盤驗證建立可鎖步、可回滾的戰局基礎。
+《千軍破》復刻專案的 **確定性模擬與戰棋核心**（Phase 1–3）與 **Phase 4 微服務邊界骨架**（白皮書 v6.0 — 國戰與部署）。Go 邏輯層以定點數（FP64）、可重播 RNG 與權威棋盤驗證建立可鎖步、可回滾的戰局基礎；Phase 4 新增 Janus／Roma／Lares 等服務契約與部署腳手架（無需 CI 內真實 K8s/Agones）。
 
 > **Go 版本**：簡報建議 Go 1.24+；目前 CI／開發環境使用 **Go 1.22.2**。模組 `go` 指令設為 `1.22` 以相容現有工具鏈。
+
+## Phase 4 架構概覽
+
+```
+                    ┌─────────────┐
+  Client (TCP) ───► │   Janus     │  I/O 閘道：連線、限流占位、etcd 發現占位
+                    │  (gateway)  │
+                    └──────┬──────┘
+                           │ gRPC
+         ┌─────────────────┼─────────────────┐
+         ▼                 ▼                 ▼
+   ┌──────────┐     ┌──────────┐      ┌──────────┐
+   │  Lares   │     │   Roma   │      │  Senate  │  維運 / GM（可選）
+   │  (auth)  │     │ (battle) │      │  (ops)   │
+   └──────────┘     └──────────┘      └──────────┘
+         │                 │
+         │           權威狀態僅記憶體
+         ▼                 ▼
+      MySQL            pkg/sim 等
+      Redis*           確定性 CPU 核心
+      etcd
+
+* Redis 僅路由／快取；禁止快取 HP／座標／Buff 權威值（見 services/roma/README.md）
+
+   ChatServer（可選）— 頻道訊息 gRPC/HTTP 骨架
+```
+
+| 服務 | 路徑 | 邊界 |
+|------|------|------|
+| **Janus** | `services/janus` | 客戶端 I/O；TCP 橋 + gRPC `JanusGateway` |
+| **Roma** | `services/roma` | CPU 確定性權威區服；記憶體戰局 |
+| **Lares** | `services/lares` | Access/Refresh 雙令牌 |
+| **Senate** | `services/senate` | 維運 gRPC/HTTP |
+| **ChatServer** | `services/chatserver` | 聊天 gRPC/HTTP |
+| **edge-infer** | `services/edge-infer` | Phase 3 邊緣推理 mock |
+
+契約：`proto/` → `gen/go/`（`make proto` 可選再生；CI 使用已提交生成碼）。
+
+部署：`deploy/k8s/`（Roma StatefulSet + Headless Service）、`deploy/agones/`（Fleet / Buffer / Counter 骨架）、`deploy/docker/Dockerfile.service`（多階段 `CGO_ENABLED=0`）。
 
 ## 目錄結構
 
@@ -20,12 +59,15 @@
 | `pkg/combat` | 兵種克制矩陣與 FP64 攻防 |
 | `pkg/replay` | 戰鬥回放（哈希鏈 + gzip；v2 含每幀 `time_flow_rate`） |
 | `pkg/timedilation` | 時間膨脹控制環、`time_flow_rate`、分層時鐘、追趕上限 1.5x |
+| `pkg/timesync` | Phase 4：Wall/Sim 雙時間戳、跨區映射、跨區凍結 |
+| `pkg/anticheat` | Phase 4：特徵抽取 + 模型推理介面（假資料 E2E） |
 | `pkg/loadsample` | CPU／隊列／成長率／P99 採樣 + `Predictor`（LSTM 可插拔介面） |
 | `pkg/degrade` | L0–L5 降級狀態機與有序恢復 |
 | `pkg/cmdmerge` | 過載指令合併（move/build、P2 500ms 批次） |
 | `pkg/ai` | 戰略層（~5s mock）+ 戰術層 → `lockstep.CommandPacket` |
 | `pkg/rag` | RAG Top-K 介面 + 記憶體假向量庫（Top-5 延遲目標見套件註解） |
-| `services/edge-infer` | 邊緣推理 HTTP 骨架（health + Qwen2.5-3B mock） |
+| `proto/` / `gen/go/` | gRPC/Protobuf 契約與生成 Go 存根 |
+| `services/*` | 微服務可執行骨架 |
 | `cmd/demo` | 雙客戶端同種子同輸入哈希對照 |
 
 ## 鎖步與時間模型
@@ -53,7 +95,10 @@
 ```bash
 make test          # 等同 go test ./...
 make demo          # 雙客戶端確定性演示
+make proto         # 可選：需本機 protoc；否則使用已提交的 gen/go
+make build-services
 make edge-infer    # 啟動 :8088 邊緣推理 mock（/health、/v1/infer、/v1/load）
+go test ./pkg/timesync ./pkg/anticheat ./internal/lares -v
 go test ./pkg/timedilation -v
 go test ./pkg/ai ./pkg/integration -v
 go test ./services/edge-infer -v
@@ -61,33 +106,34 @@ go test ./services/edge-infer -v
 
 ## Docker Compose（dev）
 
-依賴服務（Redis AOF、MySQL 8、可選 etcd）與可建置的 `app` 映像（預設在容器內跑 `make test`）。
+依賴服務（Redis AOF、MySQL 8、etcd）與 Phase 4 微服務 **janus / roma / lares**（`--profile dev`）。可選 **senate / chatserver**（額外 `--profile ops`）。
 
 ```bash
-cp .env.example .env    # 設定本地 MYSQL_ROOT_PASSWORD
-make compose-up         # 啟動 redis / mysql / etcd（profile dev）
+cp .env.example .env    # 設定 MYSQL_ROOT_PASSWORD、LARES_TOKEN_SECRET
+make compose-up         # redis / mysql / etcd / lares / roma / janus
+make compose-up-ops     # 另啟 senate + chatserver
 make compose-test       # 建置 app 並在容器內執行測試
-make compose-down       # 關閉堆疊
+make compose-down
 ```
 
-從宿主機連線時使用下列埠（避免與本機常見的 Redis／MySQL 衝突）；容器內 `app` 仍透過服務名與預設埠連線（`redis:6379`、`mysql:3306`、`etcd:2379`）：
+從宿主機連線時使用下列埠（避免與本機常見服務衝突）：
 
-| 服務 | 宿主機埠 |
-|------|----------|
+| 服務 | 宿主機埠（示例） |
+|------|------------------|
 | Redis | `16379` |
 | MySQL | `13306` |
 | etcd | `12379` |
+| Janus HTTP / gRPC / TCP | `18090` / `19090` / `17000` |
+| Lares HTTP / gRPC | `18091` / `19091` |
+| Roma HTTP / gRPC | `18092` / `19092` |
+| Senate HTTP / gRPC | `18093` / `19093`（ops） |
+| Chat HTTP / gRPC | `18094` / `19094`（ops） |
 
-手動：
-
-```bash
-docker compose --profile dev up -d redis mysql
-docker compose --profile dev build app
-```
+容器內服務間仍使用預設埠（如 `redis:6379`、`roma:9092`）。
 
 ## 本階段未包含
 
-完整 Janus/Roma/Lares 微服務業務、真實 Milvus/Qdrant、下載多 GB 模型、K8s/Agones、Cocos 客戶端 UI 等（見技術白皮書後續階段）。
+真實 Agones 叢集 apply、生產 TLS、Janus 10k 連線效能、下載多 GB 模型、Cocos 客戶端 UI 等。
 
 ## 授權
 

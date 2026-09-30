@@ -15,9 +15,9 @@ type inferRequest struct {
 }
 
 type inferResponse struct {
-	Text     string `json:"text"`
-	Model    string `json:"model"`
-	LatencyMs int64 `json:"latency_ms"`
+	Text      string `json:"text"`
+	Model     string `json:"model"`
+	LatencyMs int64  `json:"latency_ms"`
 }
 
 var loadHook atomic.Bool

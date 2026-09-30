@@ -1,0 +1,7 @@
+apiVersion: agones.dev/v1
+kind: Counter
+metadata:
+  name: roma-match-queue
+spec:
+  count: 0
+  capacity: 1000

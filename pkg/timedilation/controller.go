@@ -71,7 +71,7 @@ func TargetRate(queueLen int) Rate {
 	if queueLen <= LowWatermark {
 		return MaxRate
 	}
- span := int64(HighWatermark - LowWatermark)
+	span := int64(HighWatermark - LowWatermark)
 	t := int64(queueLen-LowWatermark) * RateScale / span
 	return Lerp(MaxRate, MinRate, t)
 }

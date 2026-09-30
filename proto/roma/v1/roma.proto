@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package qianjunpo.roma.v1;
+
+import "common/v1/common.proto";
+
+option go_package = "github.com/iiooiioo888/qianjunpo-reborn/gen/go/roma/v1;romav1";
+
+// RomaZone is the CPU-deterministic authoritative battle partition (in-memory only).
+// Redis MUST NOT store HP, position, or buff state — routing/cache keys only.
+service RomaZone {
+  rpc JoinZone(JoinZoneRequest) returns (JoinZoneResponse);
+  rpc GetBattleState(GetBattleStateRequest) returns (BattleState);
+  rpc SubmitCommand(SubmitCommandRequest) returns (SubmitCommandResponse);
+}
+
+message JoinZoneRequest {
+  string access_token = 1;
+  qianjunpo.common.v1.ZoneRef zone = 2;
+}
+
+message JoinZoneResponse {
+  string battle_id = 1;
+  qianjunpo.common.v1.DualTimestamp sim_time = 2;
+}
+
+message GetBattleStateRequest {
+  string battle_id = 1;
+}
+
+// BattleState is authoritative Roma memory; never serialized to Redis as gameplay truth.
+message BattleState {
+  string battle_id = 1;
+  qianjunpo.common.v1.ZoneRef zone = 2;
+  uint64 state_hash = 3;
+  int32 unit_count = 4;
+}
+
+message SubmitCommandRequest {
+  string battle_id = 1;
+  uint32 player_id = 2;
+  int32 move_x = 3;
+  int32 move_y = 4;
+}
+
+message SubmitCommandResponse {
+  bool accepted = 1;
+  uint64 state_hash = 2;
+}

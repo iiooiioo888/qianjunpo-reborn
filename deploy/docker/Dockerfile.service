@@ -1,0 +1,21 @@
+# syntax=docker/dockerfile:1
+# Build: docker build -f deploy/docker/Dockerfile.service --build-arg SERVICE=janus -t qjp-janus .
+
+ARG SERVICE=janus
+FROM golang:1.22-alpine AS builder
+ARG SERVICE
+WORKDIR /src
+RUN apk add --no-cache git
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+ENV CGO_ENABLED=0
+RUN go build -trimpath -ldflags="-s -w" -o /out/service ./services/${SERVICE}
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates wget
+ARG SERVICE
+ENV SERVICE_NAME=${SERVICE}
+COPY --from=builder /out/service /usr/local/bin/service
+EXPOSE 8090 9090
+ENTRYPOINT ["/usr/local/bin/service"]

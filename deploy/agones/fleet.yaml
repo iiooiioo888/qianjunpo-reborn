@@ -1,0 +1,25 @@
+apiVersion: agones.dev/v1
+kind: Fleet
+metadata:
+  name: roma-fleet
+spec:
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: roma-gameserver
+    spec:
+      ports:
+        - name: default
+          portPolicy: Dynamic
+          containerPort: 9092
+      template:
+        spec:
+          containers:
+            - name: roma
+              image: qianjunpo/roma:phase4-skeleton
+              env:
+                - name: ROMA_GRPC_ADDR
+                  value: ":9092"
+                - name: ROMA_HTTP_ADDR
+                  value: ":8092"

@@ -42,7 +42,7 @@ func (m *MockPlanner) Plan(_ context.Context, _ sim.Snapshot) (Order, error) {
 // TacticalExecutor turns orders into lockstep commands each tick.
 type TacticalExecutor struct {
 	PlayerID uint8
- pending  *Order
+	pending  *Order
 }
 
 // NewTacticalExecutor binds a player id.

@@ -31,7 +31,7 @@ type Recording struct {
 	Frames      []FrameCommand
 	// TimeFlowRates holds per-lockstep-frame dilation (parts per 10000); len may equal Frames or be empty for legacy.
 	TimeFlowRates []uint32
-	FinalHash   uint64
+	FinalHash     uint64
 }
 
 // Recorder accumulates frames and hashes.
