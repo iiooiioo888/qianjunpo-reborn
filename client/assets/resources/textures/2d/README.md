@@ -6,12 +6,12 @@
 
 | 邏輯鍵 (`UnitTextureKey`) | 預設 stem（無擴展名） | `ViewUnit.type` |
 |---------------------------|----------------------|-----------------|
-| `infantry` | `PX2D_unit_infantry_v02` | `0`（預設） |
-| `cavalry` | `PX2D_unit_cavalry_v02` | `2` |
+| `infantry` | `PX2D_unit_infantry` | `0`（預設） |
+| `cavalry` | `PX2D_unit_cavalry` | `2` |
 
-- **v03 畫布**：128×128（常數 `UNIT_ART_CANVAS_PX`）；棋盤格內僅 **Nearest** + **整數倍** 縮放（1×／2× 或反覆 ÷2），見 `PixelSpriteUtil.boardUnitDisplaySize`。
-- **過審後放圖**：將核准 PNG 放入本目錄 `units/`，檔名與 stem 一致（或改 `UnitSpriteRegistry` 內 stem／呼叫 `registerResourcePath('infantry', 'PX2D_unit_infantry_v03')` 後 `preload()`）。
-- **同步 v02 工作稿**（不改 `art/`）：
+- **STANDARD 畫布**：128×128（常數 `UNIT_ART_CANVAS_PX`）；棋盤格內僅 **Nearest** + **整數倍** 縮放（1×／2× 或反覆 ÷2），見 `PixelSpriteUtil.boardUnitDisplaySize`。
+- **換 stem**：將 PNG 放入本目錄 `units/`，檔名與 stem 一致（或改 `UnitSpriteRegistry` 內 stem／呼叫 `registerResourcePath('infantry', '…')` 後 `preload()`）。
+- **同步 STANDARD 工作稿**（來源 art #48，不改 `art/`）：
 
 ```bash
 bash client/scripts/sync-wip-unit-textures.sh

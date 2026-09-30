@@ -12,7 +12,7 @@
 1. 啟動 Cocos Dashboard → **新增／打開** → 選本目錄 `client/`（含 `package.json` 的資料夾）。
 2. 首次開啟若提示升級引擎版本，選 **3.8.x** 並允許編譯 TypeScript。
 3. 在 **資源管理器** 雙擊 `assets/scenes/TacticalBoard.scene`。
-4. 點 **預覽**（瀏覽器或模擬器）：應看到 19×19 地格、兩枚單位（有貼圖時為 PX2D v02 Sprite）、左上角 HUD。
+4. 點 **預覽**（瀏覽器或模擬器）：應看到 19×19 地格、兩枚單位（有貼圖時為 PX2D STANDARD Sprite）、左上角 HUD。
 
 若場景腳本綁定遺失：在 `Canvas/TacticalRoot` 上 **添加组件 → 自定義脚本 → TacticalBootstrap**，`Snapshot Resource` 填 `data/tactical/demo_initial`。
 
@@ -125,7 +125,7 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 |------|------|------|
 | 準備 | `make client-snapshot` | `make compose-up` + 可選 EnterBattle |
 | Cocos | `useLiveJanus=false`，預覽 | `useLiveJanus=true`，`liveBattleId=default/0` |
-| 預期 | HUD 顯示 mock 幀／速率；單位 v02 Sprite 或占位；左上資源圖標列（Nearest） | HUD 隨 curl 快照中 `timeFlowRateParts` 更新；失敗時 HUD 橙字狀態 |
+| 預期 | HUD 顯示 mock 幀／速率；單位 STANDARD Sprite 或占位；左上資源圖標列（Nearest） | HUD 隨 curl 快照中 `timeFlowRateParts` 更新；失敗時 HUD 橙字狀態 |
 | CLI | — | `curl -s 'http://127.0.0.1:8090/v1/tactical/snapshot?battle_id=default/0'` |
 
 ### 仍為 stub／後續
@@ -145,9 +145,9 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 | `assets/scripts/app/` | `TacticalBootstrap` 場景入口 |
 | `assets/resources/data/tactical/` | Mock 戰局 JSON |
 | `assets/resources/textures/2d/` | 2D 像素貼圖（見目錄內 README） |
-| `scripts/sync-wip-unit-textures.sh` | 自 `art/2d/_wip/units` 複製 v02（不改 art） |
+| `scripts/sync-wip-unit-textures.sh` | 自 `art/2d/_wip/units` 複製 STANDARD 單位貼圖（不改 art） |
 | `scripts/sync-wip-icon-textures.sh` | 自 `art/2d/_wip/icons` 複製 13 枚 PX2D 圖標（不改 art） |
-| `scripts/sync-wip-char-textures.sh` | 自 `art/2d/_wip/characters` 複製 v02 角色卡至 `textures/2d/chars/`（可選，v03 前可僅占位） |
+| `scripts/sync-wip-char-textures.sh` | 自 `art/2d/_wip/characters` 複製 v04 角色卡至 `textures/2d/chars/` |
 
 ## 美術（卡通像素風）
 
@@ -159,7 +159,7 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 | **`CharacterCardSpriteRegistry`** | `textures/2d/chars/` | `char_caocao`, `char_zhangfei` |
 | **`IconSpriteRegistry`** | `textures/2d/icons/` | `ICON_ASSET_IDS.resFood` 等 |
 
-- 單位：v02 同步 `sync-wip-unit-textures.sh`；v03 目標畫布 **128×128**，棋盤 **`UnitPlaceholderView`** + `boardUnitDisplaySize`（整數倍，Nearest）。
+- 單位：STANDARD 同步 `sync-wip-unit-textures.sh`（`PX2D_unit_infantry`／`PX2D_unit_cavalry`，128×128），棋盤 **`UnitPlaceholderView`** + `boardUnitDisplaySize`（整數倍，Nearest）。
 - 角色卡：v03 目標 **320×400**；HUD **`CharacterCardHudStrip`** 預覽三鍵，缺圖色塊占位。
 - 圖標：**`ResourceIconHudStrip`**；缺圖時 Sprite 關閉、不 crash。
 - 覆寫路徑：`UnitSpriteRegistry.registerResourcePath` / `CharacterCardSpriteRegistry.registerResourcePath` 後再 `preload()`。

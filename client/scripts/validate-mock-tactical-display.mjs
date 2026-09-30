@@ -17,6 +17,7 @@ const CHAR_CARD_V04_STEMS = [
   'PX2D_CHAR_SHU_Zhangfei_ex_v04',
   'PX2D_CHAR_WU_Placeholder_01_v04',
 ];
+const UNIT_STANDARD_STEMS = ['PX2D_unit_infantry', 'PX2D_unit_cavalry'];
 
 function fail(msg) {
   console.error(`validate-mock-tactical-display: FAIL — ${msg}`);
@@ -85,6 +86,23 @@ if (
   fail('TimeFlowHudStub missing lockstep sync HUD line (LockstepHudFormat)');
 }
 
+const unitRegistrySrc = readFileSync(join(displayDir, 'UnitSpriteRegistry.ts'), 'utf8');
+for (const stem of UNIT_STANDARD_STEMS) {
+  if (!unitRegistrySrc.includes(`'${stem}'`)) {
+    fail(`UnitSpriteRegistry missing default stem ${stem}`);
+  }
+}
+if (unitRegistrySrc.includes('_v02')) {
+  fail('UnitSpriteRegistry still references _v02 unit stems');
+}
+const unitsDir = join(root, 'assets/resources/textures/2d/units');
+for (const stem of UNIT_STANDARD_STEMS) {
+  const png = join(unitsDir, `${stem}.png`);
+  if (!existsSync(png)) {
+    fail(`missing ${png} — run bash client/scripts/sync-wip-unit-textures.sh`);
+  }
+}
+
 const registrySrc = readFileSync(join(displayDir, 'CharacterCardSpriteRegistry.ts'), 'utf8');
 for (const stem of CHAR_CARD_V04_STEMS) {
   if (!registrySrc.includes(`'${stem}'`)) {
@@ -126,5 +144,5 @@ if (!localUnit || localUnit.id !== 101) {
 }
 
 ok(
-  `demo_initial units=${raw.units.length}, lockstep=${raw.lockstepFrame}; HUD char keys=${HUD_CHAR_KEYS.join(',')}; char v04 stems+PNGs ok; lockstep sync + char-card selection link static checks passed`,
+  `demo_initial units=${raw.units.length}, lockstep=${raw.lockstepFrame}; unit STANDARD stems+PNGs ok; HUD char keys=${HUD_CHAR_KEYS.join(',')}; char v04 stems+PNGs ok; lockstep sync + char-card selection link static checks passed`,
 );

@@ -14,8 +14,8 @@ export type UnitTextureKey = (typeof UNIT_TEXTURE_KEYS)[keyof typeof UNIT_TEXTUR
 
 /** 預設資源 stem（無路徑、無擴展名）；可被 registerResourcePath 覆寫。 */
 const DEFAULT_STEM_BY_KEY: Record<UnitTextureKey, string> = {
-  infantry: 'PX2D_unit_infantry_v02',
-  cavalry: 'PX2D_unit_cavalry_v02',
+  infantry: 'PX2D_unit_infantry',
+  cavalry: 'PX2D_unit_cavalry',
 };
 
 /** ViewUnit.type → registry 鍵（與 pkg/tactical 單位種類對齊，缺省回步兵）。 */
@@ -39,7 +39,7 @@ export class UnitSpriteRegistry {
   private static frames = new Map<string, SpriteFrame | null>();
   private static loadPromise: Promise<void> | null = null;
 
-  /** 換圖：例如 v03 過審後 `registerResourcePath('infantry', 'PX2D_unit_infantry_v03')` 再 `preload()`。 */
+  /** 換圖：例如 `registerResourcePath('infantry', 'PX2D_unit_infantry_v03')` 再 `preload()`。 */
   static registerResourcePath(key: UnitTextureKey | string, resourceStem: string): void {
     this.stems.set(key, resourceStem);
     this.frames.delete(key);
