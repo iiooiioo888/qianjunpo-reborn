@@ -1,6 +1,8 @@
 import { _decorator, Component, JsonAsset, Node, resources, Widget } from 'cc';
 import { TacticalBoardView } from '../display/TacticalBoardView';
 import { TimeFlowHudStub } from '../display/TimeFlowHudStub';
+import { IconSpriteRegistry } from '../display/IconSpriteRegistry';
+import { ResourceIconHudStrip } from '../display/ResourceIconHudStrip';
 import { UnitSpriteRegistry } from '../display/UnitSpriteRegistry';
 import { DEFAULT_NETWORK_STUB } from '../network/JanusGatewayStub';
 import { LiveViewSnapshotPoller } from '../network/LiveViewSnapshotPoller';
@@ -51,6 +53,16 @@ export class TacticalBootstrap extends Component {
     hudWidget.top = 16;
     hudWidget.left = 16;
 
+    const iconStripNode = new Node('ResourceIconStrip');
+    iconStripNode.setParent(this.node);
+    iconStripNode.setPosition(-320, 248, 0);
+    const iconStrip = iconStripNode.addComponent(ResourceIconHudStrip);
+    const iconWidget = iconStripNode.addComponent(Widget);
+    iconWidget.isAlignTop = true;
+    iconWidget.isAlignLeft = true;
+    iconWidget.top = 72;
+    iconWidget.left = 16;
+
     const applySnapshot = (raw: unknown) => {
       try {
         boardView.applySnapshot(raw);
@@ -65,7 +77,8 @@ export class TacticalBootstrap extends Component {
       }
     };
 
-    void UnitSpriteRegistry.preload().then(() => {
+    void Promise.all([UnitSpriteRegistry.preload(), IconSpriteRegistry.preload()]).then(() => {
+      iconStrip.buildStrip();
       if (this.useLiveJanus) {
         this.poller = new LiveViewSnapshotPoller({
           cfg: DEFAULT_NETWORK_STUB,

@@ -70,7 +70,7 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 |------|------|------|
 | 準備 | `make client-snapshot` | `make compose-up` + 可選 EnterBattle |
 | Cocos | `useLiveJanus=false`，預覽 | `useLiveJanus=true`，`liveBattleId=default/0` |
-| 預期 | HUD 顯示 mock 幀／速率；單位 v02 Sprite 或占位 | HUD 隨 curl 快照中 `timeFlowRateParts` 更新；失敗時 HUD 橙字狀態 |
+| 預期 | HUD 顯示 mock 幀／速率；單位 v02 Sprite 或占位；左上資源圖標列（Nearest） | HUD 隨 curl 快照中 `timeFlowRateParts` 更新；失敗時 HUD 橙字狀態 |
 | CLI | — | `curl -s 'http://127.0.0.1:8090/v1/tactical/snapshot?battle_id=default/0'` |
 
 ### 仍為 stub／後續
@@ -90,11 +90,13 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 | `assets/resources/data/tactical/` | Mock 戰局 JSON |
 | `assets/resources/textures/2d/` | 2D 像素貼圖（見目錄內 README） |
 | `scripts/sync-wip-unit-textures.sh` | 自 `art/2d/_wip/units` 複製 v02（不改 art） |
+| `scripts/sync-wip-icon-textures.sh` | 自 `art/2d/_wip/icons` 複製 13 枚 PX2D 圖標（不改 art） |
 
 ## 美術（卡通像素風）
 
 - 單位：自 **`art/2d/_wip/units`** 複製 v02 至 `assets/resources/textures/2d/units/`（見 `textures/2d/README.md`）。
-- Sprite **Nearest**、關 mipmap；棋盤格 **整數倍** 縮放。
+- 圖標：`bash client/scripts/sync-wip-icon-textures.sh` → `textures/2d/icons/`；執行期由 **`IconSpriteRegistry`** + **`PixelSpriteUtil`** 設 **Nearest**；戰術場景 HUD 下方有 **`ResourceIconHudStrip`**（五資源預覽，缺圖時 Sprite 關閉、不 crash）。
+- Sprite **Nearest**、關 mipmap；棋盤格與 32px 圖標請 **整數倍** 縮放。
 - 正式 `art/2d/**` 過審流程見 [`../art/2d/README.md`](../art/2d/README.md)；**勿**將 `_wip` 提升為正式夾。
 
 ## 建置產物
