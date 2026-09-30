@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,11 +25,12 @@ import (
 
 type janusGateway struct {
 	gatewayv1.UnimplementedJanusGatewayServer
-	clock *timesync.Clock
-	limit *janus.RateLimiter
-	disco *janus.Discovery
-	auth  janus.AuthHook
-	roma  *janus.RomaClient
+	clock       *timesync.Clock
+	heartbeat   *janus.SessionHeartbeatSync
+	limit       *janus.RateLimiter
+	disco       *janus.Discovery
+	auth        janus.AuthHook
+	roma        *janus.RomaClient
 }
 
 func (g *janusGateway) Connect(ctx context.Context, req *gatewayv1.ConnectRequest) (*gatewayv1.ConnectResponse, error) {
@@ -48,10 +50,14 @@ func (g *janusGateway) Connect(ctx context.Context, req *gatewayv1.ConnectReques
 	}
 	romaEP, _ := g.disco.Lookup(ctx, zone)
 	now := g.clock.Now()
+	sid := randomSessionID()
+	if g.heartbeat != nil {
+		g.heartbeat.ForSession(sid)
+	}
 	_ = pid
 	return &gatewayv1.ConnectResponse{
-		SessionId:    randomSessionID(),
-		ServerTime:   &commonv1.DualTimestamp{WallUnixMs: now.WallUnixMs, SimTick: now.SimTick},
+		SessionId:    sid,
+		ServerTime:   janus.DualTimeToProto(now),
 		RomaEndpoint: romaEP,
 	}, nil
 }
@@ -61,8 +67,13 @@ func (g *janusGateway) Heartbeat(_ context.Context, req *gatewayv1.HeartbeatRequ
 		return nil, fmt.Errorf("janus: missing session")
 	}
 	now := g.clock.Now()
+	if ct := req.GetClientTime(); ct != nil && g.heartbeat != nil {
+		if sync := g.heartbeat.ForSession(req.GetSessionId()); sync != nil {
+			sync.ObserveServerLeg(ct, now)
+		}
+	}
 	return &gatewayv1.HeartbeatResponse{
-		ServerTime: &commonv1.DualTimestamp{WallUnixMs: now.WallUnixMs, SimTick: now.SimTick},
+		ServerTime: janus.DualTimeToProto(now),
 	}, nil
 }
 
@@ -179,6 +190,9 @@ func main() {
 
 	gw := &janusGateway{
 		clock: timesync.NewClock(nil),
+		heartbeat: janus.NewSessionHeartbeatSync(timesync.SimCadence{
+			TicksPerSecond: envInt64("JANUS_SIM_TICKS_PER_SEC", 10),
+		}),
 		limit: janus.NewRateLimiter(1000),
 		disco: disco,
 		auth:  authHook,
@@ -264,4 +278,16 @@ func env(k, def string) string {
 		return v
 	}
 	return def
+}
+
+func envInt64(k string, def int64) int64 {
+	v := os.Getenv(k)
+	if v == "" {
+		return def
+	}
+	n, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		return def
+	}
+	return n
 }
