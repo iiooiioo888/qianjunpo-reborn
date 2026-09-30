@@ -1,5 +1,6 @@
-import { _decorator, Color, Component, Graphics, Sprite, UITransform } from 'cc';
+import { _decorator, Color, Component, Graphics, Node, Sprite, UITransform } from 'cc';
 import { ViewUnit } from '../logic/TacticalSnapshot';
+import { drawUnitSelectionRing } from './BoardSelectionVisuals';
 import { ownerAccentColor } from './TerrainPalette';
 import { boardUnitDisplaySize, UNIT_ART_CANVAS_PX } from './PixelSpriteUtil';
 import { UNIT_TEXTURE_KEYS, UnitSpriteRegistry } from './UnitSpriteRegistry';
@@ -16,6 +17,7 @@ export class UnitPlaceholderView extends Component {
   cellSize = 32;
 
   private g: Graphics | null = null;
+  private ringGfx: Graphics | null = null;
   private sprite: Sprite | null = null;
   private selected = false;
 
@@ -23,15 +25,14 @@ export class UnitPlaceholderView extends Component {
     const ui = this.getComponent(UITransform) ?? this.addComponent(UITransform);
     ui.setContentSize(this.cellSize, this.cellSize);
     this.g = this.getComponent(Graphics) ?? this.addComponent(Graphics);
+    const ringNode = new Node('SelectionRing');
+    ringNode.setParent(this.node);
+    this.ringGfx = ringNode.addComponent(Graphics);
   }
 
   setSelected(on: boolean): void {
     this.selected = on;
-    const g = this.g;
-    if (!g || !g.enabled) {
-      return;
-    }
-    this.redrawSelectionRing(g);
+    this.redrawSelectionRing();
   }
 
   drawUnit(unit: ViewUnit): void {
@@ -50,21 +51,22 @@ export class UnitPlaceholderView extends Component {
         this.g.clear();
         this.g.enabled = false;
       }
-      this.redrawSelectionRing(this.g);
+      this.redrawSelectionRing();
       return;
     }
     this.drawGraphicsPlaceholder(unit);
   }
 
-  private redrawSelectionRing(g: Graphics | null): void {
-    if (!g || !g.enabled || !this.selected) {
+  private redrawSelectionRing(): void {
+    const g = this.ringGfx;
+    if (!g) {
       return;
     }
-    const s = this.cellSize;
-    g.lineWidth = 2;
-    g.strokeColor = new Color(255, 220, 60, 255);
-    g.rect(2, 2, s - 4, s - 4);
-    g.stroke();
+    g.clear();
+    if (!this.selected) {
+      return;
+    }
+    drawUnitSelectionRing(g, this.cellSize);
   }
 
   private drawGraphicsPlaceholder(unit: ViewUnit): void {
@@ -101,6 +103,6 @@ export class UnitPlaceholderView extends Component {
       g.rect(s / 2 - 3, s / 2 - 3, 6, 6);
       g.fill();
     }
-    this.redrawSelectionRing(g);
+    this.redrawSelectionRing();
   }
 }
