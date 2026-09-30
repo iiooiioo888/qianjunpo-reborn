@@ -135,4 +135,10 @@ export class UnitSpriteRegistry {
     }
     return false;
   }
+
+  /** preload 後：有 SpriteFrame 為 true；缺圖登記為 false（未 preload 亦 false）。 */
+  static isSpriteLoaded(key: UnitTextureKey | string): boolean {
+    const sf = this.frames.get(key);
+    return sf != null;
+  }
 }
