@@ -2,9 +2,10 @@ import {
   CHAR_CARD_V04,
   LIVE_POLL_INTERVAL_MS,
   LOCAL_PLAYER_OWNER,
-  MOCK_SNAPSHOT_URL,
+  mockSnapshotUrl,
   parseBootConfig,
 } from './config.js';
+import { resolveAppUrl } from './paths.js';
 import { TacticalBoardRenderer } from './board.js';
 import {
   formatLockstepFrameLine,
@@ -51,8 +52,8 @@ function refreshHud() {
   els.rate.textContent = formatRateLine(snapshot);
   els.frame.textContent = formatLockstepFrameLine(snapshot, syncCtx);
   els.mode.textContent = boot.live
-    ? `Live: ${boot.liveUrl}`
-    : `Mock: ${MOCK_SNAPSHOT_URL}  (add ?live=1 for Janus mirror)`;
+    ? `Live: ${boot.liveUrlRaw}`
+    : `Mock: mock/demo_initial.json  ·  ?live=1 → ${boot.liveUrlRaw}`;
 }
 
 function render() {
@@ -73,16 +74,17 @@ function validateSnapshot(raw) {
 }
 
 async function loadMock() {
-  const res = await fetch(MOCK_SNAPSHOT_URL, { cache: 'no-store' });
+  const url = mockSnapshotUrl();
+  const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) {
-    throw new Error(`mock fetch HTTP ${res.status}`);
+    throw new Error(`${url} HTTP ${res.status}`);
   }
   snapshot = validateSnapshot(await res.json());
   syncCtx = { source: 'mock', link: 'connected' };
   localDrift = false;
   renderer.clearSelection();
   render();
-  setStatus('Mock snapshot loaded. Click your unit (blue) to preview moves.');
+  setStatus(`Mock snapshot loaded (${url}). Click your unit (blue) to preview moves.`);
 }
 
 async function pollLive() {
@@ -116,7 +118,7 @@ async function pollLive() {
     refreshHud();
     const msg = err instanceof Error ? err.message : String(err);
     setStatus(
-      `Live fetch failed (${msg}). Cross-origin needs Dev nginx reverse proxy (e.g. /janus/ → Janus :18090). See README.`,
+      `Live fetch failed (${msg}). Use same-origin v1/… (see README: /qjp/v1/ or :18093 /v1/).`,
       true,
     );
   }
@@ -201,7 +203,7 @@ function bindCards() {
     const fig = document.createElement('figure');
     fig.className = 'char-card';
     const img = document.createElement('img');
-    img.src = card.src;
+    img.src = resolveAppUrl(card.src);
     img.alt = card.label;
     img.loading = 'lazy';
     img.onerror = () => {
@@ -238,7 +240,7 @@ if (boot.live) {
     syncCtx = { source: 'mock', link: 'error' };
     const msg = err instanceof Error ? err.message : String(err);
     setStatus(
-      `Mock load failed (${msg}). Serve from client/ root: cd client && npx serve . — do not open file://`,
+      `Mock load failed (${msg}). Serve this folder: cd client/static-preview && npx serve . — or use HTTP, not file://`,
       true,
     );
   });

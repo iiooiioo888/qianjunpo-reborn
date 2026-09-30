@@ -1,0 +1,1873 @@
+{
+  "schemaVersion": 1,
+  "boardSize": 19,
+  "seed": 51966,
+  "lockstepFrame": 0,
+  "timeFlowRateParts": 10000,
+  "initialStateHash": "9138b2f146cbd991",
+  "cells": [
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 101
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 5,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 3,
+        "passable": false,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 201
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ],
+    [
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      },
+      {
+        "terrain": 0,
+        "passable": true,
+        "unitId": 0
+      }
+    ]
+  ],
+  "units": [
+    {
+      "id": 101,
+      "owner": 0,
+      "type": 0,
+      "x": 2,
+      "y": 8,
+      "hp": 429496729600,
+      "maxHp": 100
+    },
+    {
+      "id": 201,
+      "owner": 1,
+      "type": 2,
+      "x": 16,
+      "y": 10,
+      "hp": 429496729600,
+      "maxHp": 100
+    }
+  ]
+}
