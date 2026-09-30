@@ -28,11 +28,15 @@
 
 ### Mock 驗證（預設）
 
-1. `useLiveJanus = false`，`localPlayerId = 0`。
-2. 預覽後點左側步兵（約格 `(2,8)`）。
-3. 應出現綠色高亮格；點其中一格。
-4. **預期**：單位移動、HUD 第三行 `Mock：已本地套用移動（非權威）`；瀏覽器 console 有 `[TacticalBootstrap] submit move`。
-5. `lockstep frame` 在 HUD 第二行 +1（本地 mock 遞增，非 Roma）。
+1. 倉庫根目錄（可選靜態檢查）：`node client/scripts/validate-mock-tactical-display.mjs`
+2. Cocos 打開 `TacticalBoard.scene`，`TacticalBootstrap`：**`useLiveJanus = false`**，`localPlayerId = 0`，`snapshotResource = data/tactical/demo_initial`。
+3. **預覽**（瀏覽器）：console 應有 `[TextureRegistryDev] mock preload`；HUD 第三行為貼圖占位說明或「registry 已載入」。
+4. 棋盤兩單位（步兵 type=0 @ `(2,8)`、騎兵 type=2 @ `(16,10)`）應為 **Sprite 或幾何占位**；左上 **角色卡三格** 為貼圖或色塊，不 crash。
+5. 點左側己方步兵 → 綠色合法格 → 點一格。
+6. **預期**：單位移動、HUD 第三行 `Mock：已本地套用移動（非權威）`；console 有 `[TacticalBootstrap] submit move`。
+7. `lockstep frame` 在 HUD 第二行 +1（本地 mock 遞增，非 Roma）。
+
+**過審後換圖（不動玩法）**：編輯 `TextureRegistryDev.applyDevTextureStemOverrides()` 內 `registerResourcePath` + 放入 PNG，或執行 `sync-wip-*-textures.sh` 後在 Cocos 對 `textures/2d` 重新導入。
 
 ### Live 驗證
 
@@ -62,6 +66,9 @@
 | `network/TacticalCommandClient.ts` | `submitTacticalMove`（POST 鏡像或 stub） |
 | `display/TacticalBoardInteraction.ts` | 點選輸入 |
 | `display/TacticalBoardView.ts` | 高亮層 + `pixelToGrid` |
+| `display/TextureRegistryDev.ts` | mock/live 共用 preload + 換 stem 範例 |
+| `logic/MockSnapshotIntegrity.ts` | 快照 cells↔units 與 registry type 檢查 |
+| `scripts/validate-mock-tactical-display.mjs` | CLI 靜態驗證 demo_initial |
 
 ## Mock vs Live Janus
 

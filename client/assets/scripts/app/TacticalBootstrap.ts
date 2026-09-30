@@ -3,11 +3,17 @@ import { TacticalBoardView } from '../display/TacticalBoardView';
 import { TacticalBoardInteraction } from '../display/TacticalBoardInteraction';
 import { TimeFlowHudStub } from '../display/TimeFlowHudStub';
 import { CharacterCardHudStrip } from '../display/CharacterCardHudStrip';
-import { CharacterCardSpriteRegistry } from '../display/CharacterCardSpriteRegistry';
-import { IconSpriteRegistry } from '../display/IconSpriteRegistry';
 import { ResourceIconHudStrip } from '../display/ResourceIconHudStrip';
-import { UnitSpriteRegistry } from '../display/UnitSpriteRegistry';
+import {
+  formatTexturePreloadHudNote,
+  logTexturePreloadReport,
+  preloadTacticalDisplayTextures,
+} from '../display/TextureRegistryDev';
 import { applyMockMove } from '../logic/MockSnapshotMutator';
+import {
+  validateSnapshotCellUnitSync,
+  validateSnapshotUnitTypesForRegistry,
+} from '../logic/MockSnapshotIntegrity';
 import { parseViewSnapshot } from '../logic/TacticalSnapshot';
 import { DEFAULT_NETWORK_STUB } from '../network/JanusGatewayStub';
 import { LiveViewSnapshotPoller } from '../network/LiveViewSnapshotPoller';
@@ -45,6 +51,7 @@ export class TacticalBootstrap extends Component {
   private boardInteraction: TacticalBoardInteraction | null = null;
   private hud: TimeFlowHudStub | null = null;
   private mockSnapshotRaw: unknown | null = null;
+  private textureHudNote: string | null = null;
 
   onDestroy(): void {
     this.poller?.stop();
@@ -93,13 +100,25 @@ export class TacticalBootstrap extends Component {
     charWidget.top = 112;
     charWidget.left = 16;
 
-    const applySnapshot = (raw: unknown) => {
+    const applySnapshot = (raw: unknown, networkStatus: string | null = null) => {
       try {
+        const snap = parseViewSnapshot(raw);
+        const cellErr = validateSnapshotCellUnitSync(snap);
+        if (cellErr) {
+          console.warn('[TacticalBootstrap] snapshot cell/unit mismatch', cellErr);
+        }
+        const typeErr = validateSnapshotUnitTypesForRegistry(snap);
+        if (typeErr) {
+          console.warn('[TacticalBootstrap] snapshot unit type vs registry', typeErr);
+        }
         boardView.applySnapshot(raw);
-        const snap = boardView.getSnapshot();
-        if (snap) {
-          hud.updateFromSnapshot(snap);
-          hud.setNetworkStatus(null);
+        const applied = boardView.getSnapshot();
+        if (applied) {
+          hud.updateFromSnapshot(applied);
+          const status =
+            networkStatus ??
+            (this.textureHudNote && !this.useLiveJanus ? this.textureHudNote : null);
+          hud.setNetworkStatus(status);
         }
         this.boardInteraction?.refreshSelectionFromSnapshot();
       } catch (err) {
@@ -136,9 +155,8 @@ export class TacticalBootstrap extends Component {
           return;
         }
         this.mockSnapshotRaw = result.snapshot;
-        applySnapshot(result.snapshot);
+        applySnapshot(result.snapshot, 'Mock：已本地套用移動（非權威）');
         this.boardInteraction?.clearSelection();
-        hud.setNetworkStatus('Mock：已本地套用移動（非權威）');
         return;
       }
 
@@ -161,11 +179,10 @@ export class TacticalBootstrap extends Component {
       }
     });
 
-    void Promise.all([
-      UnitSpriteRegistry.preload(),
-      IconSpriteRegistry.preload(),
-      CharacterCardSpriteRegistry.preload(),
-    ]).then(() => {
+    const displayMode = this.useLiveJanus ? 'live' : 'mock';
+    void preloadTacticalDisplayTextures().then((report) => {
+      logTexturePreloadReport(report, displayMode);
+      this.textureHudNote = formatTexturePreloadHudNote(report);
       iconStrip.buildStrip();
       charStrip.buildStrip();
       if (this.useLiveJanus) {
@@ -173,7 +190,7 @@ export class TacticalBootstrap extends Component {
           cfg: DEFAULT_NETWORK_STUB,
           battleId: this.liveBattleId,
           intervalMs: this.livePollIntervalMs,
-          onSnapshot: applySnapshot,
+          onSnapshot: (raw) => applySnapshot(raw, null),
           onError: (err, retryMs) => {
             console.warn('[TacticalBootstrap] live Janus poll failed', err.message, `(retry ~${retryMs}ms)`);
             hud.setNetworkStatus(`Janus: ${err.message}（約 ${retryMs}ms 後重試）`);

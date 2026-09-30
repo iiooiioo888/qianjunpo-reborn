@@ -118,6 +118,11 @@ export class CharacterCardSpriteRegistry {
     return false;
   }
 
+  static isSpriteLoaded(key: CharCardTextureKey | string): boolean {
+    const sf = this.frames.get(key);
+    return sf != null;
+  }
+
   /** 文件／除錯用：目標畫布像素。 */
   static artCanvasSize(): { width: number; height: number } {
     return { width: CHAR_CARD_ART_WIDTH_PX, height: CHAR_CARD_ART_HEIGHT_PX };

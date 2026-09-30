@@ -101,4 +101,9 @@ export class IconSpriteRegistry {
     }
     return false;
   }
+
+  static isSpriteLoaded(assetId: string): boolean {
+    const sf = this.frames.get(assetId);
+    return sf != null;
+  }
 }

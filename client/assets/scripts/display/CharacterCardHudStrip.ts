@@ -4,6 +4,15 @@ import { CHAR_CARD_ART_HEIGHT_PX, CHAR_CARD_ART_WIDTH_PX, charCardDisplaySize } 
 
 const { ccclass, property } = _decorator;
 
+/** 與 {@link CharacterCardSpriteRegistry} 預覽鍵一致（mock 聯調固定三格）。 */
+export const CHARACTER_CARD_HUD_PREVIEW_KEYS = [
+  CHAR_CARD_TEXTURE_KEYS.char_caocao,
+  CHAR_CARD_TEXTURE_KEYS.char_zhangfei,
+  CHAR_CARD_TEXTURE_KEYS.char_wu_placeholder,
+] as const;
+
+let loggedCardPlaceholderHint = false;
+
 /** 開發用：HUD 展示已登記角色卡（320×400 整數倍縮放，Nearest）；缺圖時色塊占位。 */
 @ccclass('CharacterCardHudStrip')
 export class CharacterCardHudStrip extends Component {
@@ -23,11 +32,7 @@ export class CharacterCardHudStrip extends Component {
       return;
     }
     this.built = true;
-    const keys = [
-      CHAR_CARD_TEXTURE_KEYS.char_caocao,
-      CHAR_CARD_TEXTURE_KEYS.char_zhangfei,
-      CHAR_CARD_TEXTURE_KEYS.char_wu_placeholder,
-    ];
+    const keys = [...CHARACTER_CARD_HUD_PREVIEW_KEYS];
     const { width, height } = charCardDisplaySize(this.previewMaxWidth, this.previewMaxHeight);
     let x = 0;
     for (const key of keys) {
@@ -63,8 +68,11 @@ export class CharacterCardHudStrip extends Component {
     const labelH = Math.min(8, Math.floor(h * 0.12));
     g.rect(4, h - labelH - 4, w - 8, labelH);
     g.fill();
-    console.info(
-      `[CharacterCardHudStrip] placeholder ${key} — drop PNG under textures/2d/chars/ (${CHAR_CARD_ART_WIDTH_PX}×${CHAR_CARD_ART_HEIGHT_PX})`,
-    );
+    if (!loggedCardPlaceholderHint) {
+      loggedCardPlaceholderHint = true;
+      console.info(
+        `[CharacterCardHudStrip] 缺圖占位（含 ${key} 等）— PNG 放 textures/2d/chars/ ${CHAR_CARD_ART_WIDTH_PX}×${CHAR_CARD_ART_HEIGHT_PX} 或 TextureRegistryDev.applyDevTextureStemOverrides`,
+      );
+    }
   }
 }
