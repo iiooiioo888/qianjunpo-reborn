@@ -91,6 +91,7 @@ export class TacticalBootstrap extends Component {
   private textureHudNote: string | null = null;
   private lastLiveSnapshotAtMs = 0;
   private livePollAgeTimer: ReturnType<typeof setInterval> | null = null;
+  private pendingLiveCommandError: string | null = null;
 
   private liveNetworkCfg(): typeof DEFAULT_NETWORK_STUB {
     const base = this.janusHttpTacticalBase.trim();
@@ -185,10 +186,15 @@ export class TacticalBootstrap extends Component {
           } else {
             hud.updateFromSnapshot(applied, mockSyncContextFromBootstrap(syncLink));
           }
-          const status =
-            networkStatus ??
-            (this.textureHudNote && !this.useLiveJanus ? this.textureHudNote : null);
-          hud.setNetworkStatus(status);
+          if (networkStatus != null) {
+            hud.setNetworkStatus(networkStatus);
+          } else if (this.pendingLiveCommandError != null && hud.hasLiveCommandRetry()) {
+            hud.setNetworkStatus(this.pendingLiveCommandError, { preserveRetryAffordance: true });
+          } else {
+            const status =
+              this.textureHudNote && !this.useLiveJanus ? this.textureHudNote : null;
+            hud.setNetworkStatus(status);
+          }
         }
         this.boardInteraction?.refreshSelectionFromSnapshot();
       } catch (err) {
@@ -208,6 +214,52 @@ export class TacticalBootstrap extends Component {
       charStrip.setSelectionLinkedCard(resolveCharCardKeyForUnit(unit));
     };
 
+    const submitLiveMove = async (unitId: number, to: { x: number; y: number }) => {
+      const snap = boardView.getSnapshot();
+      const unit = snap?.units.find((u) => u.id === unitId);
+      if (!unit) {
+        hud.setNetworkStatus('Live：單位不存在或已陣亡');
+        return;
+      }
+      console.info('[TacticalBootstrap] submit move', {
+        unitId,
+        to,
+        playerId: unit.owner,
+        battleId: this.liveBattleId,
+      });
+      hud.setNetworkStatus('Live：送出移動指令…');
+      const submit = await submitTacticalMove(this.liveNetworkCfg(), {
+        battleId: this.liveBattleId,
+        sessionId: this.liveSessionId,
+        playerId: unit.owner,
+        unitId,
+        toX: to.x,
+        toY: to.y,
+      });
+      if (submit.accepted) {
+        this.pendingLiveCommandError = null;
+        hud.clearLiveCommandRetry();
+        const hashPart = submit.stateHash != null ? ` hash=${submit.stateHash}` : '';
+        hud.setNetworkStatus(
+          `Live：指令已接受 frame=${submit.lockstepFrame ?? '?'}${hashPart}（等待快照）`,
+        );
+        this.boardInteraction?.clearSelection();
+        return;
+      }
+      const errLine = submit.stubOnly
+        ? (submit.rejectReason ?? 'Live：HTTP 指令鏡像未部署')
+        : `Live 指令失敗：${submit.rejectReason ?? 'unknown'}`;
+      if (submit.stubOnly) {
+        console.info('[TacticalBootstrap] live submit stub — use grpcurl SubmitTacticalCommand');
+      }
+      this.pendingLiveCommandError = errLine;
+      hud.setNetworkStatus(errLine, {
+        liveCommandRetry: () => {
+          void submitLiveMove(unitId, to);
+        },
+      });
+    };
+
     interaction.bind(
       boardView,
       async (unitId, to) => {
@@ -216,12 +268,6 @@ export class TacticalBootstrap extends Component {
         if (!unit) {
           return;
         }
-        console.info('[TacticalBootstrap] submit move', {
-          unitId,
-          to,
-          playerId: unit.owner,
-          battleId: this.liveBattleId,
-        });
 
         if (!this.useLiveJanus) {
           if (this.mockSnapshotRaw == null) {
@@ -243,27 +289,7 @@ export class TacticalBootstrap extends Component {
           return;
         }
 
-        const submit = await submitTacticalMove(this.liveNetworkCfg(), {
-          battleId: this.liveBattleId,
-          sessionId: this.liveSessionId,
-          playerId: unit.owner,
-          unitId,
-          toX: to.x,
-          toY: to.y,
-        });
-        if (submit.accepted) {
-          const hashPart =
-            submit.stateHash != null ? ` hash=${submit.stateHash}` : '';
-          hud.setNetworkStatus(
-            `Live：指令已接受 frame=${submit.lockstepFrame ?? '?'}${hashPart}`,
-          );
-          this.boardInteraction?.clearSelection();
-        } else if (submit.stubOnly) {
-          hud.setNetworkStatus(submit.rejectReason ?? 'Live：HTTP 指令鏡像未部署');
-          console.info('[TacticalBootstrap] live submit stub — use grpcurl SubmitTacticalCommand');
-        } else {
-          hud.setNetworkStatus(`Live 拒絕：${submit.rejectReason ?? 'unknown'}`);
-        }
+        await submitLiveMove(unitId, to);
       },
       syncCharCardHighlight,
     );
@@ -333,6 +359,8 @@ export class TacticalBootstrap extends Component {
             this.livePollAgeTimer = null;
           }
           this.lastLiveSnapshotAtMs = 0;
+          this.pendingLiveCommandError = null;
+          hud.clearLiveCommandRetry();
           hud.setNetworkStatus('Live：POST connect → enter-battle…');
           try {
             const prepared = await prepareJanusLiveSession({

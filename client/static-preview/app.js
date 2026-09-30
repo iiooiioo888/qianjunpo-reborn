@@ -50,22 +50,49 @@ function setStatus(text, isError = false) {
 }
 
 function hideLiveRetry() {
+  liveRetryKind = 'none';
   els.retryLive.hidden = true;
   els.retryLive.onclick = null;
   els.retryLive.textContent = '';
 }
 
-function showLiveRetry(label, onRetry) {
+function showLiveRetry(kind, label, onRetry) {
+  liveRetryKind = kind;
   els.retryLive.hidden = false;
   els.retryLive.textContent = label;
   els.retryLive.onclick = () => {
-    hideLiveRetry();
+    if (kind !== 'command') {
+      hideLiveRetry();
+    }
     onRetry();
   };
 }
 
+function clearCommandFailure() {
+  pendingCommandFailure = null;
+  if (liveRetryKind === 'command') {
+    hideLiveRetry();
+  }
+}
+
+function restoreCommandFailureHud() {
+  if (!pendingCommandFailure) {
+    return;
+  }
+  setStatus(pendingCommandFailure.message, true);
+  showLiveRetry('command', LIVE_LABEL_COMMAND_RETRY, () => {
+    void runFailedCommandRetry();
+  });
+}
+
 const LIVE_LABEL_PREPARE_RETRY = '重試 Live 建局（connect → enter-battle）';
 const LIVE_LABEL_POLL_RECONNECT = '重連 Live';
+const LIVE_LABEL_COMMAND_RETRY = '重試戰術指令';
+
+/** @type {'none' | 'prepare' | 'poll' | 'command'} */
+let liveRetryKind = 'none';
+/** @type {null | { unitId: number, to: { x: number, y: number }, message: string }} */
+let pendingCommandFailure = null;
 
 function stopLivePoll() {
   if (pollTimer) {
@@ -149,22 +176,74 @@ async function submitLiveCommand(unitId, to) {
     to_y: to.y,
     session_id: liveSessionId,
   };
-  const res = await fetch(boot.commandUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    return { accepted: false, rejectReason: `HTTP ${res.status}: ${text}` };
+  try {
+    const res = await fetch(boot.commandUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      return { accepted: false, rejectReason: `HTTP ${res.status}: ${text}` };
+    }
+    const json = await res.json();
+    return {
+      accepted: Boolean(json.accepted),
+      rejectReason: json.reject_reason,
+      lockstepFrame: json.lockstep_frame,
+      stateHash: json.state_hash,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { accepted: false, rejectReason: `網路錯誤：${msg}` };
   }
-  const json = await res.json();
-  return {
-    accepted: Boolean(json.accepted),
-    rejectReason: json.reject_reason,
-    lockstepFrame: json.lockstep_frame,
-    stateHash: json.state_hash,
-  };
+}
+
+function formatLiveCommandError(result) {
+  if (result.rejectReason) {
+    return `Live 指令失敗：${result.rejectReason}`;
+  }
+  return 'Live 指令失敗：unknown';
+}
+
+function showCommandFailure(unitId, to, message) {
+  pendingCommandFailure = { unitId, to, message };
+  setStatus(message, true);
+  showLiveRetry('command', LIVE_LABEL_COMMAND_RETRY, () => {
+    void runFailedCommandRetry();
+  });
+}
+
+async function runFailedCommandRetry() {
+  if (!pendingCommandFailure) {
+    return;
+  }
+  const { unitId, to } = pendingCommandFailure;
+  setStatus('Live：送出移動指令…');
+  const result = await submitLiveCommand(unitId, to);
+  if (result.accepted) {
+    clearCommandFailure();
+    const hashPart = result.stateHash != null ? ` hash=${result.stateHash}` : '';
+    renderer.clearSelection();
+    setStatus(`Live：指令已接受 frame=${result.lockstepFrame ?? '?'}${hashPart}（等待快照）`);
+    await pollLive();
+    return;
+  }
+  showCommandFailure(unitId, to, formatLiveCommandError(result));
+}
+
+async function runLiveMoveCommand(unitId, to) {
+  setStatus('Live：送出移動指令…');
+  const result = await submitLiveCommand(unitId, to);
+  if (result.accepted) {
+    clearCommandFailure();
+    const hashPart = result.stateHash != null ? ` hash=${result.stateHash}` : '';
+    renderer.clearSelection();
+    setStatus(`Live：指令已接受 frame=${result.lockstepFrame ?? '?'}${hashPart}（等待快照）`);
+    await pollLive();
+    return;
+  }
+  showCommandFailure(unitId, to, formatLiveCommandError(result));
 }
 
 async function pollLive() {
@@ -191,8 +270,12 @@ async function pollLive() {
       renderer.clearSelection();
     }
     render();
-    setStatus('Live Janus mirror polling; legal moves POST to v1/tactical/command.');
-    hideLiveRetry();
+    if (pendingCommandFailure) {
+      restoreCommandFailureHud();
+    } else {
+      setStatus('Live Janus mirror polling; legal moves POST to v1/tactical/command.');
+      hideLiveRetry();
+    }
   } catch (err) {
     syncCtx = {
       source: 'live',
@@ -205,7 +288,7 @@ async function pollLive() {
       `Live 快照失敗（${msg}）。可點「重連 Live」或等待自動重試；同域 v1/… 見 README。`,
       true,
     );
-    showLiveRetry(LIVE_LABEL_POLL_RECONNECT, () => {
+    showLiveRetry('poll', LIVE_LABEL_POLL_RECONNECT, () => {
       void runLivePrepare();
     });
   }
@@ -214,6 +297,7 @@ async function pollLive() {
 async function runLivePrepare() {
   stopLivePoll();
   lastPollAt = 0;
+  clearCommandFailure();
   hideLiveRetry();
   setStatus('Live：POST connect → enter-battle…');
   try {
@@ -232,7 +316,7 @@ async function runLivePrepare() {
     syncCtx = { source: 'live', link: 'error', pollIntervalMs: LIVE_POLL_INTERVAL_MS };
     refreshHud();
     setStatus(msg, true);
-    showLiveRetry(LIVE_LABEL_PREPARE_RETRY, () => {
+    showLiveRetry('prepare', LIVE_LABEL_PREPARE_RETRY, () => {
       void runLivePrepare();
     });
   }
@@ -266,26 +350,7 @@ function onCellClick(x, y) {
     const isLegal = legal.some((c) => c.x === x && c.y === y);
     if (isLegal) {
       if (boot.live && !localDrift) {
-        void (async () => {
-          setStatus('Live：送出移動指令…');
-          try {
-            const result = await submitLiveCommand(selected, { x, y });
-            if (result.accepted) {
-              const hashPart =
-                result.stateHash != null ? ` hash=${result.stateHash}` : '';
-              renderer.clearSelection();
-              setStatus(
-                `Live：指令已接受 frame=${result.lockstepFrame ?? '?'}${hashPart}（等待快照）`,
-              );
-              await pollLive();
-            } else {
-              setStatus(`Live 拒絕：${result.rejectReason ?? 'unknown'}`, true);
-            }
-          } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            setStatus(`Live 指令失敗：${msg}`, true);
-          }
-        })();
+        void runLiveMoveCommand(selected, { x, y });
         return;
       }
       const result = applyMockMove(snapshot, selected, { x, y });

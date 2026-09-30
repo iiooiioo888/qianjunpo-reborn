@@ -74,7 +74,7 @@ export class TimeFlowHudStub extends Component {
   }
 
   private onLiveRetryTap(): void {
-    const fn = this.livePollReconnect ?? this.livePrepareRetry;
+    const fn = this.liveCommandRetry ?? this.livePollReconnect ?? this.livePrepareRetry;
     if (!fn) {
       return;
     }
@@ -92,23 +92,28 @@ export class TimeFlowHudStub extends Component {
   private lastSnapshot: ViewSnapshot | null = null;
   private livePrepareRetry: (() => void) | null = null;
   private livePollReconnect: (() => void) | null = null;
+  private liveCommandRetry: (() => void) | null = null;
   private retryTapNode: Node | null = null;
   private retryLabel: Label | null = null;
 
   private static readonly LABEL_PREPARE_RETRY = '重試 Live 建局（connect → enter-battle）';
   private static readonly LABEL_POLL_RECONNECT = '重連 Live';
+  private static readonly LABEL_COMMAND_RETRY = '重試戰術指令';
 
   private syncLiveRetryAffordance(): void {
+    const command = this.liveCommandRetry;
     const reconnect = this.livePollReconnect;
     const prepare = this.livePrepareRetry;
-    const show = reconnect != null || prepare != null;
+    const show = command != null || reconnect != null || prepare != null;
     if (this.retryTapNode) {
       this.retryTapNode.active = show;
     }
     if (this.retryLabel && show) {
-      this.retryLabel.string = reconnect
-        ? TimeFlowHudStub.LABEL_POLL_RECONNECT
-        : TimeFlowHudStub.LABEL_PREPARE_RETRY;
+      this.retryLabel.string = command
+        ? TimeFlowHudStub.LABEL_COMMAND_RETRY
+        : reconnect
+          ? TimeFlowHudStub.LABEL_POLL_RECONNECT
+          : TimeFlowHudStub.LABEL_PREPARE_RETRY;
     }
   }
 
@@ -136,24 +141,51 @@ export class TimeFlowHudStub extends Component {
    * Live 輪詢／建局狀態 overlay（第三行）。
    * `livePrepareRetry`：connect→enter-battle 建局失敗時一鍵重試。
    * `livePollReconnect`：Live 快照輪詢失敗時一鍵重連（停 poller → 重新建局 → 恢復輪詢）。
+   * `liveCommandRetry`：戰術指令拒絕／HTTP／網路失敗時重送同一筆指令（不假樂觀改盤）。
    */
   setNetworkStatus(
     message: string | null,
-    opts?: { livePrepareRetry?: () => void; livePollReconnect?: () => void },
+    opts?: {
+      livePrepareRetry?: () => void;
+      livePollReconnect?: () => void;
+      liveCommandRetry?: () => void;
+      /** 僅更新第三行文字，保留既有重試按鈕（例如快照輪詢成功但指令仍失敗）。 */
+      preserveRetryAffordance?: boolean;
+    },
   ): void {
     if (this.statusLabel) {
       this.statusLabel.string = message ?? '';
     }
-    if (opts?.livePollReconnect) {
+    if (opts?.preserveRetryAffordance) {
+      this.syncLiveRetryAffordance();
+      return;
+    }
+    if (opts?.liveCommandRetry) {
+      this.liveCommandRetry = opts.liveCommandRetry;
+      this.livePollReconnect = null;
+      this.livePrepareRetry = null;
+    } else if (opts?.livePollReconnect) {
       this.livePollReconnect = opts.livePollReconnect;
+      this.liveCommandRetry = null;
       this.livePrepareRetry = null;
     } else if (opts?.livePrepareRetry) {
       this.livePrepareRetry = opts.livePrepareRetry;
+      this.liveCommandRetry = null;
       this.livePollReconnect = null;
-    } else {
+    } else if (opts === undefined) {
       this.livePrepareRetry = null;
       this.livePollReconnect = null;
+      this.liveCommandRetry = null;
     }
     this.syncLiveRetryAffordance();
+  }
+
+  clearLiveCommandRetry(): void {
+    this.liveCommandRetry = null;
+    this.syncLiveRetryAffordance();
+  }
+
+  hasLiveCommandRetry(): boolean {
+    return this.liveCommandRetry != null;
   }
 }
