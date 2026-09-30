@@ -12,13 +12,16 @@
     <div class="wrap">
       <h1>《千軍破》戰術棋盤 · static-preview</h1>
       <p class="sub">
-        純靜態預覽（非 Cocos）。預設 <code>mock/demo_initial.json</code>；<code>?live=1</code> 同域 <code>v1/tactical/snapshot</code>。
+        純靜態預覽（非 Cocos）。預設 <code>mock/demo_initial.json</code>；<code>?live=1&amp;accessToken=…</code> 同域 <code>v1/tactical/*</code>（token 為 Lares 簽發，勿用字面 <code>dev</code>）。
       </p>
       <section class="hud" aria-live="polite">
         <p id="hud-rate">timeFlowRateParts: —</p>
         <p id="hud-frame">lockstep frame: —</p>
         <p id="hud-mode"></p>
         <p id="hud-status">Loading…</p>
+        <button type="button" id="hud-retry-live" class="retry-live" hidden>
+          重試 Live 建局（connect → enter-battle）
+        </button>
       </section>
       <div class="board-panel">
         <canvas id="board" width="560" height="560" aria-label="19 by 19 tactical board"></canvas>

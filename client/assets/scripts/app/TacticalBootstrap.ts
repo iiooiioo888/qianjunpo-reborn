@@ -64,9 +64,9 @@ export class TacticalBootstrap extends Component {
   @property
   janusHttpTacticalBase = '';
 
-  /** Live EnterBattle：`access_token`（與 compose Janus 一致，開發常用 `dev`）。 */
+  /** Live：`access_token`（Lares 簽發；預設空，請在 Inspector 填入，勿對現網使用字面 `dev`）。 */
   @property
-  liveAccessToken = 'dev';
+  liveAccessToken = '';
 
   @property
   liveZoneId = 'default';
@@ -276,6 +276,7 @@ export class TacticalBootstrap extends Component {
       charStrip.buildStrip();
       if (this.useLiveJanus) {
         const startLivePoller = () => {
+          this.poller?.stop();
           this.poller = new LiveViewSnapshotPoller({
             cfg: this.liveNetworkCfg(),
             battleId: this.liveBattleId,
@@ -317,7 +318,14 @@ export class TacticalBootstrap extends Component {
           }, 250);
         };
 
-        void (async () => {
+        const runLivePrepare = async () => {
+          this.poller?.stop();
+          this.poller = null;
+          if (this.livePollAgeTimer !== null) {
+            clearInterval(this.livePollAgeTimer);
+            this.livePollAgeTimer = null;
+          }
+          this.lastLiveSnapshotAtMs = 0;
           hud.setNetworkStatus('Live：POST connect → enter-battle…');
           try {
             const prepared = await prepareJanusLiveSession({
@@ -338,12 +346,18 @@ export class TacticalBootstrap extends Component {
           } catch (err) {
             const msg = formatJanusLivePrepareError(err);
             console.error('[TacticalBootstrap] live session prepare failed', err);
-            hud.setNetworkStatus(msg);
+            hud.setNetworkStatus(msg, {
+              livePrepareRetry: () => {
+                void runLivePrepare();
+              },
+            });
             hud.setLockstepSyncContext(
               liveSyncContextFromPoll(0, this.livePollIntervalMs, 'error'),
             );
           }
-        })();
+        };
+
+        void runLivePrepare();
         return;
       }
 

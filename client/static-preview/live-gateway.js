@@ -8,10 +8,13 @@ import { resolveAppUrl } from './paths.js';
 export const DEFAULT_CONNECT_PATH = 'v1/tactical/connect';
 export const DEFAULT_ENTER_BATTLE_PATH = 'v1/tactical/enter-battle';
 
+export const LIVE_ACCESS_TOKEN_MISSING_MESSAGE =
+  '需提供 Lares 簽發 accessToken（?accessToken=…）';
+
 export function parseLiveGatewayConfig(params) {
   const connectUrlRaw = params.get('connectUrl') || DEFAULT_CONNECT_PATH;
   const enterBattleUrlRaw = params.get('enterBattleUrl') || DEFAULT_ENTER_BATTLE_PATH;
-  const accessToken = params.get('accessToken') || 'dev';
+  const accessToken = params.get('accessToken') ?? '';
   const zoneId = params.get('zoneId') || 'default';
   const shard = Number(params.get('shard') || '0');
   return {
@@ -82,6 +85,9 @@ async function postJson(url, body) {
  * @returns {Promise<{ sessionId: string, battleId: string, initialSnapshot: object | null }>}
  */
 export async function prepareLiveJanusSession(gw, battleIdHint = 'default/0') {
+  if (!String(gw.accessToken ?? '').trim()) {
+    throw new Error(LIVE_ACCESS_TOKEN_MISSING_MESSAGE);
+  }
   const connectBody = {
     access_token: gw.accessToken,
     client_version: '0.1.0-shell',

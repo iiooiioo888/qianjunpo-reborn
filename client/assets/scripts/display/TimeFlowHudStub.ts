@@ -57,6 +57,27 @@ export class TimeFlowHudStub extends Component {
       this.statusLabel.lineHeight = 20;
       this.statusLabel.color = new Color(255, 180, 100, 255);
     }
+    const retryN = new Node('LivePrepareRetry');
+    retryN.setParent(this.node);
+    retryN.setPosition(0, -88, 0);
+    const retryUi = retryN.addComponent(UITransform);
+    retryUi.setContentSize(520, 28);
+    const retryLbl = retryN.addComponent(Label);
+    retryLbl.string = '重試 Live 建局（connect → enter-battle）';
+    retryLbl.fontSize = 16;
+    retryLbl.lineHeight = 20;
+    retryLbl.color = new Color(120, 200, 255, 255);
+    retryN.active = false;
+    retryN.on(Node.EventType.TOUCH_END, this.onLivePrepareRetryTap, this);
+    this.retryTapNode = retryN;
+  }
+
+  private onLivePrepareRetryTap(): void {
+    const fn = this.livePrepareRetry;
+    if (!fn) {
+      return;
+    }
+    fn();
   }
 
   /** 更新 mock／live 同步語境（影響 lockstep 第二行，不覆寫第三行 overlay）。 */
@@ -68,6 +89,8 @@ export class TimeFlowHudStub extends Component {
   }
 
   private lastSnapshot: ViewSnapshot | null = null;
+  private livePrepareRetry: (() => void) | null = null;
+  private retryTapNode: Node | null = null;
 
   /** 每次 mock／live 快照成功後呼叫；`timeFlowRateParts` 為 Roma 權威顯示值。 */
   updateFromSnapshot(snap: ViewSnapshot, sync?: HudLockstepSyncContext): void {
@@ -89,11 +112,27 @@ export class TimeFlowHudStub extends Component {
     this.updateFromSnapshot(snap);
   }
 
-  /** Live 輪詢失敗時顯示；成功後傳 null 清除。 */
-  setNetworkStatus(message: string | null): void {
-    if (!this.statusLabel) {
-      return;
+  /**
+   * Live 輪詢／建局狀態 overlay（第三行）。
+   * `livePrepareRetry`：僅在 connect→enter-battle 建局失敗時顯示一鍵重試（不造假棋盤狀態）。
+   */
+  setNetworkStatus(
+    message: string | null,
+    opts?: { livePrepareRetry?: () => void },
+  ): void {
+    if (this.statusLabel) {
+      this.statusLabel.string = message ?? '';
     }
-    this.statusLabel.string = message ?? '';
+    if (opts?.livePrepareRetry) {
+      this.livePrepareRetry = opts.livePrepareRetry;
+      if (this.retryTapNode) {
+        this.retryTapNode.active = true;
+      }
+    } else {
+      this.livePrepareRetry = null;
+      if (this.retryTapNode) {
+        this.retryTapNode.active = false;
+      }
+    }
   }
 }
