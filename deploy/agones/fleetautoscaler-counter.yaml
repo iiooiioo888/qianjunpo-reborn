@@ -1,0 +1,27 @@
+# FleetAutoscaler — Counter policy (Agones 1.54, CountsAndLists Beta).
+# Scales roma-fleet so aggregate *available* player capacity (sum of capacity − count on
+# counter key "players") stays near bufferSize. Use this OR buffer-autoscaler.yaml, not both.
+#
+# Metrics: agones_fleet_counters{key="players",...} (Prometheus on controller).
+apiVersion: autoscaling.agones.dev/v1
+kind: FleetAutoscaler
+metadata:
+  name: roma-players-counter-autoscaler
+  labels:
+    app.kubernetes.io/name: qianjunpo-roma
+    qianjunpo.dev/autoscaler-policy: counter
+    qianjunpo.dev/agones-target-version: "1.54.0"
+spec:
+  fleetName: roma-fleet
+  policy:
+    type: Counter
+    counter:
+      key: players
+      # Free player slots to keep across the Fleet (available capacity buffer).
+      bufferSize: 32
+      minCapacity: 64
+      maxCapacity: 2048
+  sync:
+    type: FixedInterval
+    fixedInterval:
+      seconds: 30

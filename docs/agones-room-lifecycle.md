@@ -51,18 +51,24 @@ Sidecar REST reference: [Agones Client SDKs — REST](https://agones.dev/site/do
 
 ## Acceptance checklist
 
-1. `make test-agones-room` passes (mock Allocate → Ready → Shutdown).
+1. `make check-agones` passes (manifest validation + mock Allocate → Ready → Shutdown).
 2. `make test` stays green.
 3. `go run ./cmd/agones-room allocate && ready && shutdown` exits 0 with mock env.
 4. Roma `/v1/agones/status` returns JSON with `phase=ready` after startup (mock or sidecar).
 5. Forced failures: set mock delays / use short `ROMA_AGONES_READY_TIMEOUT` — logs contain `agones/lifecycle:` lines and `last_error` in status JSON.
 6. Prometheus: `qjp_agones_lifecycle_operations_total{operation="ready",result="ok"}` increments on successful Ready.
 
+## Scale-out (Buffer / Counter)
+
+Fleet autoscaler and `players` counter manifests are documented in **[docs/agones-scale-out.md](./agones-scale-out.md)** (`deploy/agones/buffer-autoscaler.yaml`, `fleetautoscaler-counter.yaml`, `gameserverallocation-players.yaml`). Allocation HTTP from Roma uses the same `ROMA_AGONES_FLEET` label selector as those manifests.
+
 ## Make targets
 
 ```bash
-make test-agones-room   # pkg/agones unit tests
-make agones-room-demo   # mock allocate → ready → shutdown CLI
+make validate-agones-manifests  # deploy/agones YAML structure (no cluster)
+make test-agones-room          # pkg/agones unit tests
+make agones-room-demo           # mock allocate → ready → shutdown CLI
+make check-agones               # validate-agones-manifests + test-agones-room
 ```
 
 See also `deploy/agones/README.md` for Fleet / buffer manifests.

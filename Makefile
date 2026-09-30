@@ -1,4 +1,4 @@
-.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer test-edge-infer test-ai-rag test-agones-room agones-room-demo proto proto-check build-services loadpredict aigc-worker aigc-stub-check observability-check promtool-check-rules check-observability
+.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer test-edge-infer test-ai-rag test-agones-room agones-room-demo validate-agones-manifests check-agones proto proto-check build-services loadpredict aigc-worker aigc-stub-check observability-check promtool-check-rules check-observability
 
 OBS_ALERT_RULES := deploy/observability/prometheus/alerts/qjp-production.rules.yml
 PROMTOOL_IMAGE ?= prom/prometheus:v2.54.1
@@ -51,6 +51,11 @@ test-edge-infer:
 
 test-agones-room:
 	go test ./pkg/agones/... -count=1
+
+validate-agones-manifests:
+	go test ./pkg/agones/ -run TestAgonesDeploy -count=1
+
+check-agones: validate-agones-manifests test-agones-room
 
 agones-room-demo:
 	@ROMA_AGONES_BACKEND=mock ROMA_AGONES_ALLOCATOR=mock \

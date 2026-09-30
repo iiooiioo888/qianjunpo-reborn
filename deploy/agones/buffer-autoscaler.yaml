@@ -1,12 +1,23 @@
+# FleetAutoscaler — Buffer policy (Agones 1.54 reference).
+# Keeps a buffer of *Ready* GameServers in roma-fleet (not Allocated / not ShuttingDown).
+# Pairs with Allocate → Ready lifecycle: Roma marks Ready after listeners start; allocator
+# drains the buffer by moving servers to Allocated. See docs/agones-scale-out.md.
+#
+# Do not apply fleetautoscaler-counter.yaml on the same fleet without removing this object.
 apiVersion: autoscaling.agones.dev/v1
 kind: FleetAutoscaler
 metadata:
   name: roma-buffer-autoscaler
+  labels:
+    app.kubernetes.io/name: qianjunpo-roma
+    qianjunpo.dev/autoscaler-policy: buffer
+    qianjunpo.dev/agones-target-version: "1.54.0"
 spec:
   fleetName: roma-fleet
   policy:
     type: Buffer
     buffer:
+      # Absolute count of spare Ready GameServers to maintain (IntOrString: integer or "10%").
       bufferSize: 5
       minReplicas: 2
       maxReplicas: 20
