@@ -35,7 +35,7 @@
 4. 棋盤兩單位（步兵 type=0 @ `(2,8)`、騎兵 type=2 @ `(16,10)`）應為 **Sprite 或幾何占位**；左上 **角色卡三格** 為貼圖或色塊，不 crash。
 5. 點左側己方步兵 → 綠色合法格 → 點一格。
 6. **預期**：單位移動、HUD 第三行 `Mock：已本地套用移動（非權威）`；console 有 `[TacticalBootstrap] submit move`。
-7. `lockstep frame` 在 HUD 第二行 +1（本地 mock 遞增，非 Roma）。
+7. HUD 第二行含 `lockstep frame: N` 與 `sync: mock · local JSON · non-authoritative`（幀號來自 ViewSnapshot；本地 mock 移動後 +1）；第三行為貼圖占位或移動 overlay。
 
 **過審後換圖（不動玩法）**：編輯 `TextureRegistryDev.applyDevTextureStemOverrides()` 內 `registerResourcePath` + 放入 PNG，或執行 `sync-wip-*-textures.sh` 後在 Cocos 對 `textures/2d` 重新導入。
 
