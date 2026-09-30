@@ -1,16 +1,21 @@
-import { _decorator, Color, Component, Graphics, UITransform } from 'cc';
+import { _decorator, Color, Component, Graphics, Sprite, UITransform } from 'cc';
 import { ViewUnit } from '../logic/TacticalSnapshot';
 import { ownerAccentColor } from './TerrainPalette';
+import { UnitSpriteRegistry } from './UnitSpriteRegistry';
 
 const { ccclass, property } = _decorator;
 
-/** 1px-outline cartoon placeholder until PX2D unit sprites import from art/2d. */
+/**
+ * 戰術單位顯示：優先 `resources/textures/2d/units` PX2D v02 Sprite（Nearest）；
+ * 缺圖時退回幾何占位。
+ */
 @ccclass('UnitPlaceholderView')
 export class UnitPlaceholderView extends Component {
   @property
   cellSize = 32;
 
   private g: Graphics | null = null;
+  private sprite: Sprite | null = null;
 
   onLoad(): void {
     const ui = this.getComponent(UITransform) ?? this.addComponent(UITransform);
@@ -19,10 +24,40 @@ export class UnitPlaceholderView extends Component {
   }
 
   drawUnit(unit: ViewUnit): void {
+    const sf = UnitSpriteRegistry.getSpriteFrame(unit.type);
+    if (sf) {
+      this.drawSpriteToken(sf);
+      return;
+    }
+    this.drawGraphicsPlaceholder(unit);
+  }
+
+  private drawSpriteToken(sf: NonNullable<ReturnType<typeof UnitSpriteRegistry.getSpriteFrame>>): void {
+    if (!this.sprite) {
+      this.sprite = this.getComponent(Sprite) ?? this.addComponent(Sprite);
+      this.sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+    }
+    this.sprite.enabled = true;
+    this.sprite.spriteFrame = sf;
+    const ui = this.getComponent(UITransform);
+    if (ui) {
+      ui.setContentSize(this.cellSize, this.cellSize);
+    }
+    if (this.g) {
+      this.g.clear();
+      this.g.enabled = false;
+    }
+  }
+
+  private drawGraphicsPlaceholder(unit: ViewUnit): void {
+    if (this.sprite) {
+      this.sprite.enabled = false;
+    }
     const g = this.g;
     if (!g) {
       return;
     }
+    g.enabled = true;
     g.clear();
     const s = this.cellSize;
     const pad = 4;
@@ -34,7 +69,6 @@ export class UnitPlaceholderView extends Component {
     g.strokeColor = new Color(20, 20, 28, 255);
     g.rect(pad, pad, s - pad * 2, s - pad * 2);
     g.stroke();
-    // Type notch (infantry square / cavalry diamond hint)
     g.fillColor = new Color(255, 255, 255, 180);
     if (unit.type === 2) {
       g.moveTo(s / 2, pad + 2);
