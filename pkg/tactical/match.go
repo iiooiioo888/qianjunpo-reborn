@@ -178,6 +178,10 @@ func (m *Match) Submit(cmd Command) error {
 		if err := m.validateAttack(cmd, u); err != nil {
 			return err
 		}
+	case KindAoE:
+		if err := m.validateAoE(cmd, u); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("tactical: unknown kind %d", cmd.Kind)
 	}
@@ -262,20 +266,29 @@ func (m *Match) apply(cmd Command) {
 		if defender == nil {
 			return
 		}
-		atk := combat.FinalATK(u.Stats, defender.Stats, m.counters)
-		dmg := m.combatCfg.ResolveDamage(atk, defender.Stats.BaseDEF)
-		if m.combatCfg.HitEnabled() {
-			dmg = m.combatCfg.ApplyHitToDamage(dmg, m.RNG.NextUint64())
+		m.applyStrike(u, defender)
+	case KindAoE:
+		if err := m.validateAoE(cmd, u); err != nil {
+			return
 		}
-		if m.combatCfg.CritEnabled() && dmg.Raw() > 0 {
-			dmg = m.combatCfg.ApplyCritToDamage(dmg, m.RNG.NextUint64())
-		}
-		defender.Stats.HP = defender.Stats.HP.Sub(dmg)
-		// Deterministic battle noise for desync detection (bounded).
-		_ = m.RNG.NextIntBounded(5)
-		if defender.Stats.HP.Raw() <= 0 {
-			m.Board.ClearUnit(defender.Pos)
-		}
+		_ = m.ApplyAoEStrike(u.ID, cmd.To, combat.DefaultAoERadius)
+	}
+}
+
+func (m *Match) applyStrike(attacker, defender *Unit) {
+	atk := combat.FinalATK(attacker.Stats, defender.Stats, m.counters)
+	dmg := m.combatCfg.ResolveDamage(atk, defender.Stats.BaseDEF)
+	if m.combatCfg.HitEnabled() {
+		dmg = m.combatCfg.ApplyHitToDamage(dmg, m.RNG.NextUint64())
+	}
+	if m.combatCfg.CritEnabled() && dmg.Raw() > 0 {
+		dmg = m.combatCfg.ApplyCritToDamage(dmg, m.RNG.NextUint64())
+	}
+	defender.Stats.HP = defender.Stats.HP.Sub(dmg)
+	// Deterministic battle noise for desync detection (bounded).
+	_ = m.RNG.NextIntBounded(5)
+	if defender.Stats.HP.Raw() <= 0 {
+		m.Board.ClearUnit(defender.Pos)
 	}
 }
 

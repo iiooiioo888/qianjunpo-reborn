@@ -45,10 +45,12 @@
 
 佔點勝尚未實作；本切片僅殲滅與超時比 HP。
 
-## 範圍傷害選格（AoE stub）
+## 範圍傷害選格與套用（AoE stub）
 
-群傷／範圍技能完整系統尚未入庫；目前僅提供**可呼叫、不套用傷害**的選格骨架：
+群傷／範圍技能完整系統尚未入庫；目前提供 Chebyshev 選格，並在戰術層對目標**逐一**走與單體攻擊相同的傷害管線（`ResolveDamage` → 可選 `hit_rate` → 可選 `crit`；不改公式本體）。
 
 - `combat.CollectAoECells(center, radius)`：回傳 Chebyshev 距離 `≤ radius` 的合法格（預設 stub 常數 `DefaultAoERadius = 1`，含中心格與八鄰），按 `Y` 再 `X` 排序以保確定性。
-- `combat.CollectAoETargets(board, center, radius, excludeID)`：在上述格子上收集單位 ID（升序），可排除施放者；**不**讀取 `hit_rate`／`crit`／`armor_k`，也不改變 `InAttackRange`／`AttackLineClear` 行為。
-- 戰術層 `(*tactical.Match).CollectAoETargets` 為薄封裝，供日後技能指令接線；現行 `validateAttack`／單體攻擊路徑未使用。
+- `combat.CollectAoETargets(board, center, radius, excludeID)`：在上述格子上收集單位 ID（升序），可排除施放者；僅選格，不套用傷害。
+- `combat.ResolveStrikeDamage`：純函式版單次結算（供測試與文件對照）；戰術層 `applyStrike` 與單體 `KindAttack` 共用同一 RNG 消耗順序。
+- 戰術層 `(*tactical.Match).ApplyAoEStrike(attackerID, center, radius)`：對 `CollectAoETargets` 結果中的**敵方**單位升序逐個 `applyStrike`；友軍在範圍內略過。
+- 指令 `KindAoE`（`Command.To` = 範圍中心）：提交時驗證中心在盤內（`AOE_OUT_OF_BOUNDS`）且至少一名敵人在 splash（`AOE_NO_TARGETS`）；**不**改 `InAttackRange`／`AttackLineClear`／`CollectAoECells` 行為；單體 `validateAttack` 路徑不變。
