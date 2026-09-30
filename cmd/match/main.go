@@ -98,13 +98,3 @@ func runVerify(args []string) {
 	}
 	fmt.Printf("OK final_hash=%016x chain_hash=%016x\n", final, replay.ComputeChainHash(rec))
 }
-
-func maxFrame(sched []tactical.ScheduledCommand) uint64 {
-	var max uint64
-	for _, s := range sched {
-		if s.SubmitFrame > max {
-			max = s.SubmitFrame
-		}
-	}
-	return max
-}
