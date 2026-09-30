@@ -25,9 +25,10 @@ func TestPhase3AISnapshotToCommand(t *testing.T) {
 }
 
 func TestInferFallbackWhenDown(t *testing.T) {
-	c := &ai.InferClient{BaseURL: "http://127.0.0.1:1"}
+	off := false
+	c := &ai.InferClient{BaseURL: "http://127.0.0.1:1", LogFallback: &off}
 	out := c.Infer(context.Background(), "guard", "hold")
-	if out.Text != ai.NPCFallback("guard") {
-		t.Fatalf("got %q", out.Text)
+	if out.Text != ai.NPCFallback("guard") || out.Source != ai.SourceNPC {
+		t.Fatalf("got %+v", out)
 	}
 }

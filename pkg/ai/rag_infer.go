@@ -30,7 +30,7 @@ func (c *RAGInferClient) InferWithContext(ctx context.Context, persona, userProm
 		}
 	}
 	if c.Infer == nil {
-		return InferResult{Text: NPCFallback(persona)}
+		return npcResult(persona, FallbackReasonNoInferClient, "")
 	}
 	return c.Infer.Infer(ctx, persona, augmented)
 }

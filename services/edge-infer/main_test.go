@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -45,6 +47,35 @@ func TestInferMock(t *testing.T) {
 	}
 	if resp.Model != backend.MockModelID || resp.Text == "" {
 		t.Fatalf("%+v", resp)
+	}
+}
+
+type inferFailBackend struct{}
+
+func (inferFailBackend) Name() string  { return "fail" }
+func (inferFailBackend) Model() string { return "fail" }
+func (inferFailBackend) Health(context.Context) backend.Health {
+	return backend.Health{Status: "degraded", Backend: "fail", Ready: false}
+}
+func (inferFailBackend) Infer(context.Context, backend.InferRequest) (backend.InferResponse, error) {
+	return backend.InferResponse{}, errors.New("backend unavailable")
+}
+
+func TestInferBackendErrorJSON(t *testing.T) {
+	srv := &server{backend: inferFailBackend{}}
+	body := bytes.NewBufferString(`{"prompt":"defend gate"}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/infer", body)
+	rr := httptest.NewRecorder()
+	srv.handleInfer(rr, req)
+	if rr.Code != http.StatusBadGateway {
+		t.Fatalf("code=%d", rr.Code)
+	}
+	var errResp inferErrorResponse
+	if err := json.NewDecoder(rr.Body).Decode(&errResp); err != nil {
+		t.Fatal(err)
+	}
+	if errResp.Code != "backend_infer_failed" || errResp.Error == "" {
+		t.Fatalf("%+v", errResp)
 	}
 }
 

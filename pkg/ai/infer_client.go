@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -25,11 +28,16 @@ type InferClient struct {
 	RequestTimeout time.Duration
 	// HTTPTimeout caps the outbound HTTP round-trip; zero uses DefaultInferHTTPTimeout.
 	HTTPTimeout time.Duration
+	// LogFallback emits structured slog when NPC fallback is used; default true.
+	LogFallback *bool
 }
 
-// InferResult is a successful model response.
+// InferResult is edge model text or NPC fallback with observability fields.
 type InferResult struct {
-	Text string
+	Text           string
+	Source         string         // SourceEdge or SourceNPC
+	FallbackReason FallbackReason // set when Source == SourceNPC
+	FallbackDetail string         // e.g. HTTP status or backend error code
 }
 
 func (c *InferClient) requestTimeout() time.Duration {
@@ -63,6 +71,20 @@ func (c *InferClient) httpClient() *http.Client {
 	return &http.Client{Timeout: c.httpTimeout()}
 }
 
+func (c *InferClient) shouldLogFallback() bool {
+	if c.LogFallback != nil {
+		return *c.LogFallback
+	}
+	return true
+}
+
+func (c *InferClient) fallback(persona string, reason FallbackReason, detail string) InferResult {
+	if c.shouldLogFallback() {
+		logNPCFallback(persona, reason, detail)
+	}
+	return npcResult(persona, reason, detail)
+}
+
 // Infer posts a prompt; on error or timeout returns NPC template within RequestTimeout.
 func (c *InferClient) Infer(ctx context.Context, persona, prompt string) InferResult {
 	reqTimeout := c.requestTimeout()
@@ -71,24 +93,54 @@ func (c *InferClient) Infer(ctx context.Context, persona, prompt string) InferRe
 	body, _ := json.Marshal(map[string]string{"prompt": prompt})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/v1/infer", bytes.NewReader(body))
 	if err != nil {
-		return InferResult{Text: NPCFallback(persona)}
+		return c.fallback(persona, FallbackReasonRequestBuild, err.Error())
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.httpClient().Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		if resp != nil {
-			resp.Body.Close()
+	if err != nil {
+		reason := FallbackReasonHTTPTransport
+		if errors.Is(err, context.DeadlineExceeded) {
+			reason = FallbackReasonTimeout
+		} else {
+			var netErr interface{ Timeout() bool }
+			if errors.As(err, &netErr) && netErr.Timeout() {
+				reason = FallbackReasonTimeout
+			}
 		}
-		return InferResult{Text: NPCFallback(persona)}
+		return c.fallback(persona, reason, err.Error())
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		detail := strconv.Itoa(resp.StatusCode)
+		if code := readInferErrorCode(resp.Body); code != "" {
+			detail = detail + ":" + code
+		}
+		return c.fallback(persona, FallbackReasonHTTPStatus, detail)
+	}
 	var decoded struct {
 		Text string `json:"text"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil || decoded.Text == "" {
-		return InferResult{Text: NPCFallback(persona)}
+		detail := ""
+		if err != nil {
+			detail = err.Error()
+		}
+		return c.fallback(persona, FallbackReasonBadResponse, detail)
 	}
-	return InferResult{Text: decoded.Text}
+	return edgeResult(decoded.Text)
+}
+
+type inferErrorBody struct {
+	Code  string `json:"code"`
+	Error string `json:"error"`
+}
+
+func readInferErrorCode(r io.Reader) string {
+	var body inferErrorBody
+	if err := json.NewDecoder(r).Decode(&body); err != nil {
+		return ""
+	}
+	return body.Code
 }
 
 // BaseURLMust panics when url empty (tests).
