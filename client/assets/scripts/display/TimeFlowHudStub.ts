@@ -63,17 +63,18 @@ export class TimeFlowHudStub extends Component {
     const retryUi = retryN.addComponent(UITransform);
     retryUi.setContentSize(520, 28);
     const retryLbl = retryN.addComponent(Label);
-    retryLbl.string = '重試 Live 建局（connect → enter-battle）';
+    retryLbl.string = '';
     retryLbl.fontSize = 16;
     retryLbl.lineHeight = 20;
     retryLbl.color = new Color(120, 200, 255, 255);
     retryN.active = false;
-    retryN.on(Node.EventType.TOUCH_END, this.onLivePrepareRetryTap, this);
+    retryN.on(Node.EventType.TOUCH_END, this.onLiveRetryTap, this);
     this.retryTapNode = retryN;
+    this.retryLabel = retryLbl;
   }
 
-  private onLivePrepareRetryTap(): void {
-    const fn = this.livePrepareRetry;
+  private onLiveRetryTap(): void {
+    const fn = this.livePollReconnect ?? this.livePrepareRetry;
     if (!fn) {
       return;
     }
@@ -90,7 +91,26 @@ export class TimeFlowHudStub extends Component {
 
   private lastSnapshot: ViewSnapshot | null = null;
   private livePrepareRetry: (() => void) | null = null;
+  private livePollReconnect: (() => void) | null = null;
   private retryTapNode: Node | null = null;
+  private retryLabel: Label | null = null;
+
+  private static readonly LABEL_PREPARE_RETRY = '重試 Live 建局（connect → enter-battle）';
+  private static readonly LABEL_POLL_RECONNECT = '重連 Live';
+
+  private syncLiveRetryAffordance(): void {
+    const reconnect = this.livePollReconnect;
+    const prepare = this.livePrepareRetry;
+    const show = reconnect != null || prepare != null;
+    if (this.retryTapNode) {
+      this.retryTapNode.active = show;
+    }
+    if (this.retryLabel && show) {
+      this.retryLabel.string = reconnect
+        ? TimeFlowHudStub.LABEL_POLL_RECONNECT
+        : TimeFlowHudStub.LABEL_PREPARE_RETRY;
+    }
+  }
 
   /** 每次 mock／live 快照成功後呼叫；`timeFlowRateParts` 為 Roma 權威顯示值。 */
   updateFromSnapshot(snap: ViewSnapshot, sync?: HudLockstepSyncContext): void {
@@ -114,25 +134,26 @@ export class TimeFlowHudStub extends Component {
 
   /**
    * Live 輪詢／建局狀態 overlay（第三行）。
-   * `livePrepareRetry`：僅在 connect→enter-battle 建局失敗時顯示一鍵重試（不造假棋盤狀態）。
+   * `livePrepareRetry`：connect→enter-battle 建局失敗時一鍵重試。
+   * `livePollReconnect`：Live 快照輪詢失敗時一鍵重連（停 poller → 重新建局 → 恢復輪詢）。
    */
   setNetworkStatus(
     message: string | null,
-    opts?: { livePrepareRetry?: () => void },
+    opts?: { livePrepareRetry?: () => void; livePollReconnect?: () => void },
   ): void {
     if (this.statusLabel) {
       this.statusLabel.string = message ?? '';
     }
-    if (opts?.livePrepareRetry) {
+    if (opts?.livePollReconnect) {
+      this.livePollReconnect = opts.livePollReconnect;
+      this.livePrepareRetry = null;
+    } else if (opts?.livePrepareRetry) {
       this.livePrepareRetry = opts.livePrepareRetry;
-      if (this.retryTapNode) {
-        this.retryTapNode.active = true;
-      }
+      this.livePollReconnect = null;
     } else {
       this.livePrepareRetry = null;
-      if (this.retryTapNode) {
-        this.retryTapNode.active = false;
-      }
+      this.livePollReconnect = null;
     }
+    this.syncLiveRetryAffordance();
   }
 }

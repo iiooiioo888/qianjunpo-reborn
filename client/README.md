@@ -138,7 +138,7 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 - **建局**：`prepareJanusLiveSession` 成功後才啟動 `LiveViewSnapshotPoller`；Enter 回傳的 `view_snapshot_json` 會先套用一次。
 - **`livePollIntervalMs`**（預設 **333ms**，約 3Hz；建議 **200–500ms**）：週期 `GET v1/tactical/snapshot`；`onDestroy` 停止 timer。
 - **`TimeFlowHudStub`**：每次成功快照呼叫 `updateFromSnapshot`，**僅**顯示 JSON 內 `timeFlowRateParts` 與 `lockstepFrame`（不插值、不造假速率）。
-- 輪詢失敗（戰局不存在、網路錯誤）：HUD 第三行顯示狀態並 **指數退避** 重試（1s→10s cap）；成功後清除。
+- 輪詢失敗（戰局不存在、網路錯誤）：HUD 第三行顯示狀態、**指數退避** 自動重試（1s→10s cap），並顯示一鍵 **「重連 Live」**（停 poller → 重新 connect→enter-battle → 恢復輪詢；成功前不造假棋盤）；成功後清除。
 - **`TacticalBoardView`**：僅在幀／單位位置或 HP 變化時重繪單位層；地形成變才重繪棋盤。
 
 ### 驗證步驟（簡表）
