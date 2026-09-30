@@ -15,6 +15,8 @@ service RomaZone {
   // Phase 2 deepen: authoritative pkg/tactical lockstep path.
   rpc SubmitTacticalCommand(SubmitTacticalCommandRequest) returns (SubmitTacticalCommandResponse);
   rpc StepLockstep(StepLockstepRequest) returns (StepLockstepResponse);
+  // Display-layer JSON (pkg/tactical.ViewSnapshot) from authoritative Match.
+  rpc GetTacticalViewSnapshot(GetTacticalViewSnapshotRequest) returns (GetTacticalViewSnapshotResponse);
 }
 
 message JoinZoneRequest {
@@ -82,4 +84,15 @@ message StepLockstepResponse {
   uint64 state_hash = 2;
   bool finished = 3;
   uint32 winner = 4; // 255 = undecided / draw sentinel
+}
+
+message GetTacticalViewSnapshotRequest {
+  string battle_id = 1;
+}
+
+// view_snapshot_json is UTF-8 JSON matching pkg/tactical.ViewSnapshot (schemaVersion=1).
+message GetTacticalViewSnapshotResponse {
+  bytes view_snapshot_json = 1;
+  uint64 state_hash = 2;
+  uint64 lockstep_frame = 3;
 }

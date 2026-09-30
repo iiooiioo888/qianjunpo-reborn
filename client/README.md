@@ -5,7 +5,7 @@
 ## 需求
 
 - [Cocos Creator 3.8.4](https://www.cocos.com/creator-download)（3.8.x 皆可；`package.json` 標記 3.8.4）
-- 無需啟動 Janus／Roma 即可預覽棋盤（mock JSON）
+- Mock 模式無需啟動 Janus／Roma；Live 模式需本機 `make compose-up` 或手動跑 Janus + Roma
 
 ## 開啟專案
 
@@ -16,36 +16,64 @@
 
 若場景腳本綁定遺失：在 `Canvas/TacticalRoot` 上 **添加组件 → 自定義脚本 → TacticalBootstrap**，`Snapshot Resource` 填 `data/tactical/demo_initial`。
 
+## Mock vs Live Janus
+
+| 模式 | `TacticalBootstrap` | 資料來源 |
+|------|---------------------|----------|
+| **Mock（預設）** | `useLiveJanus = false` | `resources/data/tactical/demo_initial.json`（`make client-snapshot`） |
+| **Live（開發）** | `useLiveJanus = true`，`liveBattleId = default/0` | Janus HTTP 開發鏡像 → Roma 權威 `Match` |
+
+### Mock 資料
+
+```bash
+# 在倉庫根目錄
+make client-snapshot
+```
+
+JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardSize=19`，`timeFlowRateParts` 為萬分比（10000=1.0x）。
+
+### Live 快照（gRPC 權威路徑）
+
+1. 啟動服務（Compose 預設 Janus gRPC `:9090`、HTTP `:8090`，Roma `:9092`）：
+
+   ```bash
+   make compose-up
+   ```
+
+2. **EnterBattle** 與 **GetBattleSnapshot**（`proto/gateway/v1/gateway.proto`）會回傳 `view_snapshot_json`（與 mock 同 schema）。`StepTacticalLockstep` 回應亦帶當幀快照。
+
+   ```bash
+   # 範例：取得 default 分片戰局初始快照（需 grpcurl）
+   grpcurl -plaintext -d '{"access_token":"dev","target_zone":{"zone_id":"default","shard":0}}' \
+     localhost:9090 qianjunpo.gateway.v1.JanusGateway/EnterBattle
+   grpcurl -plaintext -d '{"battle_id":"default/0"}' \
+     localhost:9090 qianjunpo.gateway.v1.JanusGateway/GetBattleSnapshot
+   ```
+
+3. **Cocos 瀏覽器預覽**（無 gRPC 插件時）：Janus HTTP 開發端點（與 `GetBattleSnapshot` 同源 JSON，非第二套棋盤）：
+
+   ```bash
+   curl -s 'http://127.0.0.1:8090/v1/tactical/snapshot?battle_id=default/0'
+   ```
+
+   在場景中勾選 `useLiveJanus`，`liveBattleId` 填 `default/0`（或 EnterBattle 回傳的 `battle_id`）。預設 host／port 見 `JanusGatewayStub.ts` 的 `DEFAULT_NETWORK_STUB`。
+
+### 仍為 stub／後續
+
+- Janus **TCP** 二進位 framing（`:7000`）仍為 skeleton；正式客戶端應走 gRPC／未來 WebSocket。
+- Cocos 內尚未內建 gRPC 客戶端；Live 預覽用 HTTP 鏡像，CI／工具用 `grpcurl` 或 `make janus-roma-test`。
+- `TimeFlowHudStub` 尚未接心跳／replay `TimeFlowRates` 串流。
+
 ## 目錄與分層
 
 | 路徑 | 職責 |
 |------|------|
 | `assets/scripts/logic/` | 純資料：`ViewSnapshot` 解析（無權威、無 Cocos 依賴） |
 | `assets/scripts/display/` | 棋盤／單位占位／色板／HUD stub |
-| `assets/scripts/network/` | `JanusGatewayStub`（後續接 `proto/gateway` TCP） |
+| `assets/scripts/network/` | `fetchLiveViewSnapshot`、Janus 設定 stub |
 | `assets/scripts/app/` | `TacticalBootstrap` 場景入口 |
 | `assets/resources/data/tactical/` | Mock 戰局 JSON |
 | `assets/resources/textures/2d/` | 正式 2D 像素貼圖匯入位（見 [`../art/2d/README.md`](../art/2d/README.md)） |
-
-## Mock 資料（與後端對齊）
-
-預設 JSON 由 Go 匯出，對應 `tactical.NewMatch(0xcafe)` 初始局面（與 `make match-play` 同 seed）：
-
-```bash
-# 在倉庫根目錄
-make client-snapshot
-# 或
-go run ./cmd/client-snapshot -seed 0xcafe -out client/assets/resources/data/tactical/demo_initial.json
-```
-
-JSON schema：`schemaVersion=1`，`boardSize=19`，`cells[y][x]` 地形與 `pkg/board` 枚舉一致，`timeFlowRateParts` 為萬分比（10000=1.0x，見 `pkg/timedilation`）。
-
-## 後續：即時連線（非本 PR 範圍）
-
-1. Janus `JanusGateway.Connect` / `EnterBattle`（`proto/gateway/v1/gateway.proto`）。
-2. 週期拉取或推送 **view snapshot**（或由 lockstep frame + 指令在客戶端 replay 純顯示層 — 仍不得本地改 HP）。
-3. 將 `TimeFlowHudStub.setTimeFlowRateParts` 接到心跳或 replay v2 `TimeFlowRates`。
-4. 替換 `JanusGatewayStub` 為 TCP/WebSocket 實作（參考 `services/janus` 與 `make janus-roma-test`）。
 
 ## 美術（卡通像素風）
 
@@ -59,5 +87,6 @@ JSON schema：`schemaVersion=1`，`boardSize=19`，`cells[y][x]` 地形與 `pkg/
 ## 相關後端
 
 - 戰術核心：`pkg/tactical`
-- CLI：`cmd/match`、`make match-play`
-- 閘道契約：`proto/gateway/v1/gateway.proto`
+- CLI：`cmd/match`、`make match-play`、`make client-snapshot`
+- 閘道契約：`proto/gateway/v1/gateway.proto`、`proto/roma/v1/roma.proto`
+- 整合測試：`make janus-roma-test`

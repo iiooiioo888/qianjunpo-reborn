@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"net"
 	"testing"
 	"time"
@@ -94,8 +95,11 @@ func TestJanusToRomaTacticalLockstepPath(t *testing.T) {
 	if battleID == "" || enter.GetInitialStateHash() == 0 {
 		t.Fatal("expected battle id and initial hash")
 	}
-
+	if len(enter.GetViewSnapshotJson()) == 0 {
+		t.Fatal("expected enter battle view snapshot json")
+	}
 	ref := tactical.NewMatch(referenceSeed("default", 0))
+	assertViewSnapshotMatchesRef(t, enter.GetViewSnapshotJson(), ref)
 	sched := tactical.DemoSchedule()
 	idx := 0
 	for frame := uint64(0); frame < tactical.DemoTargetFrame(); frame++ {
@@ -133,9 +137,49 @@ func TestJanusToRomaTacticalLockstepPath(t *testing.T) {
 		if st.GetStateHash() != ref.StateHash() {
 			t.Fatalf("frame %d hash mismatch svc=%016x ref=%016x", frame, st.GetStateHash(), ref.StateHash())
 		}
+		if len(st.GetViewSnapshotJson()) == 0 {
+			t.Fatalf("frame %d missing view snapshot", frame)
+		}
+		assertViewSnapshotMatchesRef(t, st.GetViewSnapshotJson(), ref)
 	}
 	if ref.StateHash() == 0 {
 		t.Fatal("expected non-zero ref hash")
+	}
+
+	snap, err := jc.GetBattleSnapshot(ctx, &gatewayv1.GetBattleSnapshotRequest{
+		SessionId: connect.GetSessionId(),
+		BattleId:  battleID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertViewSnapshotMatchesRef(t, snap.GetViewSnapshotJson(), ref)
+}
+
+func assertViewSnapshotMatchesRef(t *testing.T, raw []byte, ref *tactical.Match) {
+	var view tactical.ViewSnapshot
+	if err := json.Unmarshal(raw, &view); err != nil {
+		t.Fatalf("snapshot json: %v", err)
+	}
+	want := tactical.MatchToViewSnapshot(ref, view.TimeFlowRateParts)
+	if view.LockstepFrame != want.LockstepFrame {
+		t.Fatalf("snapshot frame=%d ref=%d", view.LockstepFrame, want.LockstepFrame)
+	}
+	if view.InitialStateHash != want.InitialStateHash {
+		t.Fatalf("snapshot initial hash=%s want=%s", view.InitialStateHash, want.InitialStateHash)
+	}
+	byID := make(map[uint32]tactical.ViewUnit, len(want.Units))
+	for _, u := range want.Units {
+		byID[u.ID] = u
+	}
+	for _, u := range view.Units {
+		w, ok := byID[u.ID]
+		if !ok {
+			t.Fatalf("unexpected unit id %d", u.ID)
+		}
+		if u.X != w.X || u.Y != w.Y || u.HP != w.HP {
+			t.Fatalf("unit %d: got %+v want %+v", u.ID, u, w)
+		}
 	}
 }
 
@@ -208,6 +252,18 @@ func (s *e2eRomaServer) StepLockstep(_ context.Context, req *romav1.StepLockstep
 		StateHash:     hash,
 		Finished:      finished,
 		Winner:        winner,
+	}, nil
+}
+
+func (s *e2eRomaServer) GetTacticalViewSnapshot(_ context.Context, req *romav1.GetTacticalViewSnapshotRequest) (*romav1.GetTacticalViewSnapshotResponse, error) {
+	jsonBytes, hash, frame, err := s.store.TacticalViewSnapshotJSON(roma.BattleID(req.GetBattleId()))
+	if err != nil {
+		return nil, err
+	}
+	return &romav1.GetTacticalViewSnapshotResponse{
+		ViewSnapshotJson: jsonBytes,
+		StateHash:        hash,
+		LockstepFrame:    frame,
 	}, nil
 }
 

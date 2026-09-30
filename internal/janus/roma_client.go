@@ -74,10 +74,15 @@ func (c *RomaClient) EnterBattle(ctx context.Context, target, accessToken string
 	if err != nil {
 		return nil, err
 	}
+	snapJSON, _, _, err := c.tacticalViewSnapshot(ctx, cli, resp.GetBattleId())
+	if err != nil {
+		return nil, err
+	}
 	return &gatewayv1.EnterBattleResponse{
-		BattleId:         resp.GetBattleId(),
-		SimTime:          resp.GetSimTime(),
-		InitialStateHash: state.GetStateHash(),
+		BattleId:          resp.GetBattleId(),
+		SimTime:           resp.GetSimTime(),
+		InitialStateHash:  state.GetStateHash(),
+		ViewSnapshotJson:  snapJSON,
 	}, nil
 }
 
@@ -121,12 +126,42 @@ func (c *RomaClient) StepTacticalLockstep(ctx context.Context, target string, re
 	if err != nil {
 		return nil, err
 	}
+	snapJSON, _, _, err := c.tacticalViewSnapshot(ctx, cli, req.GetBattleId())
+	if err != nil {
+		return nil, err
+	}
 	return &gatewayv1.StepTacticalLockstepResponse{
-		LockstepFrame: resp.GetLockstepFrame(),
-		StateHash:     resp.GetStateHash(),
-		Finished:      resp.GetFinished(),
-		Winner:        resp.GetWinner(),
+		LockstepFrame:    resp.GetLockstepFrame(),
+		StateHash:        resp.GetStateHash(),
+		Finished:         resp.GetFinished(),
+		Winner:           resp.GetWinner(),
+		ViewSnapshotJson: snapJSON,
 	}, nil
+}
+
+// GetBattleSnapshot pulls Roma tactical view JSON for the Cocos display layer.
+func (c *RomaClient) GetBattleSnapshot(ctx context.Context, target string, req *gatewayv1.GetBattleSnapshotRequest) (*gatewayv1.GetBattleSnapshotResponse, error) {
+	cli, err := c.client(target)
+	if err != nil {
+		return nil, err
+	}
+	jsonBytes, hash, frame, err := c.tacticalViewSnapshot(ctx, cli, req.GetBattleId())
+	if err != nil {
+		return nil, err
+	}
+	return &gatewayv1.GetBattleSnapshotResponse{
+		ViewSnapshotJson: jsonBytes,
+		StateHash:        hash,
+		LockstepFrame:    frame,
+	}, nil
+}
+
+func (c *RomaClient) tacticalViewSnapshot(ctx context.Context, cli romav1.RomaZoneClient, battleID string) ([]byte, uint64, uint64, error) {
+	resp, err := cli.GetTacticalViewSnapshot(ctx, &romav1.GetTacticalViewSnapshotRequest{BattleId: battleID})
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	return resp.GetViewSnapshotJson(), resp.GetStateHash(), resp.GetLockstepFrame(), nil
 }
 
 // DialRoma is a test helper with a short dial timeout.

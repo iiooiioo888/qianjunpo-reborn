@@ -19,11 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	RomaZone_JoinZone_FullMethodName              = "/qianjunpo.roma.v1.RomaZone/JoinZone"
-	RomaZone_GetBattleState_FullMethodName        = "/qianjunpo.roma.v1.RomaZone/GetBattleState"
-	RomaZone_SubmitCommand_FullMethodName         = "/qianjunpo.roma.v1.RomaZone/SubmitCommand"
-	RomaZone_SubmitTacticalCommand_FullMethodName = "/qianjunpo.roma.v1.RomaZone/SubmitTacticalCommand"
-	RomaZone_StepLockstep_FullMethodName          = "/qianjunpo.roma.v1.RomaZone/StepLockstep"
+	RomaZone_JoinZone_FullMethodName                = "/qianjunpo.roma.v1.RomaZone/JoinZone"
+	RomaZone_GetBattleState_FullMethodName          = "/qianjunpo.roma.v1.RomaZone/GetBattleState"
+	RomaZone_SubmitCommand_FullMethodName           = "/qianjunpo.roma.v1.RomaZone/SubmitCommand"
+	RomaZone_SubmitTacticalCommand_FullMethodName   = "/qianjunpo.roma.v1.RomaZone/SubmitTacticalCommand"
+	RomaZone_StepLockstep_FullMethodName            = "/qianjunpo.roma.v1.RomaZone/StepLockstep"
+	RomaZone_GetTacticalViewSnapshot_FullMethodName = "/qianjunpo.roma.v1.RomaZone/GetTacticalViewSnapshot"
 )
 
 // RomaZoneClient is the client API for RomaZone service.
@@ -39,6 +40,8 @@ type RomaZoneClient interface {
 	// Phase 2 deepen: authoritative pkg/tactical lockstep path.
 	SubmitTacticalCommand(ctx context.Context, in *SubmitTacticalCommandRequest, opts ...grpc.CallOption) (*SubmitTacticalCommandResponse, error)
 	StepLockstep(ctx context.Context, in *StepLockstepRequest, opts ...grpc.CallOption) (*StepLockstepResponse, error)
+	// Display-layer JSON (pkg/tactical.ViewSnapshot) from authoritative Match.
+	GetTacticalViewSnapshot(ctx context.Context, in *GetTacticalViewSnapshotRequest, opts ...grpc.CallOption) (*GetTacticalViewSnapshotResponse, error)
 }
 
 type romaZoneClient struct {
@@ -99,6 +102,16 @@ func (c *romaZoneClient) StepLockstep(ctx context.Context, in *StepLockstepReque
 	return out, nil
 }
 
+func (c *romaZoneClient) GetTacticalViewSnapshot(ctx context.Context, in *GetTacticalViewSnapshotRequest, opts ...grpc.CallOption) (*GetTacticalViewSnapshotResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetTacticalViewSnapshotResponse)
+	err := c.cc.Invoke(ctx, RomaZone_GetTacticalViewSnapshot_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RomaZoneServer is the server API for RomaZone service.
 // All implementations must embed UnimplementedRomaZoneServer
 // for forward compatibility.
@@ -112,6 +125,8 @@ type RomaZoneServer interface {
 	// Phase 2 deepen: authoritative pkg/tactical lockstep path.
 	SubmitTacticalCommand(context.Context, *SubmitTacticalCommandRequest) (*SubmitTacticalCommandResponse, error)
 	StepLockstep(context.Context, *StepLockstepRequest) (*StepLockstepResponse, error)
+	// Display-layer JSON (pkg/tactical.ViewSnapshot) from authoritative Match.
+	GetTacticalViewSnapshot(context.Context, *GetTacticalViewSnapshotRequest) (*GetTacticalViewSnapshotResponse, error)
 	mustEmbedUnimplementedRomaZoneServer()
 }
 
@@ -136,6 +151,9 @@ func (UnimplementedRomaZoneServer) SubmitTacticalCommand(context.Context, *Submi
 }
 func (UnimplementedRomaZoneServer) StepLockstep(context.Context, *StepLockstepRequest) (*StepLockstepResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StepLockstep not implemented")
+}
+func (UnimplementedRomaZoneServer) GetTacticalViewSnapshot(context.Context, *GetTacticalViewSnapshotRequest) (*GetTacticalViewSnapshotResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTacticalViewSnapshot not implemented")
 }
 func (UnimplementedRomaZoneServer) mustEmbedUnimplementedRomaZoneServer() {}
 func (UnimplementedRomaZoneServer) testEmbeddedByValue()                  {}
@@ -248,6 +266,24 @@ func _RomaZone_StepLockstep_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RomaZone_GetTacticalViewSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetTacticalViewSnapshotRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RomaZoneServer).GetTacticalViewSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RomaZone_GetTacticalViewSnapshot_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RomaZoneServer).GetTacticalViewSnapshot(ctx, req.(*GetTacticalViewSnapshotRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RomaZone_ServiceDesc is the grpc.ServiceDesc for RomaZone service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -274,6 +310,10 @@ var RomaZone_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StepLockstep",
 			Handler:    _RomaZone_StepLockstep_Handler,
+		},
+		{
+			MethodName: "GetTacticalViewSnapshot",
+			Handler:    _RomaZone_GetTacticalViewSnapshot_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

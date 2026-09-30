@@ -124,6 +124,23 @@ func (g *janusGateway) StepTacticalLockstep(ctx context.Context, req *gatewayv1.
 	return g.roma.StepTacticalLockstep(ctx, romaEP, req)
 }
 
+func (g *janusGateway) GetBattleSnapshot(ctx context.Context, req *gatewayv1.GetBattleSnapshotRequest) (*gatewayv1.GetBattleSnapshotResponse, error) {
+	ctx, span := qjptrace.StartJanusToRomaSpan(ctx, "GetBattleSnapshot")
+	var err error
+	defer func() { qjptrace.EndSpan(span, err) }()
+
+	if req.GetBattleId() == "" {
+		err = fmt.Errorf("janus: missing battle_id")
+		return nil, err
+	}
+	zone := "default"
+	romaEP, err := g.disco.Lookup(ctx, zone)
+	if err != nil {
+		return nil, err
+	}
+	return g.roma.GetBattleSnapshot(ctx, romaEP, req)
+}
+
 func main() {
 	grpcAddr := env("JANUS_GRPC_ADDR", ":9090")
 	tcpAddr := env("JANUS_TCP_ADDR", ":7000")
@@ -172,7 +189,7 @@ func main() {
 	}
 
 	go serveTCPBridge(tcpAddr, gw)
-	go serveHTTP(httpAddr)
+	go serveHTTP(httpAddr, gw)
 
 	lis, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
@@ -198,7 +215,7 @@ func serveTCPBridge(addr string, gw *janusGateway) {
 	}
 }
 
-func serveHTTP(addr string) {
+func serveHTTP(addr string, gw *janusGateway) {
 	metrics.Register(nil)
 	metrics.OnlinePlayers.Set(1)
 
@@ -207,6 +224,30 @@ func serveHTTP(addr string) {
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok","service":"janus"}`))
+	})
+	// Dev-only JSON mirror of GetBattleSnapshot for Cocos browser preview (not a second authority).
+	mux.HandleFunc("/v1/tactical/snapshot", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		battleID := r.URL.Query().Get("battle_id")
+		if battleID == "" {
+			http.Error(w, "missing battle_id", http.StatusBadRequest)
+			return
+		}
+		resp, err := gw.GetBattleSnapshot(r.Context(), &gatewayv1.GetBattleSnapshotRequest{
+			SessionId: r.URL.Query().Get("session_id"),
+			BattleId:  battleID,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Lockstep-Frame", fmt.Sprintf("%d", resp.GetLockstepFrame()))
+		w.Header().Set("X-State-Hash", fmt.Sprintf("%016x", resp.GetStateHash()))
+		_, _ = w.Write(resp.GetViewSnapshotJson())
 	})
 	s := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	log.Fatal(s.ListenAndServe())

@@ -3,6 +3,7 @@ package tactical
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/combat"
@@ -58,8 +59,14 @@ func MatchToViewSnapshot(m *Match, timeFlowRateParts uint32) ViewSnapshot {
 		}
 		cells[y] = row
 	}
-	units := make([]ViewUnit, 0, len(m.Units))
-	for _, u := range m.Units {
+	ids := make([]uint32, 0, len(m.Units))
+	for id := range m.Units {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	units := make([]ViewUnit, 0, len(ids))
+	for _, id := range ids {
+		u := m.Units[id]
 		if u == nil {
 			continue
 		}

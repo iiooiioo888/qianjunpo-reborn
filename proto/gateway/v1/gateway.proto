@@ -14,6 +14,8 @@ service JanusGateway {
   rpc EnterBattle(EnterBattleRequest) returns (EnterBattleResponse);
   rpc SubmitTacticalCommand(SubmitTacticalCommandRequest) returns (SubmitTacticalCommandResponse);
   rpc StepTacticalLockstep(StepTacticalLockstepRequest) returns (StepTacticalLockstepResponse);
+  // Pull display snapshot from Roma tactical Match (same JSON as make client-snapshot).
+  rpc GetBattleSnapshot(GetBattleSnapshotRequest) returns (GetBattleSnapshotResponse);
 }
 
 message ConnectRequest {
@@ -47,6 +49,7 @@ message EnterBattleResponse {
   string battle_id = 1;
   qianjunpo.common.v1.DualTimestamp sim_time = 2;
   uint64 initial_state_hash = 3;
+  bytes view_snapshot_json = 4;
 }
 
 message SubmitTacticalCommandRequest {
@@ -77,4 +80,17 @@ message StepTacticalLockstepResponse {
   uint64 state_hash = 2;
   bool finished = 3;
   uint32 winner = 4;
+  // Optional: same payload as GetBattleSnapshot after the step (avoids extra RPC).
+  bytes view_snapshot_json = 5;
+}
+
+message GetBattleSnapshotRequest {
+  string session_id = 1;
+  string battle_id = 2;
+}
+
+message GetBattleSnapshotResponse {
+  bytes view_snapshot_json = 1;
+  uint64 state_hash = 2;
+  uint64 lockstep_frame = 3;
 }
