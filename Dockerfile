@@ -9,8 +9,8 @@ COPY . .
 ENV CGO_ENABLED=0
 RUN go build -o /out/demo ./cmd/demo
 
-FROM alpine:3.20
-RUN apk add --no-cache ca-certificates make
+FROM golang:1.22-alpine
+RUN apk add --no-cache ca-certificates git make
 WORKDIR /app
 COPY --from=builder /out/demo /app/demo
 COPY Makefile go.mod go.sum* ./

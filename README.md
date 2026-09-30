@@ -53,6 +53,14 @@ make compose-test       # 建置 app 並在容器內執行測試
 make compose-down       # 關閉堆疊
 ```
 
+從宿主機連線時使用下列埠（避免與本機常見的 Redis／MySQL 衝突）；容器內 `app` 仍透過服務名與預設埠連線（`redis:6379`、`mysql:3306`、`etcd:2379`）：
+
+| 服務 | 宿主機埠 |
+|------|----------|
+| Redis | `16379` |
+| MySQL | `13306` |
+| etcd | `12379` |
+
 手動：
 
 ```bash
