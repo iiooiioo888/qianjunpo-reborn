@@ -18,7 +18,14 @@
 | `pkg/validate` | 伺服器權威移動驗證 |
 | `pkg/cmdqueue` | 熱／溫／冷隊列與 P0/P1/P2 優先級 |
 | `pkg/combat` | 兵種克制矩陣與 FP64 攻防 |
-| `pkg/replay` | 戰鬥回放（哈希鏈 + gzip） |
+| `pkg/replay` | 戰鬥回放（哈希鏈 + gzip；v2 含每幀 `time_flow_rate`） |
+| `pkg/timedilation` | 時間膨脹控制環、`time_flow_rate`、分層時鐘、追趕上限 1.5x |
+| `pkg/loadsample` | CPU／隊列／成長率／P99 採樣 + `Predictor`（LSTM 可插拔介面） |
+| `pkg/degrade` | L0–L5 降級狀態機與有序恢復 |
+| `pkg/cmdmerge` | 過載指令合併（move/build、P2 500ms 批次） |
+| `pkg/ai` | 戰略層（~5s mock）+ 戰術層 → `lockstep.CommandPacket` |
+| `pkg/rag` | RAG Top-K 介面 + 記憶體假向量庫（Top-5 延遲目標見套件註解） |
+| `services/edge-infer` | 邊緣推理 HTTP 骨架（health + Qwen2.5-3B mock） |
 | `cmd/demo` | 雙客戶端同種子同輸入哈希對照 |
 
 ## 鎖步與時間模型
@@ -34,12 +41,22 @@
 - 尋路與棋盤判定為確定性整數演算法
 - RNG 與狀態哈希可序列化／比對，支援快照、回滾與回放驗證
 
+### Phase 3：時間膨脹與 AI 邊界
+
+- **模擬幀率**仍固定 **10 fps**；`time_flow_rate` 以萬分比（10000=1.0x）調節區域／角色牆鐘對齊，**不進入** `pkg/fixed`／`pkg/combat` 的 FP64 戰鬥運算
+- 分層時鐘：`real` → `region` → `actor`；`battle` 幀計數只隨鎖步 +1
+- 回放 **v2** 在每幀旁記錄 `TimeFlowRates`；v1 仍可讀
+- 過載時佇列高水位 1000、低水位 200，漸進降速／較慢恢復（單元測試以 `ManualClock` 驗證 ~4.5s／~11.6s 量級）
+
 ## 本機測試與 Demo
 
 ```bash
 make test          # 等同 go test ./...
 make demo          # 雙客戶端確定性演示
-go test ./... -v   # 詳細輸出
+make edge-infer    # 啟動 :8088 邊緣推理 mock（/health、/v1/infer、/v1/load）
+go test ./pkg/timedilation -v
+go test ./pkg/ai ./pkg/integration -v
+go test ./services/edge-infer -v
 ```
 
 ## Docker Compose（dev）
@@ -70,7 +87,7 @@ docker compose --profile dev build app
 
 ## 本階段未包含
 
-時間膨脹、AI、完整 Janus/Roma/Lares 微服務業務、K8s/Agones、Cocos 客戶端等（見技術白皮書後續階段）。
+完整 Janus/Roma/Lares 微服務業務、真實 Milvus/Qdrant、下載多 GB 模型、K8s/Agones、Cocos 客戶端 UI 等（見技術白皮書後續階段）。
 
 ## 授權
 
