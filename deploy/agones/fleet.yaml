@@ -1,18 +1,39 @@
+# Roma Fleet — Agones 1.54.x (CountsAndLists Beta, enabled by default in 1.54).
+# Requires cluster feature gate CountsAndLists unless your distro enables it by default.
+# Cross-link: docs/agones-scale-out.md · docs/agones-room-lifecycle.md
 apiVersion: agones.dev/v1
 kind: Fleet
 metadata:
   name: roma-fleet
+  labels:
+    app.kubernetes.io/name: qianjunpo-roma
+    app.kubernetes.io/component: agones-gameserver
+    qianjunpo.dev/agones-target-version: "1.54.0"
 spec:
+  # Initial replica count; steady state is owned by FleetAutoscaler (buffer-autoscaler.yaml).
   replicas: 2
+  scheduling: Packed
+  # When the Fleet scales down, prefer removing GameServers with fewer occupied player slots.
+  priorities:
+    - type: Counter
+      key: players
+      order: Ascending
   template:
     metadata:
       labels:
         app: roma-gameserver
+        agones.dev/fleet: roma-fleet
     spec:
       ports:
         - name: default
           portPolicy: Dynamic
           containerPort: 9092
+      # Player headcount counter (per GameServer). Roma / sidecar SDK increments on join,
+      # decrements on leave; allocation can pre-increment via gameserverallocation-players.yaml.
+      counters:
+        players:
+          count: 0
+          capacity: 64
       template:
         spec:
           containers:
@@ -23,3 +44,12 @@ spec:
                   value: ":9092"
                 - name: ROMA_HTTP_ADDR
                   value: ":8092"
+                - name: ROMA_AGONES_BACKEND
+                  value: sidecar
+                - name: ROMA_AGONES_ALLOCATOR
+                  value: http
+                - name: ROMA_AGONES_FLEET
+                  value: roma-fleet
+                # Sidecar REST (Agones 1.54 client SDK gateway default).
+                - name: ROMA_AGONES_SIDECAR_URL
+                  value: http://127.0.0.1:9358

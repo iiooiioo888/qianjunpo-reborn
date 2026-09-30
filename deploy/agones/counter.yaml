@@ -1,7 +1,25 @@
-apiVersion: agones.dev/v1
-kind: Counter
-metadata:
-  name: roma-match-queue
-spec:
-  count: 0
-  capacity: 1000
+# Player counter declaration lives on the Fleet GameServer template (not a standalone CRD).
+# This file documents the counter key and points to the manifests that use it.
+#
+# Counter key: players  (per-GameServer headcount, capacity 64 in fleet.yaml)
+#
+# Related files:
+#   fleet.yaml                          — counters.players { count, capacity }
+#   fleetautoscaler-counter.yaml        — FleetAutoscaler policy.type: Counter
+#   gameserverallocation-players.yaml   — allocate + minAvailable + Increment
+#
+# Roma lifecycle hookup:
+#   1. Fleet pod starts → Roma sidecar Ready (docs/agones-room-lifecycle.md)
+#   2. Control plane POST GameServerAllocation (see gameserverallocation-players.yaml)
+#   3. Game server updates players via Agones SDK Beta counters API as sessions attach/detach
+#
+# Agones 1.54 feature: CountsAndLists (Beta). Disable via feature gate only if required.
+#
+# --- reference fragment (already applied in fleet.yaml) ---
+# spec:
+#   template:
+#     spec:
+#       counters:
+#         players:
+#           count: 0
+#           capacity: 64

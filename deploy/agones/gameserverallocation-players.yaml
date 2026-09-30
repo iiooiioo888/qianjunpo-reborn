@@ -1,0 +1,34 @@
+# Example GameServerAllocation for Roma control-plane allocate (HTTP).
+# Wire ROMA_AGONES_ALLOCATION_URL to your allocator / in-cluster proxy.
+# pkg/agones/http_allocator.go currently sends selectors only; extend the JSON body
+# with spec.counters when enabling player-capacity filtering in pre-prod.
+#
+# Agones 1.54: selectors.counters.players.minAvailable ensures capacity before allocate.
+# counters.players Increment reserves one slot atomically when allocation succeeds.
+apiVersion: allocation.agones.dev/v1
+kind: GameServerAllocation
+metadata:
+  name: roma-allocate-with-players-counter
+spec:
+  scheduling: Packed
+  priorities:
+    - type: Counter
+      key: players
+      order: Ascending
+  selectors:
+    - gameServerState: Ready
+      matchLabels:
+        agones.dev/fleet: roma-fleet
+      counters:
+        players:
+          minAvailable: 1
+    - gameServerState: Allocated
+      matchLabels:
+        agones.dev/fleet: roma-fleet
+      counters:
+        players:
+          minAvailable: 1
+  counters:
+    players:
+      action: Increment
+      amount: 1
