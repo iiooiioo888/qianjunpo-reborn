@@ -42,7 +42,7 @@ func (s *romaServer) GetBattleState(_ context.Context, req *romav1.GetBattleStat
 		BattleId:  string(b.ID),
 		Zone:      &commonv1.ZoneRef{ZoneId: b.ZoneID, Shard: b.Shard},
 		StateHash: b.StateHash(),
-		UnitCount: int32(len(b.Units)),
+		UnitCount: b.UnitCount(),
 	}, nil
 }
 
@@ -52,6 +52,44 @@ func (s *romaServer) SubmitCommand(_ context.Context, req *romav1.SubmitCommandR
 		return &romav1.SubmitCommandResponse{Accepted: false}, nil
 	}
 	return &romav1.SubmitCommandResponse{Accepted: true, StateHash: h}, nil
+}
+
+func (s *romaServer) SubmitTacticalCommand(_ context.Context, req *romav1.SubmitTacticalCommandRequest) (*romav1.SubmitTacticalCommandResponse, error) {
+	cmd := req.GetCommand()
+	frame, hash, err := s.store.SubmitTacticalCommand(
+		roma.BattleID(req.GetBattleId()),
+		cmd.GetPlayerId(),
+		cmd.GetKind(),
+		cmd.GetUnitId(),
+		cmd.GetToX(),
+		cmd.GetToY(),
+	)
+	if err != nil {
+		return &romav1.SubmitTacticalCommandResponse{
+			Accepted:     false,
+			RejectReason: err.Error(),
+			StateHash:    hash,
+			LockstepFrame: frame,
+		}, nil
+	}
+	return &romav1.SubmitTacticalCommandResponse{
+		Accepted:      true,
+		StateHash:     hash,
+		LockstepFrame: frame,
+	}, nil
+}
+
+func (s *romaServer) StepLockstep(_ context.Context, req *romav1.StepLockstepRequest) (*romav1.StepLockstepResponse, error) {
+	frame, hash, finished, winner, err := s.store.StepLockstep(roma.BattleID(req.GetBattleId()), req.GetSteps())
+	if err != nil {
+		return nil, err
+	}
+	return &romav1.StepLockstepResponse{
+		LockstepFrame: frame,
+		StateHash:     hash,
+		Finished:      finished,
+		Winner:        winner,
+	}, nil
 }
 
 func main() {
@@ -69,7 +107,7 @@ func main() {
 		mux.Handle("/metrics", metrics.Handler())
 		mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"status":"ok","service":"roma","note":"authoritative state in-memory only"}`))
+			_, _ = w.Write([]byte(`{"status":"ok","service":"roma","note":"authoritative tactical match in-memory"}`))
 		})
 		s := &http.Server{Addr: httpAddr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 		log.Fatal(s.ListenAndServe())

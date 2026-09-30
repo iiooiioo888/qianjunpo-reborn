@@ -1,4 +1,4 @@
-.PHONY: test demo compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
+.PHONY: test demo match-play match-verify janus-roma-test compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
 
 COMPOSE ?= docker compose --profile dev
 PROTOC ?= protoc
@@ -25,6 +25,9 @@ match-verify:
 	go run ./cmd/match play -seed 0xcafe -out $$tmp && \
 	go run ./cmd/match verify -in $$tmp; \
 	rm -f $$tmp
+
+janus-roma-test:
+	go test ./services/janus -run TestJanusToRomaTacticalLockstepPath -v
 
 edge-infer:
 	go run ./services/edge-infer

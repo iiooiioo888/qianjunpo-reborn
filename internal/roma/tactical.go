@@ -1,0 +1,80 @@
+package roma
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/hash"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/tactical"
+)
+
+const winnerUndecided = 255
+
+func tacticalSeed(zoneID string, shard uint32) uint64 {
+	h := hash.New()
+	h.Write([]byte(zoneID))
+	h.WriteUint64(uint64(shard))
+	return h.Sum64()
+}
+
+func protoToCommand(playerID, kind, unitID uint32, toX, toY int32) (tactical.Command, error) {
+	if playerID >= tactical.PlayerCount {
+		return tactical.Command{}, fmt.Errorf("roma: invalid player %d", playerID)
+	}
+	cmd := tactical.Command{
+		PlayerID: uint8(playerID),
+		Kind:     tactical.CommandKind(kind),
+		UnitID:   unitID,
+		To:       board.Coord{X: int(toX), Y: int(toY)},
+	}
+	switch cmd.Kind {
+	case tactical.KindMove, tactical.KindAttack, tactical.KindPass:
+		return cmd, nil
+	default:
+		return tactical.Command{}, fmt.Errorf("roma: unknown tactical kind %d", kind)
+	}
+}
+
+func (s *Store) SubmitTacticalCommand(id BattleID, playerID, kind, unitID uint32, toX, toY int32) (uint64, uint64, error) {
+	cmd, err := protoToCommand(playerID, kind, unitID, toX, toY)
+	if err != nil {
+		return 0, 0, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	b, ok := s.battles[id]
+	if !ok {
+		return 0, 0, errors.New("roma: battle not found")
+	}
+	if b.Match == nil {
+		return 0, 0, errors.New("roma: battle has no tactical match")
+	}
+	if err := b.Match.Submit(cmd); err != nil {
+		return b.Match.Frame, b.Match.StateHash(), err
+	}
+	return b.Match.Frame, b.Match.StateHash(), nil
+}
+
+func (s *Store) StepLockstep(id BattleID, steps uint32) (uint64, uint64, bool, uint32, error) {
+	if steps == 0 {
+		steps = 1
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	b, ok := s.battles[id]
+	if !ok {
+		return 0, 0, false, winnerUndecided, errors.New("roma: battle not found")
+	}
+	if b.Match == nil {
+		return 0, 0, false, winnerUndecided, errors.New("roma: battle has no tactical match")
+	}
+	for i := 0; i < int(steps); i++ {
+		b.Match.StepLockstep()
+	}
+	winner := uint32(winnerUndecided)
+	if b.Match.Finished {
+		winner = uint32(b.Match.Winner)
+	}
+	return b.Match.Frame, b.Match.StateHash(), b.Match.Finished, winner, nil
+}

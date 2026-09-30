@@ -12,6 +12,9 @@ service RomaZone {
   rpc JoinZone(JoinZoneRequest) returns (JoinZoneResponse);
   rpc GetBattleState(GetBattleStateRequest) returns (BattleState);
   rpc SubmitCommand(SubmitCommandRequest) returns (SubmitCommandResponse);
+  // Phase 2 deepen: authoritative pkg/tactical lockstep path.
+  rpc SubmitTacticalCommand(SubmitTacticalCommandRequest) returns (SubmitTacticalCommandResponse);
+  rpc StepLockstep(StepLockstepRequest) returns (StepLockstepResponse);
 }
 
 message JoinZoneRequest {
@@ -46,4 +49,37 @@ message SubmitCommandRequest {
 message SubmitCommandResponse {
   bool accepted = 1;
   uint64 state_hash = 2;
+}
+
+// TacticalCommand mirrors pkg/tactical.Command (grid coords are 0..18).
+message TacticalCommand {
+  uint32 player_id = 1;
+  uint32 kind = 2; // 1=move, 2=attack, 3=pass
+  uint32 unit_id = 3;
+  int32 to_x = 4;
+  int32 to_y = 5;
+}
+
+message SubmitTacticalCommandRequest {
+  string battle_id = 1;
+  TacticalCommand command = 2;
+}
+
+message SubmitTacticalCommandResponse {
+  bool accepted = 1;
+  string reject_reason = 2;
+  uint64 state_hash = 3;
+  uint64 lockstep_frame = 4;
+}
+
+message StepLockstepRequest {
+  string battle_id = 1;
+  uint32 steps = 2;
+}
+
+message StepLockstepResponse {
+  uint64 lockstep_frame = 1;
+  uint64 state_hash = 2;
+  bool finished = 3;
+  uint32 winner = 4; // 255 = undecided / draw sentinel
 }

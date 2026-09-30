@@ -27,6 +27,7 @@ type janusGateway struct {
 	limit *janus.RateLimiter
 	disco *janus.Discovery
 	auth  janus.AuthHook
+	roma  *janus.RomaClient
 }
 
 func (g *janusGateway) Connect(ctx context.Context, req *gatewayv1.ConnectRequest) (*gatewayv1.ConnectResponse, error) {
@@ -64,17 +65,77 @@ func (g *janusGateway) Heartbeat(_ context.Context, req *gatewayv1.HeartbeatRequ
 	}, nil
 }
 
+func (g *janusGateway) EnterBattle(ctx context.Context, req *gatewayv1.EnterBattleRequest) (*gatewayv1.EnterBattleResponse, error) {
+	ctx, span := qjptrace.StartJanusToRomaSpan(ctx, "EnterBattle")
+	var err error
+	defer func() { qjptrace.EndSpan(span, err) }()
+
+	if !g.limit.Allow() {
+		err = fmt.Errorf("janus: rate limited")
+		return nil, err
+	}
+	if _, ok := g.auth.ValidateAccess(ctx, req.GetAccessToken()); !ok {
+		err = fmt.Errorf("janus: unauthorized")
+		return nil, err
+	}
+	zone := req.GetTargetZone()
+	if zone == nil || zone.GetZoneId() == "" {
+		zone = &commonv1.ZoneRef{ZoneId: "default"}
+	}
+	romaEP, err := g.disco.Lookup(ctx, zone.GetZoneId())
+	if err != nil {
+		return nil, err
+	}
+	return g.roma.EnterBattle(ctx, romaEP, req.GetAccessToken(), zone)
+}
+
+func (g *janusGateway) SubmitTacticalCommand(ctx context.Context, req *gatewayv1.SubmitTacticalCommandRequest) (*gatewayv1.SubmitTacticalCommandResponse, error) {
+	ctx, span := qjptrace.StartJanusToRomaSpan(ctx, "SubmitTacticalCommand")
+	var err error
+	defer func() { qjptrace.EndSpan(span, err) }()
+
+	if req.GetBattleId() == "" {
+		err = fmt.Errorf("janus: missing battle_id")
+		return nil, err
+	}
+	zone := "default"
+	romaEP, err := g.disco.Lookup(ctx, zone)
+	if err != nil {
+		return nil, err
+	}
+	return g.roma.SubmitTacticalCommand(ctx, romaEP, req)
+}
+
+func (g *janusGateway) StepTacticalLockstep(ctx context.Context, req *gatewayv1.StepTacticalLockstepRequest) (*gatewayv1.StepTacticalLockstepResponse, error) {
+	ctx, span := qjptrace.StartJanusToRomaSpan(ctx, "StepTacticalLockstep")
+	var err error
+	defer func() { qjptrace.EndSpan(span, err) }()
+
+	if req.GetBattleId() == "" {
+		err = fmt.Errorf("janus: missing battle_id")
+		return nil, err
+	}
+	zone := "default"
+	romaEP, err := g.disco.Lookup(ctx, zone)
+	if err != nil {
+		return nil, err
+	}
+	return g.roma.StepTacticalLockstep(ctx, romaEP, req)
+}
+
 func main() {
 	grpcAddr := env("JANUS_GRPC_ADDR", ":9090")
 	tcpAddr := env("JANUS_TCP_ADDR", ":7000")
 	httpAddr := env("JANUS_HTTP_ADDR", ":8090")
 	etcdEndpoints := env("ETCD_ENDPOINTS", "etcd:2379")
+	romaDefault := env("ROMA_GRPC_ADDR", "roma:9092")
 
 	gw := &janusGateway{
 		clock: timesync.NewClock(nil),
 		limit: janus.NewRateLimiter(1000),
-		disco: &janus.Discovery{Endpoints: map[string]string{"default": "roma:9092"}},
+		disco: &janus.Discovery{Endpoints: map[string]string{"default": romaDefault}},
 		auth:  janus.StaticAuth{},
+		roma:  janus.NewRomaClient(),
 	}
 	_ = etcdEndpoints // placeholder for future etcd registration
 
@@ -87,7 +148,7 @@ func main() {
 	}
 	srv := grpc.NewServer()
 	gatewayv1.RegisterJanusGatewayServer(srv, gw)
-	log.Printf("janus grpc=%s tcp-bridge=%s etcd=%s", grpcAddr, tcpAddr, etcdEndpoints)
+	log.Printf("janus grpc=%s tcp-bridge=%s roma=%s etcd=%s", grpcAddr, tcpAddr, romaDefault, etcdEndpoints)
 	log.Fatal(srv.Serve(lis))
 }
 

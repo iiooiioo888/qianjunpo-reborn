@@ -113,7 +113,14 @@ go test ./pkg/timesync ./pkg/anticheat ./internal/lares -v
 go test ./pkg/timedilation -v
 go test ./pkg/ai ./pkg/integration -v
 go test ./services/edge-infer -v
+make janus-roma-test   # Janus gRPC → Roma pkg/tactical 鎖步 E2E（無需 Compose）
 ```
+
+### Janus → Roma 戰術路徑（Phase 2 deepen）
+
+客戶端可經 **Janus** `EnterBattle` / `SubmitTacticalCommand` / `StepTacticalLockstep` 轉發至 **Roma** 同名的 `SubmitTacticalCommand` / `StepLockstep`；Roma `JoinZone` 會建立 `pkg/tactical` 權威對局（種子由 zone/shard 確定性衍生）。狀態哈希與 `cmd/match` 一致，仍不將牆鐘寫入模擬哈希。
+
+仍為占位／後續深化：etcd 真實服務發現、Lares 令牌校驗接線、TCP 橋接戰術封包、Roma 持久化與多區同步。
 
 ## Docker Compose（dev）
 

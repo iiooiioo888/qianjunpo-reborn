@@ -6,14 +6,15 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/iiooiioo888/qianjunpo-reborn/pkg/hash"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/tactical"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/timesync"
 )
 
 // BattleID identifies an in-memory battle instance.
 type BattleID string
 
-// UnitState is authoritative combat state (memory-only).
+// UnitState is legacy stub metadata (tests / docs); tactical truth lives in Match.
 type UnitState struct {
 	ID uint32
 	X  int32
@@ -23,12 +24,11 @@ type UnitState struct {
 
 // BattleState is the Roma partition authoritative snapshot.
 type BattleState struct {
-	ID        BattleID
-	ZoneID    string
-	Shard     uint32
-	SimTime   timesync.DualTime
-	Units     map[uint32]*UnitState
-	stateHash uint64
+	ID      BattleID
+	ZoneID  string
+	Shard   uint32
+	SimTime timesync.DualTime
+	Match   *tactical.Match
 }
 
 // Store keeps battles keyed by id per zone shard.
@@ -46,7 +46,7 @@ func NewStore(clock *timesync.Clock) *Store {
 	return &Store{battles: make(map[BattleID]*BattleState), clock: clock}
 }
 
-// Join creates or returns a battle for zone shard (in-memory only).
+// Join creates or returns a tactical duel for zone shard (in-memory only).
 func (s *Store) Join(zoneID string, shard uint32) (*BattleState, error) {
 	if zoneID == "" {
 		return nil, errors.New("roma: empty zone")
@@ -57,14 +57,14 @@ func (s *Store) Join(zoneID string, shard uint32) (*BattleState, error) {
 	if b, ok := s.battles[id]; ok {
 		return b, nil
 	}
+	seed := tacticalSeed(zoneID, shard)
 	b := &BattleState{
 		ID:      id,
 		ZoneID:  zoneID,
 		Shard:   shard,
 		SimTime: s.clock.Now(),
-		Units:   map[uint32]*UnitState{1: {ID: 1, X: 0, Y: 0, HP: 100}},
+		Match:   tactical.NewMatch(seed),
 	}
-	b.rehash()
 	s.battles[id] = b
 	return b, nil
 }
@@ -80,39 +80,43 @@ func (s *Store) Get(id BattleID) (*BattleState, error) {
 	return b, nil
 }
 
-// SubmitCommand applies a lockstep-style move stub and updates hash.
+// SubmitCommand applies a legacy delta move for the player's default duel unit.
 func (s *Store) SubmitCommand(id BattleID, playerID uint32, moveX, moveY int32) (uint64, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	var unitID uint32 = tactical.UnitIDPlayer0
+	if playerID == 1 {
+		unitID = tactical.UnitIDPlayer1
+	}
+	s.mu.RLock()
 	b, ok := s.battles[id]
+	s.mu.RUnlock()
 	if !ok {
 		return 0, errors.New("roma: battle not found")
 	}
-	u, ok := b.Units[playerID]
-	if !ok {
-		u = &UnitState{ID: playerID, HP: 100}
-		b.Units[playerID] = u
+	if b.Match == nil {
+		return 0, errors.New("roma: battle has no tactical match")
 	}
-	u.X += moveX
-	u.Y += moveY
-	s.clock.AdvanceSim(1)
-	b.SimTime = s.clock.Now()
-	b.rehash()
-	return b.stateHash, nil
+	u := b.Match.Units[unitID]
+	if u == nil {
+		return 0, errors.New("roma: unit not found")
+	}
+	to := board.Coord{X: u.Pos.X + int(moveX), Y: u.Pos.Y + int(moveY)}
+	_, hash, err := s.SubmitTacticalCommand(id, playerID, uint32(tactical.KindMove), unitID, int32(to.X), int32(to.Y))
+	return hash, err
 }
 
-func (b *BattleState) rehash() {
-	h := hash.New()
-	for _, u := range b.Units {
-		h.WriteUint64(uint64(u.ID))
-		h.WriteInt64(int64(u.X))
-		h.WriteInt64(int64(u.Y))
-		h.WriteInt64(int64(u.HP))
+func (b *BattleState) StateHash() uint64 {
+	if b.Match != nil {
+		return b.Match.StateHash()
 	}
-	b.stateHash = h.Sum64()
+	return 0
 }
 
-func (b *BattleState) StateHash() uint64 { return b.stateHash }
+func (b *BattleState) UnitCount() int32 {
+	if b.Match == nil {
+		return 0
+	}
+	return int32(len(b.Match.Units))
+}
 
 func itoa(v uint32) string {
 	if v == 0 {
