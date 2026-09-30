@@ -23,13 +23,13 @@ bash client/scripts/sync-wip-unit-textures.sh
 
 | 邏輯鍵 (`CharCardTextureKey`) | 預設 stem |
 |-------------------------------|-----------|
-| `char_caocao` | `PX2D_CHAR_WEI_Caocao_ex_v02` |
-| `char_zhangfei` | `PX2D_CHAR_SHU_Zhangfei_ex_v02` |
-| `char_wu_placeholder` | `PX2D_CHAR_WU_Placeholder_01_v02` |
+| `char_caocao` | `PX2D_CHAR_WEI_Caocao_ex_v04` |
+| `char_zhangfei` | `PX2D_CHAR_SHU_Zhangfei_ex_v04` |
+| `char_wu_placeholder` | `PX2D_CHAR_WU_Placeholder_01_v04` |
 
-- **v03 畫布**：320×400（`CHAR_CARD_ART_WIDTH_PX` × `CHAR_CARD_ART_HEIGHT_PX`）；HUD 預覽用整數倍縮入框，見 `charCardDisplaySize`。
-- **v03 前**：可只登記鍵、不匯入 PNG；`CharacterCardHudStrip` 顯示色塊占位，不 crash。
-- **過審後放圖**：PNG 放入 `chars/`，必要時更新 stem 或 `CharacterCardSpriteRegistry.registerResourcePath('char_caocao', '…')`。
+- **v04 畫布**（P0 identity）：320×400（`CHAR_CARD_ART_WIDTH_PX` × `CHAR_CARD_ART_HEIGHT_PX`）；HUD 預覽用整數倍縮入框，見 `charCardDisplaySize`。
+- **缺 PNG 時**：`CharacterCardHudStrip` 顯示色塊占位，不 crash。
+- **同步 v04 工作稿**（不改 `art/`）：
 - **換貼集中入口**：`assets/scripts/display/TextureRegistryDev.ts` 的 `applyDevTextureStemOverrides()` → `preloadTacticalDisplayTextures()`（`TacticalBootstrap` 啟動時已呼叫）。
 - **可選 client 極簡占位**（非 art、勿從 `_wip` 複製）：例如 `units/mock_infantry_128.png`（128×128）、`chars/mock_char_caocao_320x400.png`（320×400），再在 `TextureRegistryDev` 內 `registerResourcePath` 指向 stem。
 

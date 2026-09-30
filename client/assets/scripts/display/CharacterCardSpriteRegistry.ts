@@ -7,7 +7,7 @@ import {
 } from './PixelSpriteUtil';
 
 /**
- * 角色卡邏輯鍵；PNG 放在 `resources/textures/2d/chars/`（v03 前可僅登記、不匯入檔案）。
+ * 角色卡邏輯鍵；PNG 放在 `resources/textures/2d/chars/`（預設 stem 對齊 art/2d/_wip v04）。
  * 檔名 stem 與 art/2d/_wip/characters 一致，過審後改 stem 或 registerResourcePath 即可。
  */
 export const CHAR_CARD_TEXTURE_KEYS = {
@@ -19,9 +19,9 @@ export const CHAR_CARD_TEXTURE_KEYS = {
 export type CharCardTextureKey = (typeof CHAR_CARD_TEXTURE_KEYS)[keyof typeof CHAR_CARD_TEXTURE_KEYS];
 
 const DEFAULT_STEM_BY_KEY: Record<CharCardTextureKey, string> = {
-  char_caocao: 'PX2D_CHAR_WEI_Caocao_ex_v02',
-  char_zhangfei: 'PX2D_CHAR_SHU_Zhangfei_ex_v02',
-  char_wu_placeholder: 'PX2D_CHAR_WU_Placeholder_01_v02',
+  char_caocao: 'PX2D_CHAR_WEI_Caocao_ex_v04',
+  char_zhangfei: 'PX2D_CHAR_SHU_Zhangfei_ex_v04',
+  char_wu_placeholder: 'PX2D_CHAR_WU_Placeholder_01_v04',
 };
 
 function charsResourcePath(stem: string): string {
