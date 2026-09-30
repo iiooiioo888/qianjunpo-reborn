@@ -73,7 +73,9 @@
 | `pkg/rag` | RAG Top-K 介面 + 記憶體假向量庫（Top-5 延遲目標見套件註解） |
 | `proto/` / `gen/go/` | gRPC/Protobuf 契約與生成 Go 存根 |
 | `services/*` | 微服務可執行骨架 |
+| `pkg/tactical` | Phase 2 垂直切片：19×19 戰術對局、權威驗證、戰鬥、回放 |
 | `cmd/demo` | 雙客戶端同種子同輸入哈希對照 |
+| `cmd/match` | 戰術對局演示與 gzip 回放驗證 CLI |
 
 ## 鎖步與時間模型
 
@@ -100,6 +102,10 @@
 ```bash
 make test          # 等同 go test ./...
 make demo          # 雙客戶端確定性演示
+make match-play    # Phase 2 戰術對局 + 哈希鏈輸出
+make match-verify  # 寫入臨時回放並 verify 終局哈希
+go run ./cmd/match play -seed 0xcafe -out /tmp/match.rgz
+go run ./cmd/match verify -in /tmp/match.rgz
 make proto         # 可選：需本機 protoc；否則使用已提交的 gen/go
 make build-services
 make edge-infer    # 啟動 :8088 邊緣推理 mock（/health、/v1/infer、/v1/load）
