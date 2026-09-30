@@ -145,11 +145,18 @@ func JPS(start, goal board.Coord, walk Walkable) PathResult {
 
 	gScore := map[int]int{key(start): 0}
 	cameFrom := map[int]board.Coord{}
+	closed := map[int]bool{}
 
 	for open.Len() > 0 {
 		cur := heap.Pop(open).(*pqItem)
+		ck := key(cur.c)
+		if closed[ck] {
+			continue
+		}
+		closed[ck] = true
 		if cur.c.X == goal.X && cur.c.Y == goal.Y {
-			return PathResult{Path: reconstruct(cameFrom, start, goal), OK: true}
+			raw := reconstruct(cameFrom, start, goal)
+			return PathResult{Path: ExpandJumpPath(raw), OK: true}
 		}
 		dirs := prunedDirs(cur.c, cameFrom, start, walk)
 		for _, d := range dirs {

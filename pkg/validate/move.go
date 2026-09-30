@@ -70,7 +70,10 @@ func (v *Validator) ValidateMove(req MoveRequest) ([]board.Coord, error) {
 		if pathfind.QuickUnreachable(conn, req.From, req.To) {
 			return nil, MoveError{Code: CodeNoPath, Message: "no route"}
 		}
-		res := pathfind.AStar(req.From, req.To, walk)
+		res := pathfind.FindPath(req.From, req.To, walk, conn, pathfind.FindOptions{
+			Algo:   pathfind.AlgoAStar,
+			Smooth: true,
+		})
 		if !res.OK {
 			return nil, MoveError{Code: CodeNoPath, Message: "pathfinding failed"}
 		}
