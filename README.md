@@ -125,6 +125,8 @@ make janus-roma-test   # Janus gRPC → Roma pkg/tactical 鎖步 E2E（無需 Co
 
 已深化（Phase 2 deepen）：etcd Roma 註冊／Janus 查詢、Lares Validate 接線、TCP `QJPT` 戰術封包、Roma `/v1/battles/replay` gzip 匯出（`cmd/match verify` 相容）。仍為占位：Roma 持久化與多區同步。
 
+**ViewSnapshot（Cocos 顯示層）**：`GetBattleSnapshot` 與 `EnterBattle`／`StepTacticalLockstep` 回傳的 `view_snapshot_json` 由 Roma 權威 `Match` 匯出（與 `make client-snapshot` 同 schema）。開發用 HTTP 鏡像：`GET /v1/tactical/snapshot?battle_id=…`（Janus `:8090`）。詳見 [`client/README.md`](client/README.md)。
+
 ```bash
 make compose-e2e-test   # 需先 make compose-up，並設 COMPOSE_E2E=1（見 pkg/integration/compose_janus_roma_test.go）
 ```

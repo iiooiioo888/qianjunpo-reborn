@@ -95,6 +95,18 @@ func (s *romaServer) StepLockstep(_ context.Context, req *romav1.StepLockstepReq
 	}, nil
 }
 
+func (s *romaServer) GetTacticalViewSnapshot(_ context.Context, req *romav1.GetTacticalViewSnapshotRequest) (*romav1.GetTacticalViewSnapshotResponse, error) {
+	jsonBytes, hash, frame, err := s.store.TacticalViewSnapshotJSON(roma.BattleID(req.GetBattleId()))
+	if err != nil {
+		return nil, err
+	}
+	return &romav1.GetTacticalViewSnapshotResponse{
+		ViewSnapshotJson: jsonBytes,
+		StateHash:        hash,
+		LockstepFrame:    frame,
+	}, nil
+}
+
 func main() {
 	grpcAddr := env("ROMA_GRPC_ADDR", ":9092")
 	httpAddr := env("ROMA_HTTP_ADDR", ":8092")

@@ -1,12 +1,21 @@
 import { _decorator, Component, JsonAsset, Node, resources, Widget } from 'cc';
 import { TacticalBoardView } from '../display/TacticalBoardView';
 import { TimeFlowHudStub } from '../display/TimeFlowHudStub';
+import { DEFAULT_NETWORK_STUB, fetchLiveViewSnapshot } from '../network/JanusGatewayStub';
 
 const { ccclass, property } = _decorator;
 
 @ccclass('TacticalBootstrap')
 export class TacticalBootstrap extends Component {
-  /** resources/ relative path without extension */
+  /** When true, load view JSON from Janus HTTP dev mirror instead of resources mock. */
+  @property
+  useLiveJanus = false;
+
+  /** Roma battle id (e.g. default/0) from EnterBattle — required when useLiveJanus is true. */
+  @property
+  liveBattleId = 'default/0';
+
+  /** resources/ relative path without extension (mock mode). */
   @property
   snapshotResource = 'data/tactical/demo_initial';
 
@@ -26,16 +35,27 @@ export class TacticalBootstrap extends Component {
     hudWidget.top = 16;
     hudWidget.left = 16;
 
-    resources.load(this.snapshotResource, JsonAsset, (err, asset) => {
-      if (err || !asset) {
-        console.error('[TacticalBootstrap] failed to load snapshot', err);
-        return;
-      }
-      boardView.applySnapshot(asset.json);
+    const apply = (raw: unknown) => {
+      boardView.applySnapshot(raw);
       const snap = boardView.getSnapshot();
       if (snap) {
         hud.bindSnapshot(snap);
       }
+    };
+
+    if (this.useLiveJanus) {
+      fetchLiveViewSnapshot(DEFAULT_NETWORK_STUB, this.liveBattleId)
+        .then(apply)
+        .catch((err) => console.error('[TacticalBootstrap] live Janus snapshot failed', err));
+      return;
+    }
+
+    resources.load(this.snapshotResource, JsonAsset, (err, asset) => {
+      if (err || !asset) {
+        console.error('[TacticalBootstrap] failed to load mock snapshot', err);
+        return;
+      }
+      apply(asset.json);
     });
   }
 }
