@@ -105,6 +105,25 @@ On NPC fallback, `InferClient` and `RAGInferClient` emit structured `slog` at in
 
 Set `InferClient.LogFallback=false` to silence in tests.
 
+### NPC fallback counters (`pkg/ai`)
+
+Each in-process NPC fallback (`source=npc`) increments an atomic counter keyed by `fallback_reason` (`timeout`, `http_non_ok_status`, `no_infer_client`, …). Read totals with `ai.NPCFallbackCounts()` or, when this process also runs `services/edge-infer`, from `GET /health`:
+
+```json
+{
+  "status": "ok",
+  "model": "qwen2.5-3b-mock",
+  "backend": "mock",
+  "ready": true,
+  "npc_fallback_by_reason": {
+    "http_transport_error": 2,
+    "http_non_ok_status": 1
+  }
+}
+```
+
+Counters reflect fallbacks in **this OS process** (game gateway, tests, or a co-located edge-infer binary that links `pkg/ai`). A standalone edge-infer with no `InferClient` calls usually shows an empty map.
+
 When edge `/v1/infer` fails, the service returns JSON `{"error","code":"backend_infer_failed"}` with HTTP 502; the client maps status + code into `FallbackDetail`.
 
 ```bash

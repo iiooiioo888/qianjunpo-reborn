@@ -120,6 +120,7 @@ func logNPCFallback(persona string, reason FallbackReason, detail string) {
 }
 
 func npcFallbackResult(persona string, reason FallbackReason, detail string, log bool) InferResult {
+	recordNPCFallback(reason)
 	if log {
 		logNPCFallback(persona, reason, detail)
 	}

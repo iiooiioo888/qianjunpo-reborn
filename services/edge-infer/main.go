@@ -39,10 +39,19 @@ func main() {
 	log.Fatal(http.ListenAndServe(addr, mux))
 }
 
+type healthResponse struct {
+	backend.Health
+	NPCFallbackByReason map[string]uint64 `json:"npc_fallback_by_reason"`
+}
+
 func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	h := s.backend.Health(ctx)
+	payload := healthResponse{
+		Health:              h,
+		NPCFallbackByReason: ai.NPCFallbackCounts(),
+	}
 	w.Header().Set("Content-Type", "application/json")
 	if h.Ready || h.Backend == "mock" {
 		w.WriteHeader(http.StatusOK)
@@ -50,7 +59,7 @@ func (s *server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 		// Soft fail: process stays up; callers may use NPC fallback.
 		w.WriteHeader(http.StatusOK)
 	}
-	_ = json.NewEncoder(w).Encode(h)
+	_ = json.NewEncoder(w).Encode(payload)
 }
 
 func (s *server) handleLoad(w http.ResponseWriter, r *http.Request) {
