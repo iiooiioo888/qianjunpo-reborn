@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,23 +24,28 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 )
 
-func TestHTTPTacticalCommandMirror(t *testing.T) {
-	gw, battleID := testJanusGatewayWithRoma(t)
+// janusRomaHTTPFixture wires in-process Janus gRPC + mock Roma for HTTP mirror tests.
+type janusRomaHTTPFixture struct {
+	GW               *janusGateway
+	BattleID         string
+	SessionID        string
+	InitialStateHash uint64
+}
 
-	mux := http.NewServeMux()
-	registerTacticalHTTPRoutes(mux, gw, tacticalHTTPOptions{
+func TestHTTPTacticalCommandMirror(t *testing.T) {
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, tacticalHTTPOptions{
 		CommandMirrorEnabled: func() bool { return true },
 	})
-	srv := httptest.NewServer(mux)
-	defer srv.Close()
 
 	body := map[string]interface{}{
-		"battle_id": battleID,
-		"player_id": 0,
-		"kind":      uint32(tactical.KindMove),
-		"unit_id":   tactical.UnitIDPlayer0,
-		"to_x":      5,
-		"to_y":      8,
+		"session_id": fix.SessionID,
+		"battle_id":  fix.BattleID,
+		"player_id":  0,
+		"kind":       uint32(tactical.KindMove),
+		"unit_id":    tactical.UnitIDPlayer0,
+		"to_x":       5,
+		"to_y":       8,
 	}
 	raw, _ := json.Marshal(body)
 	res, err := http.Post(srv.URL+"/v1/tactical/command", "application/json", bytes.NewReader(raw))
@@ -56,21 +62,82 @@ func TestHTTPTacticalCommandMirror(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !out.Accepted {
-		t.Fatalf("expected accepted command, reason=%q", out.RejectReason)
+		t.Fatalf("expected accepted command after EnterBattle, reason=%q", out.RejectReason)
+	}
+	if out.StateHash == 0 {
+		t.Fatal("expected non-zero state_hash on accepted command")
+	}
+	if out.RejectReason != "" {
+		t.Fatalf("unexpected reject_reason on success: %q", out.RejectReason)
+	}
+}
+
+func TestHTTPTacticalCommandMirrorWithoutEnterBattle(t *testing.T) {
+	fix := startJanusGatewayRomaOnly(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	// Docs/dev smoke often use default/0; without EnterBattle (JoinZone) Roma has no battle.
+	raw := []byte(`{"battle_id":"default/0","player_id":0,"kind":1,"unit_id":1,"to_x":5,"to_y":8}`)
+	res, err := http.Post(srv.URL+"/v1/tactical/command", "application/json", bytes.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d: %s", res.StatusCode, b)
+	}
+	var out tacticalCommandJSON
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Accepted {
+		t.Fatal("expected rejected command when battle was never created")
+	}
+	if !strings.Contains(out.RejectReason, "battle not found") {
+		t.Fatalf("expected roma battle not found, got reason=%q", out.RejectReason)
+	}
+}
+
+func TestHTTPTacticalSnapshotAfterEnterBattle(t *testing.T) {
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	res, err := http.Get(srv.URL + "/v1/tactical/snapshot?battle_id=" + fix.BattleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(res.Body)
+		t.Fatalf("status %d: %s", res.StatusCode, b)
+	}
+	if res.Header.Get("X-State-Hash") == "" {
+		t.Fatal("missing X-State-Hash header")
+	}
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(body) == 0 {
+		t.Fatal("empty snapshot body")
+	}
+	var view tactical.ViewSnapshot
+	if err := json.Unmarshal(body, &view); err != nil {
+		t.Fatalf("snapshot json: %v", err)
+	}
+	if view.LockstepFrame != 0 {
+		t.Fatalf("expected initial lockstep frame 0, got %d", view.LockstepFrame)
 	}
 }
 
 func TestHTTPTacticalCommandMirrorDisabled(t *testing.T) {
-	gw, battleID := testJanusGatewayWithRoma(t)
-
-	mux := http.NewServeMux()
-	registerTacticalHTTPRoutes(mux, gw, tacticalHTTPOptions{
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, tacticalHTTPOptions{
 		CommandMirrorEnabled: func() bool { return false },
 	})
-	srv := httptest.NewServer(mux)
-	defer srv.Close()
 
-	raw := []byte(`{"battle_id":"` + battleID + `","kind":1}`)
+	raw := []byte(`{"battle_id":"` + fix.BattleID + `","kind":1}`)
 	res, err := http.Post(srv.URL+"/v1/tactical/command", "application/json", bytes.NewReader(raw))
 	if err != nil {
 		t.Fatal(err)
@@ -89,11 +156,8 @@ func TestHTTPTacticalCommandMirrorDisabled(t *testing.T) {
 }
 
 func TestHTTPTacticalCommandMethodNotAllowed(t *testing.T) {
-	gw, _ := testJanusGatewayWithRoma(t)
-	mux := http.NewServeMux()
-	registerTacticalHTTPRoutes(mux, gw, defaultTacticalHTTPOptions())
-	srv := httptest.NewServer(mux)
-	defer srv.Close()
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
 
 	res, err := http.Get(srv.URL + "/v1/tactical/command")
 	if err != nil {
@@ -105,7 +169,54 @@ func TestHTTPTacticalCommandMethodNotAllowed(t *testing.T) {
 	}
 }
 
-func testJanusGatewayWithRoma(t *testing.T) (*janusGateway, string) {
+func newTacticalHTTPServer(t *testing.T, gw *janusGateway, opts tacticalHTTPOptions) *httptest.Server {
+	mux := http.NewServeMux()
+	registerTacticalHTTPRoutes(mux, gw, opts)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// startJanusGatewayRomaOnly stands up Janus + mock Roma without EnterBattle (no live battle).
+func startJanusGatewayRomaOnly(t *testing.T) janusRomaHTTPFixture {
+	gw, _ := startJanusGRPCWithRoma(t)
+	return janusRomaHTTPFixture{GW: gw, BattleID: "default/0"}
+}
+
+// startJanusGatewayWithEnterBattle runs Connect → EnterBattle so Roma holds an in-memory battle.
+func startJanusGatewayWithEnterBattle(t *testing.T) janusRomaHTTPFixture {
+	gw, jc := startJanusGRPCWithRoma(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	connect, err := jc.Connect(ctx, &gatewayv1.ConnectRequest{
+		AccessToken: "test-token",
+		TargetZone:  &commonv1.ZoneRef{ZoneId: "default", Shard: 0},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	enter, err := jc.EnterBattle(ctx, &gatewayv1.EnterBattleRequest{
+		SessionId:   connect.GetSessionId(),
+		AccessToken: "test-token",
+		TargetZone:  &commonv1.ZoneRef{ZoneId: "default", Shard: 0},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	battleID := enter.GetBattleId()
+	if battleID == "" || enter.GetInitialStateHash() == 0 {
+		t.Fatal("missing battle id or initial state hash from EnterBattle")
+	}
+	return janusRomaHTTPFixture{
+		GW:               gw,
+		BattleID:         battleID,
+		SessionID:        connect.GetSessionId(),
+		InitialStateHash: enter.GetInitialStateHash(),
+	}
+}
+
+func startJanusGRPCWithRoma(t *testing.T) (*janusGateway, gatewayv1.JanusGatewayClient) {
 	romaLis := bufconn.Listen(bufSize)
 	romaSrv := grpc.NewServer()
 	romaStore := roma.NewStore(nil)
@@ -155,18 +266,5 @@ func testJanusGatewayWithRoma(t *testing.T) (*janusGateway, string) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = janusConn.Close() })
-	jc := gatewayv1.NewJanusGatewayClient(janusConn)
-
-	enter, err := jc.EnterBattle(ctx, &gatewayv1.EnterBattleRequest{
-		AccessToken: "test-token",
-		TargetZone:  &commonv1.ZoneRef{ZoneId: "default", Shard: 0},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	battleID := enter.GetBattleId()
-	if battleID == "" {
-		t.Fatal("missing battle id")
-	}
-	return gw, battleID
+	return gw, gatewayv1.NewJanusGatewayClient(janusConn)
 }
