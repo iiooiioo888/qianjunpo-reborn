@@ -9,11 +9,40 @@ Janus `:8090`（宿主機 `make compose-up` 時為 `:18090`) 提供與 gRPC 戰�
 | `GET` | `/v1/tactical/snapshot?battle_id=…` | `GetBattleSnapshot` |
 | `POST` | `/v1/tactical/command` | `SubmitTacticalCommand` |
 
+## 認證（Docker Compose：LaresAuth，非 StaticAuth）
+
+`make compose-up` 啟動的 **Janus** 使用 **LaresAuth** 驗證 `access_token`（見 `services/janus/main.go`）：
+
+| 環境變數 | Compose 典型值 | 說明 |
+|----------|----------------|------|
+| `JANUS_LARES_GRPC_ADDR` | `lares:9091`（宿主機 gRPC **`:19091`**） | Janus 連 Lares Validate |
+| `LARES_TOKEN_SECRET` | `${LARES_TOKEN_SECRET:-phase4-dev-secret}` | Janus 與 Lares **共用**簽章密鑰（`internal/lares.TokenIssuer`） |
+
+Janus 會以相同 secret 做本機 HMAC 校驗，並可透過 Lares gRPC `Validate` 備援。**沒有**「任意字串 `dev` 即通過」的 StaticAuth 路徑；對 Compose 送 `"access_token":"dev"` 通常會在 Connect 階段失敗（例如 HTTP **502**，body 含 `janus: unauthorized`）。
+
+### 取得可用的 `ACCESS_TOKEN`（curl / smoke）
+
+1. **建議**：在本機 shell 匯出 **`ACCESS_TOKEN`**（或 `export ACCESS_TOKEN=…`），所有 curl 與腳本共用，**不要把真 token 寫進 repo**。
+2. **簽發（推薦）— Lares `Login`（任意非空帳密即可；player_id 由帳號衍生）：
+
+   ```bash
+   export ACCESS_TOKEN=$(grpcurl -plaintext -d '{"username":"smoke","password":"smoke"}' \
+     127.0.0.1:19091 qianjunpo.lares.v1.LaresAuth/Login \
+     | jq -r '.accessToken // .access_token')
+   ```
+
+   `LARES_TOKEN_SECRET` 須與 compose 內 Janus/Lares 一致（預設見上表；可自 `.env` 覆寫）。
+
+3. **簽章格式（除錯用）**：Lares 使用 **stub token**（非 production JWT），形狀為  
+   `base64url(payload).base64url(hmac-sha256(secret, payload))`，其中  
+   `payload` 明文為 `access|<player_id>|<account>|<exp_unix>`（refresh 則為 `refresh|…`）。  
+   實作見 `internal/lares/tokens.go`；手動拼 token 時 secret 必須與 **`LARES_TOKEN_SECRET`** 相同。
+
 ## 必要順序：Connect → EnterBattle → 指令／快照（全 HTTP）
 
 Roma 的戰局存在**記憶體分區**中，只有經 Janus **`EnterBattle`**（內部呼叫 Roma `JoinZone`）才會建立 `battle_id`（例如 `default/0`）。若略過 EnterBattle 直接 `POST /v1/tactical/command`，會得到 HTTP 200 但 **`accepted: false`**，`reject_reason` 通常為 **`roma: battle not found`**。
 
-瀏覽器 Live 預覽建議流程（**不需 grpcurl**）：
+瀏覽器 Live 預覽建議流程（**不需 grpcurl** 做戰術步驟，但仍需有效 Lares token）：
 
 1. **`POST /v1/tactical/connect`** — 取得 `session_id`（與正式 gRPC 客戶端一致）
 2. **`POST /v1/tactical/enter-battle`** — 建立戰局，回傳 `battle_id`、`initial_state_hash`、`view_snapshot_json`
@@ -21,27 +50,29 @@ Roma 的戰局存在**記憶體分區**中，只有經 Janus **`EnterBattle`**�
 
 整合測試見 `services/janus/http_tactical_test.go`：`TestHTTPTacticalEnterBattleThenCommandAccepted`（全 HTTP 路徑）、`TestHTTPTacticalCommandMirror`（gRPC EnterBattle 後 HTTP 指令）、與 `TestHTTPTacticalCommandMirrorWithoutEnterBattle`（未 EnterBattle 時 `battle not found`）。
 
+預設演練戰的單位 id（`pkg/tactical/unit.go`）：**玩家 0 → `unit_id` 101**，**玩家 1 → 201**。curl 範例請使用快照中真實 id，勿用 `unit_id: 1`。
+
 ### curl（`make compose-up`，宿主機埠）
 
-Janus HTTP 在 **`:18090`**。`access_token` 需與 compose 內 Janus 設定一致（開發環境常用佔位 token；見 `.env` / compose）。
+先設定 `ACCESS_TOKEN`（見上一節）。Janus HTTP 在 **`:18090`**。
 
 ```bash
 # 1) Connect
 SESSION=$(curl -sS -X POST 'http://127.0.0.1:18090/v1/tactical/connect' \
   -H 'Content-Type: application/json' \
-  -d '{"access_token":"dev","target_zone":{"zone_id":"default","shard":0}}' \
+  -d "{\"access_token\":\"$ACCESS_TOKEN\",\"target_zone\":{\"zone_id\":\"default\",\"shard\":0}}" \
   | jq -r '.session_id')
 
 # 2) EnterBattle — 在 Roma 建立戰局，取得 battle_id
 BATTLE=$(curl -sS -X POST 'http://127.0.0.1:18090/v1/tactical/enter-battle' \
   -H 'Content-Type: application/json' \
-  -d "{\"session_id\":\"$SESSION\",\"access_token\":\"dev\",\"target_zone\":{\"zone_id\":\"default\",\"shard\":0}}" \
+  -d "{\"session_id\":\"$SESSION\",\"access_token\":\"$ACCESS_TOKEN\",\"target_zone\":{\"zone_id\":\"default\",\"shard\":0}}" \
   | jq -r '.battle_id')
 
-# 3) POST 戰術指令（應 accepted: true）
+# 3) POST 戰術指令（應 accepted: true；unit_id 101 = owner 0 預設單位）
 curl -sS -X POST 'http://127.0.0.1:18090/v1/tactical/command' \
   -H 'Content-Type: application/json' \
-  -d "{\"session_id\":\"$SESSION\",\"battle_id\":\"$BATTLE\",\"player_id\":0,\"kind\":1,\"unit_id\":1,\"to_x\":5,\"to_y\":8}"
+  -d "{\"session_id\":\"$SESSION\",\"battle_id\":\"$BATTLE\",\"player_id\":0,\"kind\":1,\"unit_id\":101,\"to_x\":5,\"to_y\":8}"
 
 # 4) GET 顯示用快照
 curl -sS "http://127.0.0.1:18090/v1/tactical/snapshot?battle_id=$BATTLE" -D -
@@ -49,9 +80,19 @@ curl -sS "http://127.0.0.1:18090/v1/tactical/snapshot?battle_id=$BATTLE" -D -
 
 若跳過 EnterBattle，僅對 `default/0` 發指令，會與測試 `TestHTTPTacticalCommandMirrorWithoutEnterBattle` 相同而遭拒絕。
 
+### 一鍵 smoke（`scripts/janus-http-smoke.sh`）
+
+```bash
+export ACCESS_TOKEN=…   # Lares Login 取得
+./scripts/janus-http-smoke.sh
+# 或：JANUS_HTTP_BASE=http://127.0.0.1:18090 ACCESS_TOKEN=… ./scripts/janus-http-smoke.sh
+```
+
+腳本會 connect → enter-battle → command；`unit_id` 優先從 `view_snapshot_json.units` 選取目前 `PLAYER_ID`（預設 0）所屬單位，否則退回 **101**。成功時 exit 0 且 `accepted: true`。
+
 ### grpcurl（選用）
 
-仍可用 gRPC **`:19090`** 做 Connect / EnterBattle，再對 **`:18090`** 發 HTTP 指令／快照；見歷史 PR #57 與 `grpcurl` 文件。
+仍可用 gRPC **`:19090`** 做 Connect / EnterBattle，再對 **`:18090`** 發 HTTP 指令／快照；token 同樣須為 Lares 簽發。見歷史 PR #57 與 `pkg/integration/compose_janus_roma_test.go`。
 
 ## POST `/v1/tactical/connect`
 
@@ -59,7 +100,7 @@ Request：
 
 ```json
 {
-  "access_token": "dev",
+  "access_token": "<Lares access token>",
   "client_version": "optional",
   "target_zone": { "zone_id": "default", "shard": 0 }
 }
@@ -82,7 +123,7 @@ Request：
 ```json
 {
   "session_id": "…",
-  "access_token": "dev",
+  "access_token": "<Lares access token>",
   "target_zone": { "zone_id": "default", "shard": 0 }
 }
 ```
@@ -98,7 +139,7 @@ Response：
 }
 ```
 
-`view_snapshot_json` 為 Roma 戰術顯示層 JSON（與 `GET /v1/tactical/snapshot` body 同型）。
+`view_snapshot_json` 為 Roma 戰術顯示層 JSON（與 `GET /v1/tactical/snapshot` body 同型）；`units[].id` 為下指令時應使用的 `unit_id`（預設對局常見 **101** / **201**）。
 
 ## POST `/v1/tactical/command`
 
@@ -110,7 +151,7 @@ Request body（snake_case，與 `TacticalCommandClient.ts` 對齊）：
   "battle_id": "default/0",
   "player_id": 0,
   "kind": 1,
-  "unit_id": 1,
+  "unit_id": 101,
   "to_x": 5,
   "to_y": 8
 }
