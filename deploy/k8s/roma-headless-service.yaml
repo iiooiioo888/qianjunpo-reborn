@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: roma-headless
+  labels:
+    app: roma
+spec:
+  clusterIP: None
+  selector:
+    app: roma
+  ports:
+    - name: grpc
+      port: 9092
+      targetPort: 9092
+    - name: http
+      port: 8092
+      targetPort: 8092

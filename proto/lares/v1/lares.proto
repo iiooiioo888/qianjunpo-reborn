@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package qianjunpo.lares.v1;
+
+import "common/v1/common.proto";
+
+option go_package = "github.com/iiooiioo888/qianjunpo-reborn/gen/go/lares/v1;laresv1";
+
+// LaresAuth issues dual-token sessions (Access + Refresh).
+service LaresAuth {
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Refresh(RefreshRequest) returns (RefreshResponse);
+  rpc Validate(ValidateRequest) returns (ValidateResponse);
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 access_expires_unix = 3;
+  int64 refresh_expires_unix = 4;
+  qianjunpo.common.v1.PlayerRef player = 5;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message RefreshResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int64 access_expires_unix = 3;
+  int64 refresh_expires_unix = 4;
+}
+
+message ValidateRequest {
+  string access_token = 1;
+}
+
+message ValidateResponse {
+  bool valid = 1;
+  qianjunpo.common.v1.PlayerRef player = 2;
+}

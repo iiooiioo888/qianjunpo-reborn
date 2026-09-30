@@ -15,6 +15,9 @@ WORKDIR /app
 COPY --from=builder /out/demo /app/demo
 COPY Makefile go.mod go.sum* ./
 COPY pkg ./pkg
+COPY internal ./internal
+COPY gen ./gen
+COPY services ./services
 COPY cmd ./cmd
 ENV CGO_ENABLED=0
 CMD ["make", "test"]

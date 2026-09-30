@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: roma
+  labels:
+    app: roma
+spec:
+  serviceName: roma-headless
+  replicas: 3
+  selector:
+    matchLabels:
+      app: roma
+  template:
+    metadata:
+      labels:
+        app: roma
+    spec:
+      containers:
+        - name: roma
+          image: qianjunpo/roma:phase4-skeleton
+          ports:
+            - containerPort: 9092
+              name: grpc
+            - containerPort: 8092
+              name: http
+          env:
+            - name: ROMA_GRPC_ADDR
+              value: ":9092"
+            - name: ROMA_HTTP_ADDR
+              value: ":8092"
+            - name: ETCD_ENDPOINTS
+              value: "etcd:2379"
+            - name: REDIS_URL
+              value: "redis://redis:6379/0"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8092
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: "2000m"
+              memory: "4Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"

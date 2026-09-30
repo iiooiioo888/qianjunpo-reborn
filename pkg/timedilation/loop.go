@@ -24,7 +24,7 @@ func NewControlLoop(clock Clock) *ControlLoop {
 
 // Tick runs one 10fps-aligned control iteration.
 func (l *ControlLoop) Tick(sample loadsample.Sample) TickRecord {
- lvl := degrade.LevelFromLoad(sample.QueueLength, int64(l.Controller.Rate))
+	lvl := degrade.LevelFromLoad(sample.QueueLength, int64(l.Controller.Rate))
 	l.Degrade.SyncSuggested(lvl)
 	rec := l.Controller.Step(sample, l.Clocks.BattleFrame)
 	TickLayerClocks(&l.Clocks, DefaultControllerConfig().TickInterval, rec.Rate, MaxRate)

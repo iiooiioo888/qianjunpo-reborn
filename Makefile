@@ -1,6 +1,15 @@
-.PHONY: test demo compose-up compose-down compose-test edge-infer
+.PHONY: test demo compose-up compose-down compose-test edge-infer proto proto-check build-services
 
 COMPOSE ?= docker compose --profile dev
+PROTOC ?= protoc
+PROTO_GEN_GO ?= $(shell go env GOPATH)/bin/protoc-gen-go
+PROTO_GEN_GO_GRPC ?= $(shell go env GOPATH)/bin/protoc-gen-go-grpc
+PROTO_FILES := proto/common/v1/common.proto \
+	proto/gateway/v1/gateway.proto \
+	proto/lares/v1/lares.proto \
+	proto/roma/v1/roma.proto \
+	proto/senate/v1/senate.proto \
+	proto/chat/v1/chat.proto
 
 test:
 	go test ./...
@@ -11,9 +20,32 @@ demo:
 edge-infer:
 	go run ./services/edge-infer
 
+proto:
+	@command -v $(PROTOC) >/dev/null || (echo "install protoc to regenerate; checked-in gen/go is CI default" && exit 0)
+	@test -x $(PROTO_GEN_GO) || go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
+	@test -x $(PROTO_GEN_GO_GRPC) || go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.5.1
+	$(PROTOC) -I proto \
+		--go_out=./gen/go --go_opt=module=github.com/iiooiioo888/qianjunpo-reborn/gen/go \
+		--go-grpc_out=./gen/go --go-grpc_opt=module=github.com/iiooiioo888/qianjunpo-reborn/gen/go \
+		$(PROTO_FILES)
+
+proto-check: proto
+	@git diff --exit-code gen/go || (echo "gen/go out of date; commit or run make proto" && exit 1)
+
+build-services:
+	CGO_ENABLED=0 go build -o /tmp/janus ./services/janus
+	CGO_ENABLED=0 go build -o /tmp/roma ./services/roma
+	CGO_ENABLED=0 go build -o /tmp/lares ./services/lares
+	CGO_ENABLED=0 go build -o /tmp/senate ./services/senate
+	CGO_ENABLED=0 go build -o /tmp/chatserver ./services/chatserver
+
 compose-up:
 	@test -f .env || cp .env.example .env
-	$(COMPOSE) up -d redis mysql etcd
+	$(COMPOSE) up -d redis mysql etcd lares roma janus
+
+compose-up-ops:
+	@test -f .env || cp .env.example .env
+	docker compose --profile dev --profile ops up -d senate chatserver
 
 compose-down:
 	$(COMPOSE) down

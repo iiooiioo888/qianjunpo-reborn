@@ -60,6 +60,134 @@ services:
     ports:
       - "12379:2379"
 
+  lares:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.service
+      args:
+        SERVICE: lares
+    environment:
+      LARES_GRPC_ADDR: ":9091"
+      LARES_HTTP_ADDR: ":8091"
+      LARES_TOKEN_SECRET: ${LARES_TOKEN_SECRET:-phase4-dev-secret}
+      ETCD_ENDPOINTS: etcd:2379
+      REDIS_URL: redis://redis:6379/0
+      MYSQL_DSN: mysql://root:${MYSQL_ROOT_PASSWORD}@mysql:3306/qianjunpo?parseTime=true
+    ports:
+      - "19091:9091"
+      - "18091:8091"
+    depends_on:
+      etcd:
+        condition: service_started
+      redis:
+        condition: service_started
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8091/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  roma:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.service
+      args:
+        SERVICE: roma
+    environment:
+      ROMA_GRPC_ADDR: ":9092"
+      ROMA_HTTP_ADDR: ":8092"
+      ETCD_ENDPOINTS: etcd:2379
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "19092:9092"
+      - "18092:8092"
+    depends_on:
+      etcd:
+        condition: service_started
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8092/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  janus:
+    profiles: ["dev"]
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.service
+      args:
+        SERVICE: janus
+    environment:
+      JANUS_GRPC_ADDR: ":9090"
+      JANUS_TCP_ADDR: ":7000"
+      JANUS_HTTP_ADDR: ":8090"
+      ETCD_ENDPOINTS: etcd:2379
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "19090:9090"
+      - "18090:8090"
+      - "17000:7000"
+    depends_on:
+      lares:
+        condition: service_healthy
+      roma:
+        condition: service_healthy
+      etcd:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8090/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  senate:
+    profiles: ["dev", "ops"]
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.service
+      args:
+        SERVICE: senate
+    environment:
+      SENATE_GRPC_ADDR: ":9093"
+      SENATE_HTTP_ADDR: ":8093"
+    ports:
+      - "19093:9093"
+      - "18093:8093"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8093/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  chatserver:
+    profiles: ["dev", "ops"]
+    build:
+      context: .
+      dockerfile: deploy/docker/Dockerfile.service
+      args:
+        SERVICE: chatserver
+    environment:
+      CHAT_GRPC_ADDR: ":9094"
+      CHAT_HTTP_ADDR: ":8094"
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "19094:9094"
+      - "18094:8094"
+    depends_on:
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8094/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
 volumes:
   redis-data:
   mysql-data:

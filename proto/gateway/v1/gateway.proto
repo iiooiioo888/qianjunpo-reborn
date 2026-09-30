@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package qianjunpo.gateway.v1;
+
+import "common/v1/common.proto";
+
+option go_package = "github.com/iiooiioo888/qianjunpo-reborn/gen/go/gateway/v1;gatewayv1";
+
+// JanusGateway is the client-facing I/O boundary (TCP session bridged to internal gRPC).
+service JanusGateway {
+  rpc Connect(ConnectRequest) returns (ConnectResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+}
+
+message ConnectRequest {
+  string client_version = 1;
+  string access_token = 2;
+  qianjunpo.common.v1.ZoneRef target_zone = 3;
+}
+
+message ConnectResponse {
+  string session_id = 1;
+  qianjunpo.common.v1.DualTimestamp server_time = 2;
+  string roma_endpoint = 3;
+}
+
+message HeartbeatRequest {
+  string session_id = 1;
+  qianjunpo.common.v1.DualTimestamp client_time = 2;
+}
+
+message HeartbeatResponse {
+  qianjunpo.common.v1.DualTimestamp server_time = 1;
+}

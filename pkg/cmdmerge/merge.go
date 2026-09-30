@@ -73,12 +73,12 @@ func ParseKind(payload []byte) CommandKind {
 
 // Merger statefully merges consecutive move/build commands.
 type Merger struct {
-	policy     MergePolicy
-	lastMove   *MovePayload
-	lastBuild  *BuildPayload
-	p2Batch    []cmdqueue.Command
+	policy        MergePolicy
+	lastMove      *MovePayload
+	lastBuild     *BuildPayload
+	p2Batch       []cmdqueue.Command
 	p2WindowStart time.Time
-	clock      func() time.Time
+	clock         func() time.Time
 }
 
 // NewMerger creates a merger with optional clock (defaults to time.Now).

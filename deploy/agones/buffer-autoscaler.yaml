@@ -1,0 +1,16 @@
+apiVersion: autoscaling.agones.dev/v1
+kind: FleetAutoscaler
+metadata:
+  name: roma-buffer-autoscaler
+spec:
+  fleetName: roma-fleet
+  policy:
+    type: Buffer
+    buffer:
+      bufferSize: 5
+      minReplicas: 2
+      maxReplicas: 20
+  sync:
+    type: FixedInterval
+    fixedInterval:
+      seconds: 30

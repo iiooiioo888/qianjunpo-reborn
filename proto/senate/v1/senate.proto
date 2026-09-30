@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package qianjunpo.senate.v1;
+
+option go_package = "github.com/iiooiioo888/qianjunpo-reborn/gen/go/senate/v1;senatev1";
+
+// SenateOps is the operations / GM boundary (HTTP + gRPC in skeleton).
+service SenateOps {
+  rpc Ping(PingRequest) returns (PingResponse);
+  rpc SetMaintenance(SetMaintenanceRequest) returns (SetMaintenanceResponse);
+}
+
+message PingRequest {}
+
+message PingResponse {
+  string status = 1;
+}
+
+message SetMaintenanceRequest {
+  bool enabled = 1;
+  string reason = 2;
+}
+
+message SetMaintenanceResponse {
+  bool applied = 1;
+}

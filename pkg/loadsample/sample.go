@@ -3,10 +3,10 @@ package loadsample
 
 // Sample is one observation used to drive dilation and degradation.
 type Sample struct {
-	CPUPercent    float64 // 0..100
-	QueueLength   int
-	GrowthRate    float64 // commands/sec derivative
-	P99LatencyMs  float64
+	CPUPercent   float64 // 0..100
+	QueueLength  int
+	GrowthRate   float64 // commands/sec derivative
+	P99LatencyMs float64
 }
 
 // Predictor is a pluggable load forecaster (LSTM or other ML backend).
