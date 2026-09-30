@@ -17,3 +17,11 @@ Apply manually when an Agones-enabled cluster is available:
 ```bash
 kubectl apply -f deploy/agones/
 ```
+
+## Phase 5 — predict → scale → rate recover
+
+1. **Predict**: `pkg/loadpredict` / `services/loadpredict` stub forecasts 30s-ahead load; fires when composite load ≥ 90%.
+2. **Scale**: `PreScaleSignal` targets Agones **buffer-autoscaler.yaml** / Fleet capacity 7–15 minutes ahead of the spike (skeleton only in CI).
+3. **Recover**: After queue drains, Roma `pkg/timedilation` raises `time_flow_rate` (see `RecoverTimeFlow` hint on signals).
+
+Wire load samples from Roma command queues into `loadsample.Sample` for the control loop.

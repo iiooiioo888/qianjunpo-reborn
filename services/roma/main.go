@@ -11,6 +11,8 @@ import (
 	commonv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/common/v1"
 	romav1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/roma/v1"
 	"github.com/iiooiioo888/qianjunpo-reborn/internal/roma"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/observability/metrics"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/timedilation"
 	"google.golang.org/grpc"
 )
 
@@ -58,7 +60,13 @@ func main() {
 	store := roma.NewStore(nil)
 
 	go func() {
+		metrics.Register(nil)
+		metrics.SetTimeFlowRate(int64(timedilation.MaxRate))
+		metrics.BattleLatencyP99.Set(12)
+		metrics.QueueLen.Set(0)
+
 		mux := http.NewServeMux()
+		mux.Handle("/metrics", metrics.Handler())
 		mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"status":"ok","service":"roma","note":"authoritative state in-memory only"}`))

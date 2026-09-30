@@ -14,8 +14,10 @@ import (
 
 	commonv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/common/v1"
 	gatewayv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/gateway/v1"
-	"github.com/iiooiioo888/qianjunpo-reborn/pkg/timesync"
 	"github.com/iiooiioo888/qianjunpo-reborn/internal/janus"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/observability/metrics"
+	qjptrace "github.com/iiooiioo888/qianjunpo-reborn/pkg/observability/trace"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/timesync"
 	"google.golang.org/grpc"
 )
 
@@ -28,6 +30,9 @@ type janusGateway struct {
 }
 
 func (g *janusGateway) Connect(ctx context.Context, req *gatewayv1.ConnectRequest) (*gatewayv1.ConnectResponse, error) {
+	ctx, span := qjptrace.StartJanusToRomaSpan(ctx, "Connect")
+	defer qjptrace.EndSpan(span, nil)
+
 	if !g.limit.Allow() {
 		return nil, fmt.Errorf("janus: rate limited")
 	}
@@ -109,7 +114,11 @@ func handleTCPConn(conn net.Conn, gw *janusGateway) {
 }
 
 func serveHTTP(addr string) {
+	metrics.Register(nil)
+	metrics.OnlinePlayers.Set(1)
+
 	mux := http.NewServeMux()
+	mux.Handle("/metrics", metrics.Handler())
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok","service":"janus"}`))

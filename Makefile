@@ -1,4 +1,4 @@
-.PHONY: test demo compose-up compose-down compose-test edge-infer proto proto-check build-services
+.PHONY: test demo compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
 
 COMPOSE ?= docker compose --profile dev
 PROTOC ?= protoc
@@ -38,6 +38,17 @@ build-services:
 	CGO_ENABLED=0 go build -o /tmp/lares ./services/lares
 	CGO_ENABLED=0 go build -o /tmp/senate ./services/senate
 	CGO_ENABLED=0 go build -o /tmp/chatserver ./services/chatserver
+	CGO_ENABLED=0 go build -o /tmp/loadpredict ./services/loadpredict
+	CGO_ENABLED=0 go build -o /tmp/aigc-worker ./services/aigc-worker
+
+loadpredict:
+	go run ./services/loadpredict
+
+aigc-worker:
+	go run ./services/aigc-worker
+
+aigc-stub-check:
+	@curl -sf http://127.0.0.1:8096/health >/dev/null 2>&1 || (echo "start with: make aigc-worker" && exit 0)
 
 compose-up:
 	@test -f .env || cp .env.example .env
