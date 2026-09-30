@@ -79,10 +79,7 @@ func (c *InferClient) shouldLogFallback() bool {
 }
 
 func (c *InferClient) fallback(persona string, reason FallbackReason, detail string) InferResult {
-	if c.shouldLogFallback() {
-		logNPCFallback(persona, reason, detail)
-	}
-	return npcResult(persona, reason, detail)
+	return npcFallbackResult(persona, reason, detail, c.shouldLogFallback())
 }
 
 // Infer posts a prompt; on error or timeout returns NPC template within RequestTimeout.
