@@ -16,6 +16,7 @@ export class UnitPlaceholderView extends Component {
 
   private g: Graphics | null = null;
   private sprite: Sprite | null = null;
+  private selected = false;
 
   onLoad(): void {
     const ui = this.getComponent(UITransform) ?? this.addComponent(UITransform);
@@ -23,13 +24,34 @@ export class UnitPlaceholderView extends Component {
     this.g = this.getComponent(Graphics) ?? this.addComponent(Graphics);
   }
 
+  setSelected(on: boolean): void {
+    this.selected = on;
+    const g = this.g;
+    if (!g || !g.enabled) {
+      return;
+    }
+    this.redrawSelectionRing(g);
+  }
+
   drawUnit(unit: ViewUnit): void {
     const sf = UnitSpriteRegistry.getSpriteFrame(unit.type);
     if (sf) {
       this.drawSpriteToken(sf);
+      this.redrawSelectionRing(this.g);
       return;
     }
     this.drawGraphicsPlaceholder(unit);
+  }
+
+  private redrawSelectionRing(g: Graphics | null): void {
+    if (!g || !g.enabled || !this.selected) {
+      return;
+    }
+    const s = this.cellSize;
+    g.lineWidth = 2;
+    g.strokeColor = new Color(255, 220, 60, 255);
+    g.rect(2, 2, s - 4, s - 4);
+    g.stroke();
   }
 
   private drawSpriteToken(sf: NonNullable<ReturnType<typeof UnitSpriteRegistry.getSpriteFrame>>): void {
@@ -81,5 +103,6 @@ export class UnitPlaceholderView extends Component {
       g.rect(s / 2 - 3, s / 2 - 3, 6, 6);
       g.fill();
     }
+    this.redrawSelectionRing(g);
   }
 }

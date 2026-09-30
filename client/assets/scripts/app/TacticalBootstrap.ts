@@ -1,11 +1,15 @@
 import { _decorator, Component, JsonAsset, Node, resources, Widget } from 'cc';
 import { TacticalBoardView } from '../display/TacticalBoardView';
+import { TacticalBoardInteraction } from '../display/TacticalBoardInteraction';
 import { TimeFlowHudStub } from '../display/TimeFlowHudStub';
 import { IconSpriteRegistry } from '../display/IconSpriteRegistry';
 import { ResourceIconHudStrip } from '../display/ResourceIconHudStrip';
 import { UnitSpriteRegistry } from '../display/UnitSpriteRegistry';
+import { applyMockMove } from '../logic/MockSnapshotMutator';
+import { parseViewSnapshot } from '../logic/TacticalSnapshot';
 import { DEFAULT_NETWORK_STUB } from '../network/JanusGatewayStub';
 import { LiveViewSnapshotPoller } from '../network/LiveViewSnapshotPoller';
+import { submitTacticalMove } from '../network/TacticalCommandClient';
 
 const { ccclass, property } = _decorator;
 
@@ -30,7 +34,15 @@ export class TacticalBootstrap extends Component {
   @property
   snapshotResource = 'data/tactical/demo_initial';
 
+  /** 僅可選取／移動此 player_id 的單位（與 SubmitTacticalCommand 一致）。 */
+  @property
+  localPlayerId = 0;
+
   private poller: LiveViewSnapshotPoller | null = null;
+  private boardView: TacticalBoardView | null = null;
+  private boardInteraction: TacticalBoardInteraction | null = null;
+  private hud: TimeFlowHudStub | null = null;
+  private mockSnapshotRaw: unknown | null = null;
 
   onDestroy(): void {
     this.poller?.stop();
@@ -42,11 +54,17 @@ export class TacticalBootstrap extends Component {
     boardNode.setParent(this.node);
     const boardView = boardNode.addComponent(TacticalBoardView);
     boardView.cellSize = 32;
+    this.boardView = boardView;
+
+    const interaction = boardNode.addComponent(TacticalBoardInteraction);
+    interaction.localPlayerId = this.localPlayerId;
+    this.boardInteraction = interaction;
 
     const hudNode = new Node('TimeFlowHud');
     hudNode.setParent(this.node);
     hudNode.setPosition(-320, 300, 0);
     const hud = hudNode.addComponent(TimeFlowHudStub);
+    this.hud = hud;
     const hudWidget = hudNode.addComponent(Widget);
     hudWidget.isAlignTop = true;
     hudWidget.isAlignLeft = true;
@@ -71,11 +89,65 @@ export class TacticalBootstrap extends Component {
           hud.updateFromSnapshot(snap);
           hud.setNetworkStatus(null);
         }
+        this.boardInteraction?.refreshSelectionFromSnapshot();
       } catch (err) {
         console.error('[TacticalBootstrap] snapshot parse/apply failed', err);
         hud.setNetworkStatus('快照解析失敗（見 console）');
       }
     };
+
+    interaction.bind(boardView, async (unitId, to) => {
+      const snap = boardView.getSnapshot();
+      const unit = snap?.units.find((u) => u.id === unitId);
+      if (!unit) {
+        return;
+      }
+      console.info('[TacticalBootstrap] submit move', {
+        unitId,
+        to,
+        playerId: unit.owner,
+        battleId: this.liveBattleId,
+      });
+
+      if (!this.useLiveJanus) {
+        if (this.mockSnapshotRaw == null) {
+          hud.setNetworkStatus('Mock：無快照基底');
+          return;
+        }
+        const result = applyMockMove(
+          parseViewSnapshot(this.mockSnapshotRaw),
+          unitId,
+          to,
+        );
+        if (!result.ok || !result.snapshot) {
+          hud.setNetworkStatus(`Mock 移動拒絕：${result.reason ?? 'unknown'}`);
+          return;
+        }
+        this.mockSnapshotRaw = result.snapshot;
+        applySnapshot(result.snapshot);
+        this.boardInteraction?.clearSelection();
+        hud.setNetworkStatus('Mock：已本地套用移動（非權威）');
+        return;
+      }
+
+      const submit = await submitTacticalMove(DEFAULT_NETWORK_STUB, {
+        battleId: this.liveBattleId,
+        sessionId: '',
+        playerId: unit.owner,
+        unitId,
+        toX: to.x,
+        toY: to.y,
+      });
+      if (submit.accepted) {
+        hud.setNetworkStatus(`Live：指令已接受 frame=${submit.lockstepFrame ?? '?'}`);
+        this.boardInteraction?.clearSelection();
+      } else if (submit.stubOnly) {
+        hud.setNetworkStatus(submit.rejectReason ?? 'Live：指令已記錄（stub）');
+        console.info('[TacticalBootstrap] live submit stub — use grpcurl SubmitTacticalCommand');
+      } else {
+        hud.setNetworkStatus(`Live 拒絕：${submit.rejectReason ?? 'unknown'}`);
+      }
+    });
 
     void Promise.all([UnitSpriteRegistry.preload(), IconSpriteRegistry.preload()]).then(() => {
       iconStrip.buildStrip();
@@ -100,6 +172,7 @@ export class TacticalBootstrap extends Component {
           hud.setNetworkStatus('Mock JSON 載入失敗');
           return;
         }
+        this.mockSnapshotRaw = asset.json;
         applySnapshot(asset.json);
       });
     });

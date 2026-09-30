@@ -58,10 +58,31 @@
       ],
       "title": "Time flow rate (1.0 = normal)",
       "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1, "min": 0 } },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "id": 5,
+      "targets": [
+        { "expr": "rate(process_cpu_seconds_total[5m])", "legendFormat": "{{job}}" }
+      ],
+      "title": "Process CPU (5m rate)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Prometheus",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "id": 6,
+      "targets": [
+        { "expr": "qjp_active_rooms", "legendFormat": "rooms" }
+      ],
+      "title": "Active battles / rooms",
+      "type": "timeseries"
     }
   ],
   "schemaVersion": 39,
-  "tags": ["qianjunpo", "phase5"],
+  "tags": ["qianjunpo", "phase5", "production"],
   "time": { "from": "now-6h", "to": "now" },
   "title": "千軍破·重生 Phase 5 — Production Tuning",
   "uid": "qjp-phase5",

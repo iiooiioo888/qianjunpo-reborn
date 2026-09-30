@@ -41,7 +41,7 @@
 
 契約：`proto/` → `gen/go/`（`make proto` 可選再生；CI 使用已提交生成碼）。
 
-部署：`deploy/k8s/`（Roma StatefulSet + Headless Service）、`deploy/agones/`（Fleet / Buffer / Counter 骨架）、`deploy/docker/Dockerfile.service`（多階段 `CGO_ENABLED=0`）。
+部署：`deploy/k8s/`（Roma StatefulSet + Headless Service）、`deploy/agones/`（Fleet / Buffer / Counter 骨架）、`deploy/docker/Dockerfile.service`（多階段 `CGO_ENABLED=0`）。Agones **房間生命週期**（Allocate → Ready → Shutdown，`ROMA_AGONES_BACKEND=mock|sidecar`）見 [`docs/agones-room-lifecycle.md`](docs/agones-room-lifecycle.md)。
 
 ## 目錄結構
 
@@ -173,14 +173,15 @@ Phase 5 在 Phase 1–4 之上加入 **可觀測性、負載預測、平衡自�
 | 負載預測 | `pkg/loadpredict`、`services/loadpredict` | 30s 前瞻、`≥90%` 負載 hook、`PreScaleSignal` 7–15 分鐘提前量 → Agones |
 | 時間恢復 | `pkg/timedilation` + `deploy/agones/README.md` | predict → scale → `time_flow_rate` 恢復 |
 | 平衡自動化 | `pkg/balance` | RL/MCTS `Agent` 介面、批次模擬、勝率門檻（預設 5% swing） |
-| 指標 | `pkg/observability/metrics` | `online_players`、`battle_latency_p99_ms`、`queue_len`、`time_flow_rate` |
+| 指標 | `pkg/observability/metrics` | `online_players`、`battle_latency_p99_ms`、`queue_len`、`time_flow_rate`、`active_rooms`、`process_cpu_seconds_total` |
 | 追蹤 | `pkg/observability/trace` | Janus→Roma OTel span 骨架 |
-| Grafana | `deploy/observability/` | 儀表板 JSON（手動 import） |
+| Grafana / 告警 | `deploy/observability/` | 儀表板 JSON、`prometheus/alerts/`；`make check-observability` |
 | AIGC | `docs/aigc/PIPELINE.md`、`services/aigc-worker` | ComfyUI／IP-Adapter 占位 |
 | 動態內容 | `pkg/contentops` | LLM 產物 create／approve／rollback 記憶體佇列 |
 
 ```bash
 go test ./pkg/loadpredict ./pkg/balance ./pkg/contentops ./pkg/observability/... -v
+make check-observability
 go test ./pkg/integration -run Phase5 -v
 make build-services   # 含 loadpredict、aigc-worker
 make loadpredict      # :8095 /metrics /v1/forecast
