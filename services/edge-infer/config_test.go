@@ -2,6 +2,7 @@ package main
 
 import (
 	"testing"
+	"time"
 )
 
 func TestNewBackendOllama(t *testing.T) {
@@ -13,5 +14,13 @@ func TestNewBackendOllama(t *testing.T) {
 	}
 	if cfg.Ollama.BaseURL == "" || cfg.Ollama.Model == "" {
 		t.Fatalf("%+v", cfg.Ollama)
+	}
+}
+
+func TestHealthProbeTimeoutFromEnv(t *testing.T) {
+	t.Setenv("EDGE_INFER_HEALTH_PROBE_TIMEOUT", "500ms")
+	cfg := loadConfig()
+	if cfg.Ollama.HealthProbeTimeout != 500*time.Millisecond {
+		t.Fatalf("got %v", cfg.Ollama.HealthProbeTimeout)
 	}
 }

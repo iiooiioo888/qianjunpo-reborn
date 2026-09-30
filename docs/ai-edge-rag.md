@@ -8,6 +8,14 @@
 | `EDGE_INFER_ADDR` | `:8088` | HTTP listen address |
 | `EDGE_INFER_OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama / OpenAI-compatible base |
 | `EDGE_INFER_OLLAMA_MODEL` | `qwen2.5:3b` | Model tag (e.g. Q4_K_M quant via Ollama) |
+| `EDGE_INFER_HEALTH_PROBE_TIMEOUT` | `2s` | Max wait for Ollama `/api/tags` on `/health` (infer still uses long client) |
+
+Client (`pkg/ai.InferClient`):
+
+| Env | Default | Meaning |
+|-----|---------|---------|
+| `AI_INFER_REQUEST_TIMEOUT` | `1s` | Whole infer attempt before NPC fallback |
+| `AI_INFER_HTTP_TIMEOUT` | `800ms` | HTTP client limit per POST `/v1/infer` |
 
 ### Local Ollama
 
