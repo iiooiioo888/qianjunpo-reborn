@@ -21,6 +21,11 @@ type inferResponse struct {
 	LatencyMs int64  `json:"latency_ms"`
 }
 
+type inferErrorResponse struct {
+	Error string `json:"error"`
+	Code  string `json:"code"`
+}
+
 type server struct {
 	backend backend.Backend
 	mock    *backend.MockBackend
@@ -78,7 +83,12 @@ func (s *server) handleInfer(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	out, err := s.backend.Infer(ctx, backend.InferRequest{Prompt: req.Prompt})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		_ = json.NewEncoder(w).Encode(inferErrorResponse{
+			Error: err.Error(),
+			Code:  "backend_infer_failed",
+		})
 		return
 	}
 	resp := inferResponse{

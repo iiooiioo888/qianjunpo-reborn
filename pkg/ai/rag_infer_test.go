@@ -21,12 +21,17 @@ func TestRAGInferSlowEdgeFallsBackWithinDeadline(t *testing.T) {
 	}
 	client.Infer.RequestTimeout = 250 * time.Millisecond
 	client.Infer.HTTPTimeout = 200 * time.Millisecond
+	off := false
+	client.Infer.LogFallback = &off
 
 	start := time.Now()
 	out := client.InferWithContext(context.Background(), "guard", "flank the supply line")
 	elapsed := time.Since(start)
 	if out.Text != NPCFallback("guard") {
 		t.Fatalf("expected NPC fallback, got %q", out.Text)
+	}
+	if out.Source != SourceNPC || out.FallbackReason != FallbackReasonTimeout {
+		t.Fatalf("%+v", out)
 	}
 	if elapsed > 600*time.Millisecond {
 		t.Fatalf("RAG+infer fallback too slow: %v", elapsed)

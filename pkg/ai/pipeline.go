@@ -73,16 +73,6 @@ func (t *TacticalExecutor) Tick() (lockstep.CommandPacket, bool) {
 	return cmd, true
 }
 
-// NPCFallback returns template dialogue/actions when edge inference is unavailable (<1s path).
-func NPCFallback(persona string) string {
-	switch persona {
-	case "guard":
-		return "Hold the line!"
-	default:
-		return "For the realm!"
-	}
-}
-
 // Pipeline connects snapshot → strategic plan → tactical command.
 type Pipeline struct {
 	Planner  StrategicPlanner

@@ -43,6 +43,20 @@ When `backend=ollama` and Ollama is down, `/health` returns HTTP 200 with `statu
 
 `RAGInferClient` retrieves Top-5, builds a prompt prefix, then calls edge HTTP. No RAG or LLM output enters `pkg/fixed` / combat FP64 math.
 
+`InferResult` fields:
+
+| Field | When set |
+|-------|----------|
+| `Source` | `edge` (model) or `npc` (template) |
+| `FallbackReason` | Non-empty when `Source=npc` (`timeout`, `http_non_ok_status`, `no_infer_client`, …) |
+| `FallbackDetail` | Optional (`502:backend_infer_failed`, transport error text) |
+
+Persona keys for `NPCFallback` include `guard`, `scout`, `strategist`, `merchant`, and general ids such as `cao_cao`, `zhang_fei`, `guan_yu` (spaces/hyphens normalized). Unknown personas get `"For the realm!"`.
+
+On NPC fallback, `InferClient` emits structured `slog` (`ai infer npc fallback`). Set `LogFallback=false` on the client to silence in tests.
+
+When edge `/v1/infer` fails, the service returns JSON `{"error","code":"backend_infer_failed"}` with HTTP 502; the client maps status + code into `FallbackDetail`.
+
 ```bash
 make test-edge-infer   # mock HTTP handlers
 make test-ai-rag       # pkg/ai + pkg/rag focused tests
