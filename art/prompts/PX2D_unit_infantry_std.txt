@@ -1,0 +1,5 @@
+A. HARD OUTPUT: exact 128x128 pixel unit sprite, single subject only, solid flat background #1A1410, no sprite sheet no collage no frame no text,
+B. STYLE LOCK: cartoon pixel art, 1px hard black outline, no anti-aliasing, top-left light, palette #8B4513 leather #CD5C5C cloth trim #DAA520 metal accents,
+C. POSE LOCK: front idle standing full body height 90 percent canvas feet near bottom open hands holding spear vertically at side shared batch idle skeleton,
+D. IDENTITY infantry MUST SHOW FIRST: (1) silhouette foot soldier with round shield on left arm, (2) simple helmet or head wrap, (3) brown-red uniform blocks readable at 128px, (4) short spear and wooden shield, (5) faction accent small colored sash only not dominant,
+E. FORBIDDEN: wrong size not 128x128 second soldier horse photoreal gradient background sprite sheet collage text frame cavalry mount

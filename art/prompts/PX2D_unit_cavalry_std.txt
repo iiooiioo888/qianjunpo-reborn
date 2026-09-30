@@ -1,0 +1,5 @@
+A. HARD OUTPUT: exact 128x128 pixel unit sprite, single subject only, solid flat background #1A1410, no sprite sheet no collage no frame no text,
+B. STYLE LOCK: cartoon pixel art, 1px hard black outline, no anti-aliasing, top-left light, palette #8B4513 #CD5C5C #DAA520 with dark horse coat,
+C. POSE LOCK: three-quarter front idle rider plus horse single composed subject full group height 92 percent canvas shared batch idle skeleton,
+D. IDENTITY cavalry MUST SHOW FIRST: (1) silhouette horse and rider one icon readable, (2) rider helmet plume small, (3) horse brown dark mane rider red-brown armor, (4) lance angled backward not covering face, (5) faction accent on rider sash only,
+E. FORBIDDEN: wrong size not 128x128 infantry foot-only duplicate riders photoreal gradient background sprite sheet collage text frame
