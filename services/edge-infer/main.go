@@ -8,17 +8,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/ai"
 	"github.com/iiooiioo888/qianjunpo-reborn/services/edge-infer/backend"
 )
 
 type inferRequest struct {
 	Prompt string `json:"prompt"`
-}
-
-type inferResponse struct {
-	Text      string `json:"text"`
-	Model     string `json:"model"`
-	LatencyMs int64  `json:"latency_ms"`
 }
 
 type inferErrorResponse struct {
@@ -91,11 +86,7 @@ func (s *server) handleInfer(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	resp := inferResponse{
-		Text:      out.Text,
-		Model:     out.Model,
-		LatencyMs: out.LatencyMs,
-	}
+	resp := ai.EdgeInferHTTPResponse(out.Text, out.Model, out.LatencyMs)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
 }

@@ -117,17 +117,22 @@ func (c *InferClient) Infer(ctx context.Context, persona, prompt string) InferRe
 		}
 		return c.fallback(persona, FallbackReasonHTTPStatus, detail)
 	}
-	var decoded struct {
-		Text string `json:"text"`
+	var decoded InferHTTPResponse
+	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil {
+		return c.fallback(persona, FallbackReasonBadResponse, err.Error())
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil || decoded.Text == "" {
-		detail := ""
-		if err != nil {
-			detail = err.Error()
+	out := InferResultFromHTTP(decoded)
+	if out.Text == "" {
+		return c.fallback(persona, FallbackReasonBadResponse, "")
+	}
+	if out.Source == SourceNPC {
+		reason := out.FallbackReason
+		if reason == FallbackReasonNone {
+			reason = FallbackReasonBadResponse
 		}
-		return c.fallback(persona, FallbackReasonBadResponse, detail)
+		return c.fallback(persona, reason, out.FallbackDetail)
 	}
-	return edgeResult(decoded.Text)
+	return out
 }
 
 type inferErrorBody struct {

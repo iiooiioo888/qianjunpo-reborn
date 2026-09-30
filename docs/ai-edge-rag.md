@@ -26,6 +26,40 @@ curl -s localhost:8088/health | jq
 curl -s -X POST localhost:8088/v1/infer -d '{"prompt":"defend the gate"}' | jq
 ```
 
+### `POST /v1/infer` success JSON
+
+Snake_case fields mirror `pkg/ai.InferResult` for observability:
+
+```json
+{
+  "text": "advance: defend the gate",
+  "model": "qwen2.5-3b-mock",
+  "latency_ms": 1,
+  "source": "edge"
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `source` | `edge` on successful model output from this service |
+| `fallback_reason` | Omitted on edge success; NPC reasons appear when a proxy returns `source=npc` (client-side fallback does not use this HTTP shape) |
+| `fallback_detail` | Omitted unless `fallback_reason` is set |
+
+`pkg/ai.InferClient` decodes the success body into `InferResult` (`Source`, `FallbackReason`, `FallbackDetail`). When edge HTTP fails, the client still returns NPC template text with `source=npc` and a populated `fallback_reason` / `fallback_detail` (not an HTTP 200 from edge-infer).
+
+Example client-side NPC fallback after HTTP 502:
+
+```json
+{
+  "text": "Eyes on the pass—they're moving east.",
+  "source": "npc",
+  "fallback_reason": "http_non_ok_status",
+  "fallback_detail": "502:backend_infer_failed"
+}
+```
+
+(The above is the in-process `InferResult` shape from `InferClient.Infer` / `RAGInferClient.InferWithContext`, not the edge service response.)
+
 When `backend=ollama` and Ollama is down, `/health` returns HTTP 200 with `status=degraded` and `ready=false` (soft fail). `pkg/ai.InferClient` still falls back to NPC templates within **1s** if `/v1/infer` errors.
 
 ### Measuring latency (aspirational targets)

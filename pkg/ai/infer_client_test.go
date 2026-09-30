@@ -25,15 +25,26 @@ func TestInferClientMockHTTP(t *testing.T) {
 			http.NotFound(w, r)
 			return
 		}
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"text": "advance: test", "model": "qwen2.5-3b-mock", "latency_ms": 1,
-		})
+		_ = json.NewEncoder(w).Encode(EdgeInferHTTPResponse("advance: test", "qwen2.5-3b-mock", 1))
 	}))
 	defer srv.Close()
 
 	c := inferClientNoLog(srv.URL, nil)
 	out := c.Infer(context.Background(), "guard", "defend gate")
 	if out.Text != "advance: test" || out.Source != SourceEdge || out.FallbackReason != FallbackReasonNone {
+		t.Fatalf("%+v", out)
+	}
+}
+
+func TestInferClientDecodesHTTPObservabilityFields(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(EdgeInferHTTPResponse("line holds", "qwen2.5-3b-mock", 2))
+	}))
+	defer srv.Close()
+
+	c := inferClientNoLog(srv.URL, nil)
+	out := c.Infer(context.Background(), "guard", "hold")
+	if out.Source != SourceEdge || out.FallbackReason != FallbackReasonNone || out.Text != "line holds" {
 		t.Fatalf("%+v", out)
 	}
 }
