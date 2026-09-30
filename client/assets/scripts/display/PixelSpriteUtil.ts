@@ -10,7 +10,8 @@ export function applyPixelArtSampling(frame: SpriteFrame | null): void {
 }
 
 /**
- * v03 過審後單位貼圖畫布（像素）。v02 仍由 registry 指向既有檔名；顯示時用 {@link boardUnitDisplaySize} 整數倍縮放。
+ * STANDARD 單位貼圖畫布（像素，128×128）；registry 預設 stem 見 {@link UnitSpriteRegistry}。
+ * 顯示時用 {@link boardUnitDisplaySize} 整數倍縮放（Nearest）。
  */
 export const UNIT_ART_CANVAS_PX = 128;
 
