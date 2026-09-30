@@ -44,3 +44,11 @@
 | 達 `maxTurnFrames` 仍未殲滅 | `EndTimeout` | 總 HP 較高者；同 HP 則 `NoWinner` |
 
 佔點勝尚未實作；本切片僅殲滅與超時比 HP。
+
+## 範圍傷害選格（AoE stub）
+
+群傷／範圍技能完整系統尚未入庫；目前僅提供**可呼叫、不套用傷害**的選格骨架：
+
+- `combat.CollectAoECells(center, radius)`：回傳 Chebyshev 距離 `≤ radius` 的合法格（預設 stub 常數 `DefaultAoERadius = 1`，含中心格與八鄰），按 `Y` 再 `X` 排序以保確定性。
+- `combat.CollectAoETargets(board, center, radius, excludeID)`：在上述格子上收集單位 ID（升序），可排除施放者；**不**讀取 `hit_rate`／`crit`／`armor_k`，也不改變 `InAttackRange`／`AttackLineClear` 行為。
+- 戰術層 `(*tactical.Match).CollectAoETargets` 為薄封裝，供日後技能指令接線；現行 `validateAttack`／單體攻擊路徑未使用。
