@@ -91,3 +91,53 @@ func TestSubmitKindAttackLoSBlockedRejected(t *testing.T) {
 		t.Fatalf("want CodeBlocked, got %v", err)
 	}
 }
+
+// Symmetric to TestSubmitKindAttackLoSBlockedRejected: impassable terrain on trace rejects KindAttack.
+func TestSubmitKindAttackLoSTerrainBlockedRejected(t *testing.T) {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewMatchWithConfig(7, cfg)
+	attacker := m.Units[UnitIDPlayer0]
+	attacker.Stats.Type = combat.UnitArcher
+	attacker.Stats.Range = 3
+	attacker.Pos = board.Coord{X: 2, Y: 2}
+	m.Units[UnitIDPlayer0] = attacker
+	m.Board.ClearUnit(board.Coord{2, 8})
+	if !m.Board.SetUnit(attacker.Pos, UnitIDPlayer0) {
+		t.Fatal("place archer")
+	}
+
+	target := board.Coord{X: 5, Y: 2}
+	blockCell := board.Coord{X: 3, Y: 2}
+	m.Board.SetTerrain(blockCell, board.TerrainMountain)
+	if m.Board.Get(blockCell).Passable {
+		t.Fatal("setup: blocker terrain must be impassable")
+	}
+	if m.Board.GetUnit(blockCell) != 0 {
+		t.Fatal("setup: blocker cell must be empty")
+	}
+
+	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
+	defender := m.Units[UnitIDPlayer1]
+	defender.Pos = target
+	m.Units[UnitIDPlayer1] = defender
+	if !m.Board.SetUnit(target, UnitIDPlayer1) {
+		t.Fatal("place defender")
+	}
+
+	err = m.Submit(Command{
+		PlayerID: 0,
+		Kind:     KindAttack,
+		UnitID:   UnitIDPlayer0,
+		To:       target,
+	})
+	if err == nil {
+		t.Fatal("expected terrain-blocked line rejection")
+	}
+	var me validate.MoveError
+	if !asMoveError(err, &me) || me.Code != validate.CodeBlocked {
+		t.Fatalf("want CodeBlocked, got %v", err)
+	}
+}
