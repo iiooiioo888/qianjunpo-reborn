@@ -250,30 +250,7 @@ func serveHTTP(addr string, gw *janusGateway) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok","service":"janus"}`))
 	})
-	// Dev-only JSON mirror of GetBattleSnapshot for Cocos browser preview (not a second authority).
-	mux.HandleFunc("/v1/tactical/snapshot", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		battleID := r.URL.Query().Get("battle_id")
-		if battleID == "" {
-			http.Error(w, "missing battle_id", http.StatusBadRequest)
-			return
-		}
-		resp, err := gw.GetBattleSnapshot(r.Context(), &gatewayv1.GetBattleSnapshotRequest{
-			SessionId: r.URL.Query().Get("session_id"),
-			BattleId:  battleID,
-		})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("X-Lockstep-Frame", fmt.Sprintf("%d", resp.GetLockstepFrame()))
-		w.Header().Set("X-State-Hash", fmt.Sprintf("%016x", resp.GetStateHash()))
-		_, _ = w.Write(resp.GetViewSnapshotJson())
-	})
+	registerTacticalHTTPRoutes(mux, gw, defaultTacticalHTTPOptions())
 	s := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	log.Fatal(s.ListenAndServe())
 }
