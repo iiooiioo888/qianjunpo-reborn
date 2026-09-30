@@ -13,6 +13,9 @@ Pre-production wiring for **Allocate → Ready → Shutdown** on Roma game serve
 | `ROMA_AGONES_ALLOCATION_TOKEN` | _(empty)_ | Bearer token for allocation API |
 | `ROMA_AGONES_NAMESPACE` | `default` | K8s namespace |
 | `ROMA_AGONES_FLEET` | `roma-fleet` | Fleet label selector (`deploy/agones/fleet.yaml`) |
+| `ROMA_AGONES_ALLOCATION_PLAYERS_COUNTER` | `0` | When `1`/`true`, HTTP allocate body includes `players` counter filter + `Increment` (see scale-out doc) |
+| `ROMA_AGONES_ALLOCATION_PLAYERS_MIN_AVAILABLE` | `1` | Counter selector floor when counter mode is on |
+| `ROMA_AGONES_ALLOCATION_PLAYERS_INCREMENT` | `1` | Slots reserved per successful allocate |
 | `ROMA_AGONES_*_TIMEOUT` | allocate 30s / ready 15s / shutdown 30s | Per-step deadlines |
 | `ROMA_AGONES_HEALTH_INTERVAL` | `2s` | Sidecar health ping interval in Roma |
 | `ROMA_AGONES_GAMESERVER_PORT` | `9092` | Mock allocate response gRPC port |
@@ -45,6 +48,7 @@ curl -s -X POST http://127.0.0.1:18092/v1/agones/allocate \
 1. Apply Fleet manifests: `kubectl apply -f deploy/agones/`
 2. Set Roma container env: `ROMA_AGONES_BACKEND=sidecar`, `ROMA_AGONES_ALLOCATOR=http`
 3. Point `ROMA_AGONES_ALLOCATION_URL` at your allocation service (Agones allocator or in-cluster proxy).
+4. For Fleet `players` counter scale-out, set `ROMA_AGONES_ALLOCATION_PLAYERS_COUNTER=1` so allocate matches `deploy/agones/gameserverallocation-players.yaml`.
 4. Roma calls sidecar `POST /ready` after listeners start and `POST /shutdown` on SIGTERM.
 
 Sidecar REST reference: [Agones Client SDKs — REST](https://agones.dev/site/docs/guides/client-sdks/rest/).

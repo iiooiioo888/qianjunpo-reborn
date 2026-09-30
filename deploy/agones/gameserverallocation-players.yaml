@@ -1,7 +1,7 @@
 # Example GameServerAllocation for Roma control-plane allocate (HTTP).
 # Wire ROMA_AGONES_ALLOCATION_URL to your allocator / in-cluster proxy.
-# pkg/agones/http_allocator.go currently sends selectors only; extend the JSON body
-# with spec.counters when enabling player-capacity filtering in pre-prod.
+# Roma HTTP allocator: set ROMA_AGONES_ALLOCATION_PLAYERS_COUNTER=1 to emit this shape
+# from pkg/agones/http_allocator.go (see docs/agones-scale-out.md).
 #
 # Agones 1.54: selectors.counters.players.minAvailable ensures capacity before allocate.
 # counters.players Increment reserves one slot atomically when allocation succeeds.
