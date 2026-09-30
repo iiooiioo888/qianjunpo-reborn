@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 .PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
+=======
+.PHONY: test demo match-play match-verify janus-roma-test compose-e2e-test compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
+>>>>>>> a99d35f (feat(phase2): deepen Janus/Roma placeholders after PR #10)
 
 COMPOSE ?= docker compose --profile dev
 PROTOC ?= protoc
@@ -31,6 +35,10 @@ client-snapshot:
 
 janus-roma-test:
 	go test ./services/janus -run TestJanusToRomaTacticalLockstepPath -v
+
+compose-e2e-test:
+	@test -f .env || cp .env.example .env
+	COMPOSE_E2E=1 go test ./pkg/integration -run TestComposeJanusRomaTacticalSequence -v -count=1
 
 edge-infer:
 	go run ./services/edge-infer

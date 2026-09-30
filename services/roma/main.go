@@ -6,12 +6,15 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	commonv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/common/v1"
 	romav1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/roma/v1"
 	"github.com/iiooiioo888/qianjunpo-reborn/internal/roma"
+	etcdreg "github.com/iiooiioo888/qianjunpo-reborn/pkg/discovery/etcd"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/observability/metrics"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/replay"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/timedilation"
 	"google.golang.org/grpc"
 )
@@ -66,9 +69,9 @@ func (s *romaServer) SubmitTacticalCommand(_ context.Context, req *romav1.Submit
 	)
 	if err != nil {
 		return &romav1.SubmitTacticalCommandResponse{
-			Accepted:     false,
-			RejectReason: err.Error(),
-			StateHash:    hash,
+			Accepted:      false,
+			RejectReason:  err.Error(),
+			StateHash:     hash,
 			LockstepFrame: frame,
 		}, nil
 	}
@@ -95,7 +98,33 @@ func (s *romaServer) StepLockstep(_ context.Context, req *romav1.StepLockstepReq
 func main() {
 	grpcAddr := env("ROMA_GRPC_ADDR", ":9092")
 	httpAddr := env("ROMA_HTTP_ADDR", ":8092")
+	etcdEndpoints := env("ETCD_ENDPOINTS", "etcd:2379")
+	advertise := env("ROMA_ADVERTISE_ADDR", "roma:9092")
+	zoneID := env("ROMA_ZONE_ID", "default")
+	shard := uint32(0)
+	if v := env("ROMA_SHARD", "0"); v != "" {
+		if n, err := parseShard(v); err == nil {
+			shard = n
+		}
+	}
+
 	store := roma.NewStore(nil)
+
+	if strings.TrimSpace(etcdEndpoints) != "" && os.Getenv("ETCD_DISABLE") != "1" {
+		reg, err := etcdreg.NewRomaRegistry(etcdEndpoints)
+		if err != nil {
+			log.Printf("roma: etcd client failed: %v", err)
+		} else {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			if err := reg.Register(ctx, zoneID, shard, advertise); err != nil {
+				log.Printf("roma: etcd register failed: %v", err)
+			} else {
+				log.Printf("roma: registered %s shard %d -> %s", zoneID, shard, advertise)
+			}
+			cancel()
+			defer func() { _ = reg.Close() }()
+		}
+	}
 
 	go func() {
 		metrics.Register(nil)
@@ -109,6 +138,30 @@ func main() {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"status":"ok","service":"roma","note":"authoritative tactical match in-memory"}`))
 		})
+		mux.HandleFunc("/v1/battles/replay", func(w http.ResponseWriter, r *http.Request) {
+			if r.Method != http.MethodGet {
+				http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				return
+			}
+			id := r.URL.Query().Get("battle_id")
+			if id == "" {
+				http.Error(w, "missing battle_id", http.StatusBadRequest)
+				return
+			}
+			rec, err := store.ExportRecording(roma.BattleID(id))
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			gz, err := replay.MarshalGzip(rec)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/gzip")
+			w.Header().Set("Content-Disposition", "attachment; filename=match.rgz")
+			_, _ = w.Write(gz)
+		})
 		s := &http.Server{Addr: httpAddr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 		log.Fatal(s.ListenAndServe())
 	}()
@@ -121,6 +174,17 @@ func main() {
 	romav1.RegisterRomaZoneServer(srv, &romaServer{store: store})
 	log.Printf("roma grpc on %s", grpcAddr)
 	log.Fatal(srv.Serve(lis))
+}
+
+func parseShard(v string) (uint32, error) {
+	var n uint64
+	for _, c := range v {
+		if c < '0' || c > '9' {
+			return 0, os.ErrInvalid
+		}
+		n = n*10 + uint64(c-'0')
+	}
+	return uint32(n), nil
 }
 
 func env(k, def string) string {

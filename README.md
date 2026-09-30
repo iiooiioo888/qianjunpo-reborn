@@ -123,7 +123,11 @@ make janus-roma-test   # Janus gRPC → Roma pkg/tactical 鎖步 E2E（無需 Co
 
 客戶端可經 **Janus** `EnterBattle` / `SubmitTacticalCommand` / `StepTacticalLockstep` 轉發至 **Roma** 同名的 `SubmitTacticalCommand` / `StepLockstep`；Roma `JoinZone` 會建立 `pkg/tactical` 權威對局（種子由 zone/shard 確定性衍生）。狀態哈希與 `cmd/match` 一致，仍不將牆鐘寫入模擬哈希。
 
-仍為占位／後續深化：etcd 真實服務發現、Lares 令牌校驗接線、TCP 橋接戰術封包、Roma 持久化與多區同步。
+已深化（Phase 2 deepen）：etcd Roma 註冊／Janus 查詢、Lares Validate 接線、TCP `QJPT` 戰術封包、Roma `/v1/battles/replay` gzip 匯出（`cmd/match verify` 相容）。仍為占位：Roma 持久化與多區同步。
+
+```bash
+make compose-e2e-test   # 需先 make compose-up，並設 COMPOSE_E2E=1（見 pkg/integration/compose_janus_roma_test.go）
+```
 
 ## Docker Compose（dev）
 
