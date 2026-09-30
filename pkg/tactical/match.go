@@ -42,6 +42,22 @@ func (b *commandBuffer) pop(execFrame uint64) []Command {
 	return cmds
 }
 
+func (b *commandBuffer) pendingCount() int {
+	n := 0
+	for _, cmds := range b.byExec {
+		n += len(cmds)
+	}
+	return n
+}
+
+// PendingCommandCount returns queued lockstep commands not yet executed (scheduling metadata).
+func (m *Match) PendingCommandCount() int {
+	if m.buffer == nil {
+		return 0
+	}
+	return m.buffer.pendingCount()
+}
+
 // Match is an authoritative tactical battle on the 19×19 board.
 type Match struct {
 	Seed     uint64

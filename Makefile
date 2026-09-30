@@ -1,4 +1,4 @@
-.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
+.PHONY: test demo match-play match-verify client-snapshot janus-roma-test compose-e2e-test timedilation-drill compose-up compose-down compose-test edge-infer proto proto-check build-services loadpredict aigc-worker aigc-stub-check
 
 COMPOSE ?= docker compose --profile dev
 PROTOC ?= protoc
@@ -31,6 +31,10 @@ client-snapshot:
 
 janus-roma-test:
 	go test ./services/janus -run TestJanusToRomaTacticalLockstepPath -v
+
+timedilation-drill:
+	go test ./pkg/timedilation -run 'TestOverloadDrill|TestDegradeRecovers' -count=1
+	go run ./cmd/timedilation-drill
 
 compose-e2e-test:
 	@test -f .env || cp .env.example .env

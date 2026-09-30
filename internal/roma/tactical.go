@@ -71,6 +71,7 @@ func (s *Store) StepLockstep(id BattleID, steps uint32) (uint64, uint64, bool, u
 	}
 	for i := 0; i < int(steps); i++ {
 		b.Match.StepLockstep()
+		s.observeAndTickDilation(b)
 	}
 	winner := uint32(winnerUndecided)
 	if b.Match.Finished {
