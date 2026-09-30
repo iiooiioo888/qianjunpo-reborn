@@ -318,3 +318,94 @@ func TestSubmitKindAoELoSTerrainBlockedRejected(t *testing.T) {
 		t.Fatalf("want AOE_LOS_BLOCKED, got %v", err)
 	}
 }
+
+// Symmetric to TestSubmitKindAoELoSBlockedRejected: line blocker at (3,2) would reject ranged AoE from
+// (2,2)→(5,2), but adjacent melee KindAoE must skip AttackLineClear and damage after lockstep.
+func TestSubmitKindAoEMeleeLoSNotCheckedUnitOnLineSubmitDamagesEnemy(t *testing.T) {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewMatchWithConfig(22, cfg)
+	attPos := board.Coord{X: 4, Y: 2}
+	center := board.Coord{X: 5, Y: 2}
+	blocker := board.Coord{X: 3, Y: 2}
+
+	m.Board.ClearUnit(m.Units[UnitIDPlayer0].Pos)
+	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
+	attacker := defaultUnit(cfg, UnitIDPlayer0, 0, combat.UnitInfantry, attPos)
+	m.Units[UnitIDPlayer0] = &attacker
+	if !m.Board.SetUnit(attPos, UnitIDPlayer0) {
+		t.Fatal("place infantry")
+	}
+	if !m.Board.SetUnit(blocker, 999) {
+		t.Fatal("place line blocker")
+	}
+	defender := defaultUnit(cfg, UnitIDPlayer1, 1, combat.UnitCavalry, center)
+	m.Units[UnitIDPlayer1] = &defender
+	if !m.Board.SetUnit(center, UnitIDPlayer1) {
+		t.Fatal("place defender")
+	}
+
+	enemyHPBefore := defender.Stats.HP.Raw()
+	if err := m.Submit(Command{
+		PlayerID: 0,
+		Kind:     KindAoE,
+		UnitID:   UnitIDPlayer0,
+		To:       center,
+	}); err != nil {
+		t.Fatalf("melee aoe must ignore off-segment line blockers: %v", err)
+	}
+	for i := 0; i <= lockstep.CommandDelayFrames; i++ {
+		m.StepLockstep()
+	}
+	if m.Units[UnitIDPlayer1].Stats.HP.Raw() >= enemyHPBefore {
+		t.Fatalf("melee aoe: expected hp loss, before=%d after=%d", enemyHPBefore, m.Units[UnitIDPlayer1].Stats.HP.Raw())
+	}
+}
+
+// Symmetric to TestSubmitKindAoELoSTerrainBlockedRejected: impassable terrain on extended line must
+// not reject adjacent melee KindAoE.
+func TestSubmitKindAoEMeleeLoSNotCheckedTerrainOnLineSubmitDamagesEnemy(t *testing.T) {
+	cfg, err := combat.DefaultConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	m := NewMatchWithConfig(23, cfg)
+	attPos := board.Coord{X: 4, Y: 2}
+	center := board.Coord{X: 5, Y: 2}
+	blockCell := board.Coord{X: 3, Y: 2}
+
+	m.Board.ClearUnit(m.Units[UnitIDPlayer0].Pos)
+	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
+	attacker := defaultUnit(cfg, UnitIDPlayer0, 0, combat.UnitInfantry, attPos)
+	m.Units[UnitIDPlayer0] = &attacker
+	if !m.Board.SetUnit(attPos, UnitIDPlayer0) {
+		t.Fatal("place infantry")
+	}
+	m.Board.SetTerrain(blockCell, board.TerrainMountain)
+	if m.Board.Get(blockCell).Passable {
+		t.Fatal("setup: blocker terrain must be impassable")
+	}
+	defender := defaultUnit(cfg, UnitIDPlayer1, 1, combat.UnitCavalry, center)
+	m.Units[UnitIDPlayer1] = &defender
+	if !m.Board.SetUnit(center, UnitIDPlayer1) {
+		t.Fatal("place defender")
+	}
+
+	enemyHPBefore := defender.Stats.HP.Raw()
+	if err := m.Submit(Command{
+		PlayerID: 0,
+		Kind:     KindAoE,
+		UnitID:   UnitIDPlayer0,
+		To:       center,
+	}); err != nil {
+		t.Fatalf("melee aoe must not apply terrain LOS to adjacent center: %v", err)
+	}
+	for i := 0; i <= lockstep.CommandDelayFrames; i++ {
+		m.StepLockstep()
+	}
+	if m.Units[UnitIDPlayer1].Stats.HP.Raw() >= enemyHPBefore {
+		t.Fatalf("melee aoe: expected hp loss, before=%d after=%d", enemyHPBefore, m.Units[UnitIDPlayer1].Stats.HP.Raw())
+	}
+}
