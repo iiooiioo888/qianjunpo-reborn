@@ -14,6 +14,9 @@ export const DEFAULT_LIVE_SNAPSHOT_URL = 'v1/tactical/snapshot?battle_id=default
 /** Same-origin POST mirror (#50); override with `?commandUrl=`. */
 export const DEFAULT_LIVE_COMMAND_URL = 'v1/tactical/command';
 
+/** Step Roma lockstep after accepted command; override with `?stepLockstepUrl=`. */
+export const DEFAULT_LIVE_STEP_LOCKSTEP_URL = 'v1/tactical/step-lockstep';
+
 /** Local player owner id in duel mock (owner 0). */
 export const LOCAL_PLAYER_OWNER = 0;
 
@@ -36,9 +39,21 @@ export function parseBootConfig() {
   const liveUrl = resolveAppUrl(liveUrlRaw);
   const commandUrlRaw = params.get('commandUrl') || DEFAULT_LIVE_COMMAND_URL;
   const commandUrl = resolveAppUrl(commandUrlRaw);
+  const stepLockstepUrlRaw = params.get('stepLockstepUrl') || DEFAULT_LIVE_STEP_LOCKSTEP_URL;
+  const stepLockstepUrl = resolveAppUrl(stepLockstepUrlRaw);
   const showCards = params.get('cards') !== '0';
   const liveGateway = parseLiveGatewayConfig(params);
-  return { live, liveUrl, liveUrlRaw, commandUrl, commandUrlRaw, showCards, liveGateway };
+  return {
+    live,
+    liveUrl,
+    liveUrlRaw,
+    commandUrl,
+    commandUrlRaw,
+    stepLockstepUrl,
+    stepLockstepUrlRaw,
+    showCards,
+    liveGateway,
+  };
 }
 
 export function mockSnapshotUrl() {

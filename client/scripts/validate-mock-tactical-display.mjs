@@ -168,6 +168,17 @@ if (
 ) {
   fail('static-preview missing Live command failure retry UX');
 }
+const liveGatewayPreview = readFileSync(
+  join(root, 'static-preview/live-gateway.js'),
+  'utf8',
+);
+if (
+  !liveGatewayPreview.includes('v1/tactical/step-lockstep') ||
+  !staticPreviewApp.includes('stepTacticalLockstep') ||
+  !staticPreviewApp.includes('applyLiveLockstepAfterCommand')
+) {
+  fail('static-preview missing Live step-lockstep after accepted command');
+}
 
 const localUnit = raw.units.find((u) => u.owner === 0 && u.hp > 0);
 if (!localUnit || localUnit.id !== 101) {
