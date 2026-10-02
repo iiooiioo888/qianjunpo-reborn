@@ -113,6 +113,51 @@ func TestSubmitKindSkillStrikeLockstepIntegration(t *testing.T) {
 	}
 }
 
+func TestSubmitKindSkillStrikeViewSnapshotShowsCastAndDamage(t *testing.T) {
+	m := NewMatch(6)
+	attacker := m.Units[UnitIDPlayer0]
+	neighbor := board.Coord{X: attacker.Pos.X + 1, Y: attacker.Pos.Y}
+	m.Board.ClearUnit(m.Units[UnitIDPlayer1].Pos)
+	defender := m.Units[UnitIDPlayer1]
+	defender.Pos = neighbor
+	m.Units[UnitIDPlayer1] = defender
+	if !m.Board.SetUnit(neighbor, UnitIDPlayer1) {
+		t.Fatal("place defender")
+	}
+	beforeHP := defender.Stats.HP.Raw()
+	if err := m.Submit(Command{
+		PlayerID: 0,
+		Kind:     KindSkill,
+		UnitID:   UnitIDPlayer0,
+		To:       neighbor,
+		SkillID:  combat.SkillStubStrike,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < int(lockstep.CommandDelayFrames)+1; i++ {
+		m.StepLockstep()
+	}
+	snap := MatchToViewSnapshot(m, 10000)
+	if snap.LastSkillCast == nil {
+		t.Fatal("expected lastSkillCast in view snapshot after skill resolve")
+	}
+	if snap.LastSkillCast.SkillID != uint16(combat.SkillStubStrike) {
+		t.Fatalf("skill id=%d", snap.LastSkillCast.SkillID)
+	}
+	if snap.LastSkillCast.TargetX != neighbor.X || snap.LastSkillCast.TargetY != neighbor.Y {
+		t.Fatalf("target=%d,%d want %d,%d", snap.LastSkillCast.TargetX, snap.LastSkillCast.TargetY, neighbor.X, neighbor.Y)
+	}
+	var enemyHP int64
+	for _, u := range snap.Units {
+		if u.ID == UnitIDPlayer1 {
+			enemyHP = u.HP
+		}
+	}
+	if enemyHP >= beforeHP {
+		t.Fatalf("snapshot hp should reflect damage: before=%d after=%d", beforeHP, enemyHP)
+	}
+}
+
 func TestSubmitKindSkillSplashLockstepIntegration(t *testing.T) {
 	m := NewMatch(5)
 	attacker := m.Units[UnitIDPlayer0]

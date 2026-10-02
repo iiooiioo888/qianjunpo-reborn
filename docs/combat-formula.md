@@ -67,4 +67,5 @@
 - `combat.DefaultCardPool()`：預設 duel 卡池（`SkillStubStrike`、`SkillStubSplash`）。
 - `combat.LookupSkill`：stub 行為對應 `SkillBehaviorStrike`（單體，沿用 `validateAttack`／`applyStrike`）或 `SkillBehaviorSplash`（範圍，沿用 `validateAoE`／`ApplyAoEStrike`）。
 - 指令 `KindSkill`：`Command.SkillID` 為技能 id，`Command.To` 為目標格；replay payload v2 在 8-byte 座標後附加 `skill_id`（舊 8-byte 回放仍可 `Decode`）。
-- 整合測：`pkg/tactical/skill_test.go`（`TestSubmitKindSkillStrikeLockstepIntegration`、`TestSubmitKindSkillSplashLockstepIntegration`）、`pkg/integration/skill_stub_test.go`（`TestPhase2SkillStubIntegration`）。
+- 整合測：`pkg/tactical/skill_test.go`（`TestSubmitKindSkillStrikeLockstepIntegration`、`TestSubmitKindSkillSplashLockstepIntegration`、`TestSubmitKindSkillStrikeViewSnapshotShowsCastAndDamage`）、`pkg/integration/skill_stub_test.go`（`TestPhase2SkillStubIntegration`）、`pkg/integration/skill_cast_snapshot_test.go`（`TestPhase2SkillCastViewSnapshotIntegration`）。
+- **View snapshot**：執行後 `units[].hp` 反映傷害；`lastSkillCast` 標記最近施放（見 `docs/skill-cast.md`）。Roma/Janus/proto 尚無 `skill_id` wire 欄位。

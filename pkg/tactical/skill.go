@@ -63,10 +63,12 @@ func (m *Match) applySkill(cmd Command, caster *Unit) {
 			return
 		}
 		m.applyStrike(caster, defender)
+		m.recordSkillCast(cmd, caster)
 	case combat.SkillBehaviorSplash:
 		if err := m.validateAoE(cmd, caster); err != nil {
 			return
 		}
 		_ = m.ApplyAoEStrike(caster.ID, cmd.To, combat.DefaultAoERadius)
+		m.recordSkillCast(cmd, caster)
 	}
 }
