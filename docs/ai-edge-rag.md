@@ -26,6 +26,46 @@ curl -s localhost:8088/health | jq
 curl -s -X POST localhost:8088/v1/infer -d '{"prompt":"defend the gate"}' | jq
 ```
 
+### `POST /v1/rag-infer` (live battle context → Top-K → infer)
+
+Runs the **real** in-process path: seed corpus → vector Top-K (query = `battle_context` + `order`) → augmented prompt → backend (`mock` or `ollama`). Use this for curl verification of `rag_k` / `rag_hit_ids`.
+
+```bash
+make edge-infer   # EDGE_INFER_BACKEND=mock by default
+curl -s -X POST localhost:8088/v1/rag-infer \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "persona": "guard",
+    "order": "flank east with cavalry",
+    "battle_context": {
+      "units_summary": "three cavalry on the east wing",
+      "terrain_summary": "hills favor archers"
+    }
+  }' | jq
+```
+
+Success JSON (mock backend):
+
+```json
+{
+  "text": "advance: …",
+  "model": "qwen2.5-3b-mock",
+  "latency_ms": 1,
+  "source": "edge",
+  "rag_k": 5,
+  "rag_hit_ids": ["tactic-flank", "wei-xiahou", "…"]
+}
+```
+
+| Field | Meaning |
+|-------|---------|
+| `rag_k` | Top-K depth used for retrieval (`pkg/rag.DefaultTopK`, usually 5) |
+| `rag_hit_ids` | Corpus document ids from Top-K (stable offline ids like `tactic-flank`) |
+
+`order` and legacy `prompt` are accepted; at least one is required. `battle_context.units_summary` / `terrain_summary` are optional but should mirror live unit/terrain summaries from the tactical view.
+
+In-process (`pkg/ai.RAGInferClient.InferWithBattle`) returns the same `rag_k` / `rag_hit_ids` on `InferResult` after retrieval, before edge HTTP.
+
 ### `POST /v1/infer` success JSON
 
 Snake_case fields mirror `pkg/ai.InferResult` for observability:

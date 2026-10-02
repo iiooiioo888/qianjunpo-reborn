@@ -49,6 +49,24 @@ func TestInferResultFromHTTPRAGFields(t *testing.T) {
 	}
 }
 
+func TestRAGInferHTTPResponseJSON(t *testing.T) {
+	raw, err := json.Marshal(RAGInferHTTPResponse("line", "m", 2, 5, []string{"tactic-flank", "wei-xiahou"}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatal(err)
+	}
+	if m["rag_k"] != float64(5) {
+		t.Fatalf("rag_k=%v", m["rag_k"])
+	}
+	ids, ok := m["rag_hit_ids"].([]interface{})
+	if !ok || len(ids) != 2 {
+		t.Fatalf("rag_hit_ids=%v", m["rag_hit_ids"])
+	}
+}
+
 func TestInferResultFromHTTPNPCOnWire(t *testing.T) {
 	out := InferResultFromHTTP(InferHTTPResponse{
 		Text:           "Hold the line!",

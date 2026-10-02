@@ -42,6 +42,11 @@ type InferResult struct {
 	FallbackDetail string         // e.g. HTTP status or backend error code
 }
 
+// WithRAGObservability attaches RAG Top-K metadata (safe for nil hit slice).
+func (r InferResult) WithRAGObservability(k int, hitIDs []string) InferResult {
+	return withRAGMeta(r, k, hitIDs)
+}
+
 func (c *InferClient) requestTimeout() time.Duration {
 	if c.RequestTimeout > 0 {
 		return c.RequestTimeout

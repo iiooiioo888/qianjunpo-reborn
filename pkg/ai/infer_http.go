@@ -81,3 +81,8 @@ func InferResultFromHTTP(r InferHTTPResponse) InferResult {
 		FallbackDetail: r.FallbackDetail,
 	}
 }
+
+// RAGInferHTTPResponse builds the success contract for POST /v1/rag-infer.
+func RAGInferHTTPResponse(text, model string, latencyMs int64, ragK int, hitIDs []string) InferHTTPResponse {
+	return EdgeInferHTTPResponseWithRAG(text, model, latencyMs, ragK, hitIDs)
+}
