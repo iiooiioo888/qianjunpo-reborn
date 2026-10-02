@@ -7,12 +7,19 @@ import {
 } from './config.js';
 import { resolveAppUrl } from './paths.js';
 import { TacticalBoardRenderer } from './board.js';
+import { applyMockVictoryPatch, isBattleFinished } from './battle-end.js';
+import {
+  createBattleEndOverlayElements,
+  updateBattleEndOverlay,
+} from './battle-end-overlay.js';
 import {
   formatLastSkillCastLine,
   formatLockstepFrameLine,
   formatRateLine,
   formatSelectionLine,
+  lastSkillCastHudClass,
   liveLinkStateFromPollAge,
+  pickLastSkillCast,
 } from './hud.js';
 import { applyMockMove } from './mock-move.js';
 import { computeLegalMoveDestinations } from './reachability.js';
@@ -43,7 +50,10 @@ const els = {
   mode: document.getElementById('hud-mode'),
   cards: document.getElementById('char-cards'),
   canvas: document.getElementById('board'),
+  boardWrap: document.getElementById('board-wrap'),
 };
+
+const battleEndOverlay = createBattleEndOverlayElements(els.boardWrap);
 
 const renderer = new TacticalBoardRenderer(els.canvas);
 
@@ -60,6 +70,8 @@ let pollTimer = null;
 let localDrift = false;
 let liveSessionId = '';
 let liveBattleId = battleIdFromLiveUrl(boot.liveUrlRaw);
+/** @type {object | null} sticky lastSkillCast when polls omit the field briefly */
+let stickyLastSkillCast = null;
 
 function setStatus(text, isError = false) {
   els.status.textContent = text;
@@ -128,6 +140,17 @@ function stopLivePoll() {
   }
 }
 
+function ingestSnapshot(raw) {
+  let snap = validateSnapshot(raw);
+  if (boot.mockVictory && !boot.live) {
+    snap = applyMockVictoryPatch(snap, boot.mockVictory, LOCAL_PLAYER_OWNER);
+  }
+  if (snap.lastSkillCast) {
+    stickyLastSkillCast = snap.lastSkillCast;
+  }
+  snapshot = snap;
+}
+
 function refreshHud() {
   if (!snapshot) {
     return;
@@ -135,7 +158,12 @@ function refreshHud() {
   els.rate.textContent = formatRateLine(snapshot);
   els.frame.textContent = formatLockstepFrameLine(snapshot, syncCtx);
   els.selection.textContent = formatSelectionLine(snapshot, renderer.selectedUnitId);
-  els.skillCast.textContent = formatLastSkillCastLine(snapshot);
+  els.skillCast.textContent = formatLastSkillCastLine(snapshot, stickyLastSkillCast);
+  els.skillCast.className = lastSkillCastHudClass(snapshot, stickyLastSkillCast);
+  updateBattleEndOverlay(snapshot, {
+    ...battleEndOverlay,
+    localPlayerOwner: LOCAL_PLAYER_OWNER,
+  });
   updateCastSkillButton();
   els.mode.textContent = boot.live
     ? `Live: ${boot.liveUrlRaw}`
@@ -165,7 +193,7 @@ async function loadMock() {
   if (!res.ok) {
     throw new Error(`${url} HTTP ${res.status}`);
   }
-  snapshot = validateSnapshot(await res.json());
+  ingestSnapshot(await res.json());
   syncCtx = { source: 'mock', link: 'connected' };
   localDrift = false;
   renderer.clearSelection();
@@ -198,6 +226,10 @@ function updateCastSkillButton() {
     return;
   }
   const selectedId = renderer.selectedUnitId;
+  if (isBattleFinished(snapshot)) {
+    els.castSkill.hidden = true;
+    return;
+  }
   if (selectedId == null || !snapshot) {
     els.castSkill.hidden = true;
     return;
@@ -302,7 +334,7 @@ async function applyLiveLockstepAfterCommand() {
     throw new Error(formatLiveStepError(step));
   }
   if (step.viewSnapshot) {
-    snapshot = validateSnapshot(step.viewSnapshot);
+    ingestSnapshot(step.viewSnapshot);
     lastPollAt = Date.now();
     syncCtx = {
       source: 'live',
@@ -395,7 +427,7 @@ async function pollLive() {
       throw new Error(`live HTTP ${res.status}`);
     }
     const body = await res.json();
-    snapshot = validateSnapshot(body);
+    ingestSnapshot(body);
     lastPollAt = Date.now();
     const pollAgeMs = performance.now() - started;
     syncCtx = {
@@ -502,7 +534,7 @@ async function runLivePrepare() {
     liveSessionId = prepared.sessionId;
     liveBattleId = prepared.battleId;
     if (prepared.initialSnapshot) {
-      snapshot = validateSnapshot(prepared.initialSnapshot);
+      ingestSnapshot(prepared.initialSnapshot);
       render();
     }
     setStatus(`Live：EnterBattle 已建局 ${liveBattleId}；開始快照輪詢。`);
@@ -538,7 +570,7 @@ function unitAt(x, y) {
 }
 
 function onCellClick(x, y) {
-  if (!snapshot) {
+  if (!snapshot || isBattleFinished(snapshot)) {
     return;
   }
   const unitAtCell = unitAt(x, y);

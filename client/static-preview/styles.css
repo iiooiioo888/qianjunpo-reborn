@@ -94,6 +94,86 @@ h1 {
   align-items: flex-start;
 }
 
+.board-wrap {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+}
+
+.battle-end-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(8, 10, 16, 0.72);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.battle-end-panel {
+  text-align: center;
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  background: rgba(26, 32, 48, 0.95);
+  border: 2px solid var(--muted);
+  max-width: 92%;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.battle-end-overlay.tone-win .battle-end-panel {
+  border-color: #3dd68c;
+  box-shadow: 0 0 24px rgba(61, 214, 140, 0.25);
+}
+
+.battle-end-overlay.tone-lose .battle-end-panel {
+  border-color: var(--error);
+  box-shadow: 0 0 24px rgba(255, 107, 107, 0.2);
+}
+
+.battle-end-overlay.tone-draw .battle-end-panel {
+  border-color: #c9a227;
+}
+
+.battle-end-headline {
+  margin: 0 0 0.35rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.battle-end-overlay.tone-win .battle-end-headline {
+  color: #3dd68c;
+}
+
+.battle-end-overlay.tone-lose .battle-end-headline {
+  color: var(--error);
+}
+
+.battle-end-overlay.tone-draw .battle-end-headline {
+  color: #e8c547;
+}
+
+.battle-end-detail {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.battle-end-meta {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+}
+
+#hud-skill-cast.skill-cast-active {
+  color: #9ed0ff;
+  font-weight: 600;
+}
+
 #board {
   display: block;
   border-radius: 6px;

@@ -236,6 +236,14 @@ if (
 ) {
   fail('static-preview missing lastSkillCast HUD line');
 }
+const battleEndPreview = readFileSync(join(root, 'static-preview/battle-end.js'), 'utf8');
+if (
+  !battleEndPreview.includes('endReason') ||
+  !staticPreviewApp.includes('updateBattleEndOverlay') ||
+  !staticPreviewApp.includes('isBattleFinished')
+) {
+  fail('static-preview missing battle end overlay (winner/endReason)');
+}
 if (
   !staticPreviewApp.includes('TACTICAL_COMMAND_KIND_SKILL') ||
   !staticPreviewApp.includes('skill_id') ||

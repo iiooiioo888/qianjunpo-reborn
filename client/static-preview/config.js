@@ -54,6 +54,11 @@ export function parseBootConfig() {
   const liveGateway = parseLiveGatewayConfig(params);
   const stubSkillIdRaw = params.get('skillId') ?? params.get('skill_id');
   const stubSkillId = stubSkillIdRaw != null ? Number(stubSkillIdRaw) : STUB_SKILL_STRIKE_ID;
+  const mockVictoryRaw = (params.get('mockVictory') || params.get('mockEnd') || '').toLowerCase();
+  const mockVictory =
+    mockVictoryRaw === 'win' || mockVictoryRaw === 'lose' || mockVictoryRaw === 'draw'
+      ? mockVictoryRaw
+      : '';
   return {
     live,
     liveUrl,
@@ -65,6 +70,7 @@ export function parseBootConfig() {
     showCards,
     liveGateway,
     stubSkillId: Number.isFinite(stubSkillId) && stubSkillId > 0 ? stubSkillId : STUB_SKILL_STRIKE_ID,
+    mockVictory,
   };
 }
 

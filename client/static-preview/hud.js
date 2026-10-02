@@ -55,16 +55,37 @@ export function formatSelectionLine(snap, selectedUnitId) {
   return `selected unit: id=${unit.id}  ·  grid (${unit.x}, ${unit.y})`;
 }
 
-/** Latest KindSkill resolution from authoritative snapshot (display-only). */
-export function formatLastSkillCastLine(snap) {
-  const cast = snap?.lastSkillCast;
-  if (!cast) {
-    return 'lastSkillCast: —';
+function normalizeSkillCast(cast) {
+  if (!cast || typeof cast !== 'object') {
+    return null;
   }
   const skillId = cast.skillId ?? cast.skill_id;
   const caster = cast.casterUnitId ?? cast.caster_unit_id;
   const tx = cast.targetX ?? cast.target_x;
   const ty = cast.targetY ?? cast.target_y;
-  const frame = cast.lockstepFrame ?? cast.lockstep_frame ?? '?';
-  return `lastSkillCast: skill=${skillId}  caster=${caster}  → (${tx},${ty})  @ frame ${frame}`;
+  const frame = cast.lockstepFrame ?? cast.lockstep_frame;
+  if (skillId == null && caster == null && tx == null && ty == null) {
+    return null;
+  }
+  return { skillId, caster, tx, ty, frame };
+}
+
+/** Pick latest cast from snapshot or sticky client cache (avoids HUD blanking between polls). */
+export function pickLastSkillCast(snap, stickyCast) {
+  return normalizeSkillCast(snap?.lastSkillCast) ?? normalizeSkillCast(stickyCast);
+}
+
+/** Latest KindSkill resolution from authoritative snapshot (display-only). */
+export function formatLastSkillCastLine(snap, stickyCast = null) {
+  const cast = pickLastSkillCast(snap, stickyCast);
+  if (!cast) {
+    return 'lastSkillCast: —';
+  }
+  const frame = cast.frame ?? '?';
+  const stickyNote = snap?.lastSkillCast ? '' : ' · (sticky)';
+  return `lastSkillCast: skill=${cast.skillId ?? '?'}  caster=${cast.caster ?? '?'}  → (${cast.tx ?? '?'},${cast.ty ?? '?'})  @ frame ${frame}${stickyNote}`;
+}
+
+export function lastSkillCastHudClass(snap, stickyCast = null) {
+  return pickLastSkillCast(snap, stickyCast) ? 'skill-cast-active' : '';
 }
