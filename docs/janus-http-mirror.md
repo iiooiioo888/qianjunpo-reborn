@@ -133,6 +133,13 @@ export ACCESS_TOKEN=…   # Lares Login 取得
 
 腳本會 connect → enter-battle → command；`unit_id` 優先從 `view_snapshot_json.units` 選取目前 `PLAYER_ID`（預設 0）所屬單位，否則退回 **101**。成功時 exit 0 且 `accepted: true`。
 
+**KindSkill（可選）**：設定 `SKILL_ID=1` 或 `MOVE_KIND=5` 時走技能 E2E：從快照解析敵方座標（預設對局騎兵 **201 @ (16,10)**），若我方單位不在相鄰格則重複 **bridge move**（`kind=1` → `POST /v1/tactical/step-lockstep`，預設 `LOCKSTEP_STEPS=4`）至目標旁格（預設 **(15,10)**），再 `kind=5` + `skill_id` 施放並步進，斷言 `lastSkillCast` 與敵方 HP 下降。可覆寫 `SKILL_TO_X`/`SKILL_TO_Y`、`BRIDGE_TO_X`/`BRIDGE_TO_Y`。預設移動 smoke（未設 `SKILL_ID` 且 `MOVE_KIND=1`）行為不變。
+
+```bash
+SKILL_ID=1 ./scripts/janus-http-smoke.sh
+# 等同 MOVE_KIND=5 SKILL_ID=1；見 docs/skill-cast.md
+```
+
 ### grpcurl（選用）
 
 仍可用 gRPC **`:19090`** 做 Connect / EnterBattle，再對 **`:18090`** 發 HTTP 指令／快照；token 同樣須為 Lares 簽發。見歷史 PR #57 與 `pkg/integration/compose_janus_roma_test.go`。

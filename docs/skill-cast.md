@@ -44,6 +44,8 @@ curl -sS -X POST 'http://127.0.0.1:18090/v1/tactical/command' \
 
 步進後 `GET /v1/tactical/snapshot` 或 `POST /v1/tactical/step-lockstep` 的 `view_snapshot_json` 會保留 **`lastSkillCast`** 與 **`units[].hp`**（與 Roma `GetTacticalViewSnapshot` 相同 JSON，HTTP 層不做欄位白名單過濾）。詳見 `docs/janus-http-mirror.md`。
 
+**Compose smoke**：`SKILL_ID=1 ./scripts/janus-http-smoke.sh` 會先 bridge 移至敵方相鄰格（預設對局 **101→(15,10)** 再對 **(16,10)** 施放 Strike），再 step-lockstep 斷言 `lastSkillCast` / HP。
+
 | 層 | 現狀 |
 |----|------|
 | `pkg/tactical` | ✅ Submit → lockstep → 傷害 + snapshot |
