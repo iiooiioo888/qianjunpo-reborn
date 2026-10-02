@@ -37,6 +37,22 @@ bash client/scripts/sync-wip-unit-textures.sh
 bash client/scripts/sync-wip-char-textures.sh
 ```
 
+## 地格（`textures/2d/tiles/`）
+
+| 邏輯鍵 (`TerrainTileTextureKey`) | 預設 stem | `TerrainKind` |
+|----------------------------------|-----------|---------------|
+| `plain` | `ISO25_tile_grass_v02` | `Plain`（`0`） |
+| `mountain` | `ISO25_tile_mountain_v01` | `Mountain`（`1`） |
+
+- **STANDARD 畫布**：64×32 等距菱形（`ISO25_TILE_ART_WIDTH_PX` × `ISO25_TILE_ART_HEIGHT_PX`）；棋盤 **Nearest** + **整數倍** 縮放，見 `boardIsoTileDisplaySize`。
+- **同步 STANDARD 工作稿**（來源 art #83，不改 `art/`）：
+
+```bash
+bash client/scripts/sync-wip-tile-textures.sh
+```
+
+載入：`TerrainTileSpriteRegistry.getSpriteFrameForTerrain(terrain)`；缺圖時 `TacticalBoardView` 平面色塊占位。
+
 ## 圖標（`textures/2d/icons/`）
 
 | 檔案 | 用途（`IconAssetId`） |

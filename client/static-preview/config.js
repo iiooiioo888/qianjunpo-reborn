@@ -23,6 +23,14 @@ export const LOCAL_PLAYER_OWNER = 0;
 export const BOARD_SIZE = 19;
 export const CLIENT_DEFAULT_MOVE_POINTS = 4;
 
+/** ISO25 STANDARD 地格（art #83）；檔名 stem 與 Cocos TerrainTileSpriteRegistry 一致。 */
+export const ISO25_TILE_ART_W = 64;
+export const ISO25_TILE_ART_H = 32;
+export const TERRAIN_TILE_SRC = {
+  0: 'tiles/ISO25_tile_grass_v02.png',
+  1: 'tiles/ISO25_tile_mountain_v01.png',
+};
+
 export const LIVE_POLL_INTERVAL_MS = 400;
 
 /** Optional v04 cards — drop files under `chars/` or show placeholder. */

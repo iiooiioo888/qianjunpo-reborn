@@ -1,7 +1,7 @@
 import { Color } from 'cc';
 import { TerrainKind } from '../logic/TacticalSnapshot';
 
-/** Cartoon-pixel friendly flat fills until art/2d tiles land (Nearest + integer scale). */
+/** Flat fills when ISO25 tile sprites are missing (Nearest + integer scale). */
 export function terrainFillColor(t: TerrainKind): Color {
   switch (t) {
     case TerrainKind.Mountain:

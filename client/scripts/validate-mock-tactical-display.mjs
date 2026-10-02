@@ -18,6 +18,7 @@ const CHAR_CARD_V04_STEMS = [
   'PX2D_CHAR_WU_Placeholder_01_v04',
 ];
 const UNIT_STANDARD_STEMS = ['PX2D_unit_infantry', 'PX2D_unit_cavalry'];
+const ISO25_TILE_STEMS = ['ISO25_tile_grass_v02', 'ISO25_tile_mountain_v01'];
 
 function fail(msg) {
   console.error(`validate-mock-tactical-display: FAIL — ${msg}`);
@@ -161,6 +162,38 @@ if (
 ) {
   fail('TimeFlowHudStub/TacticalBootstrap missing Live tactical command retry HUD');
 }
+const tileRegistrySrc = readFileSync(join(displayDir, 'TerrainTileSpriteRegistry.ts'), 'utf8');
+for (const stem of ISO25_TILE_STEMS) {
+  if (!tileRegistrySrc.includes(`'${stem}'`)) {
+    fail(`TerrainTileSpriteRegistry missing default stem ${stem}`);
+  }
+}
+if (tileRegistrySrc.includes('grass_v01')) {
+  fail('TerrainTileSpriteRegistry still references rejected grass_v01');
+}
+const tilesDir = join(root, 'assets/resources/textures/2d/tiles');
+const previewTilesDir = join(root, 'static-preview/tiles');
+for (const stem of ISO25_TILE_STEMS) {
+  const png = join(tilesDir, `${stem}.png`);
+  if (!existsSync(png)) {
+    fail(`missing ${png} — run bash client/scripts/sync-wip-tile-textures.sh`);
+  }
+  const previewPng = join(previewTilesDir, `${stem}.png`);
+  if (!existsSync(previewPng)) {
+    fail(`missing ${previewPng} — run bash client/scripts/sync-wip-tile-textures.sh`);
+  }
+}
+const staticPreviewConfig = readFileSync(join(root, 'static-preview/config.js'), 'utf8');
+for (const stem of ISO25_TILE_STEMS) {
+  if (!staticPreviewConfig.includes(stem)) {
+    fail(`static-preview/config.js missing tile stem ${stem}`);
+  }
+}
+const staticPreviewBoard = readFileSync(join(root, 'static-preview/board.js'), 'utf8');
+if (!staticPreviewBoard.includes('drawTerrainTile')) {
+  fail('static-preview/board.js missing ISO25 terrain tile draw path');
+}
+
 const staticPreviewApp = readFileSync(join(root, 'static-preview/app.js'), 'utf8');
 if (
   !staticPreviewApp.includes('pendingCommandFailure') ||
@@ -186,5 +219,5 @@ if (!localUnit || localUnit.id !== 101) {
 }
 
 ok(
-  `demo_initial units=${raw.units.length}, lockstep=${raw.lockstepFrame}; unit STANDARD stems+PNGs ok; HUD char keys=${HUD_CHAR_KEYS.join(',')}; char v04 stems+PNGs ok; lockstep sync + char-card selection link static checks passed`,
+  `demo_initial units=${raw.units.length}, lockstep=${raw.lockstepFrame}; unit STANDARD stems+PNGs ok; ISO25 tile stems+PNGs ok; HUD char keys=${HUD_CHAR_KEYS.join(',')}; char v04 stems+PNGs ok; lockstep sync + char-card selection link static checks passed`,
 );

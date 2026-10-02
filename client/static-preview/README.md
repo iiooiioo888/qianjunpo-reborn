@@ -53,6 +53,10 @@ cp client/assets/resources/data/tactical/demo_initial.json client/static-preview
 
 將 PNG 放到 `chars/*_v04.png`（檔名見 `config.js`）。缺圖自動占位，不影響棋盤。
 
+## ISO25 地格（STANDARD）
+
+草／山地貼圖由 `bash client/scripts/sync-wip-tile-textures.sh` 自 `art/25d/_wip/tiles` 複製至 `tiles/*.png`（檔名見 `config.js` `TERRAIN_TILE_SRC`）。缺圖時棋盤退回平面色塊。
+
 ## 互動
 
 - 點己方單位（owner `0`）→ BFS 高亮（move **4**）。
