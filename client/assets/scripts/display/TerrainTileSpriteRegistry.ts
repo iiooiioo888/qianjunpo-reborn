@@ -9,6 +9,8 @@ import { applyPixelArtSampling } from './PixelSpriteUtil';
 export const TERRAIN_TILE_TEXTURE_KEYS = {
   plain: 'plain',
   mountain: 'mountain',
+  forest: 'forest',
+  river: 'river',
 } as const;
 
 export type TerrainTileTextureKey =
@@ -18,11 +20,15 @@ export type TerrainTileTextureKey =
 const DEFAULT_STEM_BY_KEY: Record<TerrainTileTextureKey, string> = {
   plain: 'ISO25_tile_grass_v02',
   mountain: 'ISO25_tile_mountain_v01',
+  forest: 'ISO25_tile_forest_v01',
+  river: 'ISO25_tile_water_v01',
 };
 
 const TERRAIN_TO_KEY: Partial<Record<TerrainKind, TerrainTileTextureKey>> = {
   [TerrainKind.Plain]: TERRAIN_TILE_TEXTURE_KEYS.plain,
   [TerrainKind.Mountain]: TERRAIN_TILE_TEXTURE_KEYS.mountain,
+  [TerrainKind.Forest]: TERRAIN_TILE_TEXTURE_KEYS.forest,
+  [TerrainKind.River]: TERRAIN_TILE_TEXTURE_KEYS.river,
 };
 
 const DEFAULT_TERRAIN_KEY = TERRAIN_TILE_TEXTURE_KEYS.plain;

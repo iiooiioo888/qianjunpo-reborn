@@ -3,9 +3,11 @@
  * 靜態檢查 mock 快照與 registry 鍵對齊（無 Cocos）。
  * 在倉庫根目錄：node client/scripts/validate-mock-tactical-display.mjs
  */
+import { createHash } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { inflateSync } from 'node:zlib';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const snapshotPath = join(root, 'assets/resources/data/tactical/demo_initial.json');
@@ -18,7 +20,106 @@ const CHAR_CARD_V04_STEMS = [
   'PX2D_CHAR_WU_Placeholder_01_v04',
 ];
 const UNIT_STANDARD_STEMS = ['PX2D_unit_infantry', 'PX2D_unit_cavalry'];
-const ISO25_TILE_STEMS = ['ISO25_tile_grass_v02', 'ISO25_tile_mountain_v01'];
+const ISO25_TILE_STEMS = [
+  'ISO25_tile_grass_v02',
+  'ISO25_tile_mountain_v01',
+  'ISO25_tile_water_v01',
+  'ISO25_tile_forest_v01',
+];
+/** art-manager PASS (#97) — sync 後須與 art/25d/_wip/tiles 一致 */
+const ISO25_TILE_MD5_EXPECTED = {
+  ISO25_tile_water_v01: '7b5b1c2f057e7f250924a421a10a648d',
+  ISO25_tile_forest_v01: '4bec6b8f8ee72e5d24c39e650fd64c0e',
+};
+
+function md5File(path) {
+  return createHash('md5').update(readFileSync(path)).digest('hex');
+}
+
+/** 64×32 RGBA PNG：鑽石外四角須 alpha=0（ISO25 STANDARD #28）。 */
+function assertIso25DiamondCornersTransparent(pngPath) {
+  const buf = readFileSync(pngPath);
+  if (buf.length < 8 || buf.readUInt32BE(0) !== 0x89504e47) {
+    fail(`${pngPath} is not a PNG`);
+  }
+  let offset = 8;
+  let width = 0;
+  let height = 0;
+  let colorType = 0;
+  const idatParts = [];
+  while (offset + 8 <= buf.length) {
+    const len = buf.readUInt32BE(offset);
+    const type = buf.toString('ascii', offset + 4, offset + 8);
+    const dataStart = offset + 8;
+    if (type === 'IHDR' && len >= 13) {
+      width = buf.readUInt32BE(dataStart);
+      height = buf.readUInt32BE(dataStart + 4);
+      colorType = buf[dataStart + 9];
+    } else if (type === 'IDAT') {
+      idatParts.push(buf.subarray(dataStart, dataStart + len));
+    } else if (type === 'IEND') {
+      break;
+    }
+    offset += 12 + len;
+  }
+  if (width !== 64 || height !== 32) {
+    fail(`${pngPath} expected 64x32, got ${width}x${height}`);
+  }
+  if (colorType !== 6) {
+    fail(`${pngPath} expected RGBA color type 6, got ${colorType}`);
+  }
+  const rawScan = inflateSync(Buffer.concat(idatParts));
+  const bpp = 4;
+  const rowBytes = width * bpp;
+  const stride = 1 + rowBytes;
+  const rgba = new Uint8Array(width * height * 4);
+  const prevRow = new Uint8Array(rowBytes);
+  const curRow = new Uint8Array(rowBytes);
+
+  function paeth(a, b, c) {
+    const p = a + b - c;
+    const pa = Math.abs(p - a);
+    const pb = Math.abs(p - b);
+    const pc = Math.abs(p - c);
+    if (pa <= pb && pa <= pc) return a;
+    if (pb <= pc) return b;
+    return c;
+  }
+
+  for (let y = 0; y < height; y++) {
+    const rowStart = y * stride;
+    const filter = rawScan[rowStart];
+    for (let i = 0; i < rowBytes; i++) {
+      const f = rawScan[rowStart + 1 + i];
+      const left = i >= bpp ? curRow[i - bpp] : 0;
+      const up = prevRow[i];
+      const upLeft = i >= bpp ? prevRow[i - bpp] : 0;
+      let raw = f;
+      if (filter === 1) raw = (f + left) & 0xff;
+      else if (filter === 2) raw = (f + up) & 0xff;
+      else if (filter === 3) raw = (f + Math.floor((left + up) / 2)) & 0xff;
+      else if (filter === 4) raw = (f + paeth(left, up, upLeft)) & 0xff;
+      else if (filter !== 0) {
+        fail(`${pngPath} unsupported PNG filter ${filter} at row ${y}`);
+      }
+      curRow[i] = raw;
+    }
+    rgba.set(curRow, y * rowBytes);
+    prevRow.set(curRow);
+  }
+  const corners = [
+    [0, 0],
+    [width - 1, 0],
+    [0, height - 1],
+    [width - 1, height - 1],
+  ];
+  for (const [x, y] of corners) {
+    const a = rgba[(y * width + x) * 4 + 3];
+    if (a !== 0) {
+      fail(`${pngPath} corner (${x},${y}) alpha=${a}, expected 0`);
+    }
+  }
+}
 
 function fail(msg) {
   console.error(`validate-mock-tactical-display: FAIL — ${msg}`);
@@ -187,6 +288,19 @@ for (const stem of ISO25_TILE_STEMS) {
   const previewPng = join(previewTilesDir, `${stem}.png`);
   if (!existsSync(previewPng)) {
     fail(`missing ${previewPng} — run bash client/scripts/sync-wip-tile-textures.sh`);
+  }
+  const expectedMd5 = ISO25_TILE_MD5_EXPECTED[stem];
+  if (expectedMd5) {
+    const cocosMd5 = md5File(png);
+    const previewMd5 = md5File(previewPng);
+    if (cocosMd5 !== expectedMd5) {
+      fail(`${png} md5 ${cocosMd5} !== expected ${expectedMd5}`);
+    }
+    if (previewMd5 !== expectedMd5) {
+      fail(`${previewPng} md5 ${previewMd5} !== expected ${expectedMd5}`);
+    }
+    assertIso25DiamondCornersTransparent(png);
+    assertIso25DiamondCornersTransparent(previewPng);
   }
 }
 const staticPreviewConfig = readFileSync(join(root, 'static-preview/config.js'), 'utf8');

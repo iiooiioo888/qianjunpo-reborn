@@ -6,7 +6,11 @@ SRC="${ROOT}/art/25d/_wip/tiles"
 DST_COCOS="${ROOT}/client/assets/resources/textures/2d/tiles"
 DST_PREVIEW="${ROOT}/client/static-preview/tiles"
 mkdir -p "${DST_COCOS}" "${DST_PREVIEW}"
-for f in ISO25_tile_grass_v02.png ISO25_tile_mountain_v01.png; do
+for f in \
+  ISO25_tile_grass_v02.png \
+  ISO25_tile_mountain_v01.png \
+  ISO25_tile_water_v01.png \
+  ISO25_tile_forest_v01.png; do
   if [[ ! -f "${SRC}/${f}" ]]; then
     echo "missing ${SRC}/${f} — git pull main（art #83 STANDARD）" >&2
     exit 1
