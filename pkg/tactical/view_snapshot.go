@@ -49,6 +49,10 @@ type ViewSnapshot struct {
 	Cells             [][]ViewCell `json:"cells"`
 	Units             []ViewUnit `json:"units"`
 	LastSkillCast     *ViewSkillCast `json:"lastSkillCast,omitempty"`
+	// Outcome fields mirror Match when finished; omitted from StateHash (display layer).
+	Finished  bool       `json:"finished,omitempty"`
+	Winner    *uint8     `json:"winner,omitempty"`
+	EndReason EndReason  `json:"endReason,omitempty"`
 }
 
 // MatchToViewSnapshot exports current match state for local client preview.
@@ -96,6 +100,15 @@ func MatchToViewSnapshot(m *Match, timeFlowRateParts uint32) ViewSnapshot {
 			LockstepFrame: rec.Frame,
 		}
 	}
+	var finished bool
+	var winner *uint8
+	var endReason EndReason
+	if m.Finished {
+		finished = true
+		w := m.Winner
+		winner = &w
+		endReason = m.EndReason
+	}
 	return ViewSnapshot{
 		SchemaVersion:     viewSnapshotSchemaVersion,
 		BoardSize:         board.Size,
@@ -106,6 +119,9 @@ func MatchToViewSnapshot(m *Match, timeFlowRateParts uint32) ViewSnapshot {
 		Cells:             cells,
 		Units:             units,
 		LastSkillCast:     lastCast,
+		Finished:          finished,
+		Winner:            winner,
+		EndReason:         endReason,
 	}
 }
 

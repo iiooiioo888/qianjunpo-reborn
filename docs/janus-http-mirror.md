@@ -189,7 +189,7 @@ Response：
 }
 ```
 
-`view_snapshot_json` 為 Roma 戰術顯示層 JSON（與 `GET /v1/tactical/snapshot` body 同型）；`units[].id` 為下指令時應使用的 `unit_id`（預設對局常見 **101** / **201**）。技能執行後 JSON 含 **`units[].hp`** 與可選 **`lastSkillCast`**（#89）；HTTP 直接透傳 Roma bytes，不剝欄位。
+`view_snapshot_json` 為 Roma 戰術顯示層 JSON（與 `GET /v1/tactical/snapshot` body 同型）；`units[].id` 為下指令時應使用的 `unit_id`（預設對局常見 **101** / **201**）。技能執行後 JSON 含 **`units[].hp`** 與可選 **`lastSkillCast`**（#89）；對局結束後另含 **`finished`**、`winner`（player id；平手為 **255**）、**`endReason`**（字串 token：`EndAnnihilation`、`EndTimeout`、`EndMutualWipe`、`EndCapture`，與 `pkg/tactical` `EndReason` 對齊，見 `docs/combat-formula.md`）。HTTP 直接透傳 Roma bytes，不剝欄位。
 
 ## POST `/v1/tactical/command`
 
@@ -265,7 +265,17 @@ Response：
 }
 ```
 
-與 gRPC `StepTacticalLockstep` 對齊；`view_snapshot_json` 為步進後顯示層快照（避免多一次 snapshot RPC）。
+與 gRPC `StepTacticalLockstep` 對齊；`view_snapshot_json` 為步進後顯示層快照（避免多一次 snapshot RPC）。頂層 `finished`／`winner` 與 gRPC 一致；終局細節（含 **`endReason`**) 請讀 `view_snapshot_json` 內欄位（與 `GET /v1/tactical/snapshot` 相同）。
+
+**終局斷言（開發／Compose）**：對局結束後任一路徑應一致，例如：
+
+```bash
+curl -sS "${JANUS_HTTP_BASE}/v1/tactical/snapshot?battle_id=${BATTLE_ID}" \
+  | jq '{finished, winner, endReason}'
+# 期望例：{"finished":true,"winner":0,"endReason":"EndAnnihilation"}
+```
+
+`make compose-up` 後若剛改動 `pkg/tactical` 或 Janus／Roma，請 **`docker compose build`**（或 `make compose-up` 重建）再跑 smoke，否則容器內仍為舊 snapshot schema。
 
 ### Environment
 

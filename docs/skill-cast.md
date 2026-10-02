@@ -27,8 +27,9 @@ err := m.Submit(tactical.Command{
 |------|------|
 | `units[].hp` | 受擊方 HP 下降（傷害效果） |
 | `lastSkillCast`（可選） | 最近一次成功解析的 `KindSkill`：`skillId`、`casterUnitId`、`targetX`/`targetY`、`lockstepFrame` |
+| `finished`／`winner`／`endReason`（終局時） | 與 `Match` 終局一致；`endReason` 為 `EndAnnihilation` 等字串 token（見 `docs/combat-formula.md`） |
 
-`lastSkillCast` 僅供顯示層標記施放，**不**參與 `StateHash`。
+`lastSkillCast` 與終局 outcome 欄位僅供顯示層，**不**參與 `StateHash`。
 
 整合測：`TestSubmitKindSkillStrikeViewSnapshotShowsCastAndDamage`（`pkg/tactical/skill_test.go`）、`TestPhase2SkillCastViewSnapshotIntegration`（`pkg/integration/skill_cast_snapshot_test.go`）。
 
@@ -42,7 +43,7 @@ curl -sS -X POST 'http://127.0.0.1:18090/v1/tactical/command' \
   -d '{"battle_id":"default/0","player_id":0,"kind":5,"unit_id":101,"to_x":3,"to_y":8,"skill_id":1}'
 ```
 
-步進後 `GET /v1/tactical/snapshot` 或 `POST /v1/tactical/step-lockstep` 的 `view_snapshot_json` 會保留 **`lastSkillCast`** 與 **`units[].hp`**（與 Roma `GetTacticalViewSnapshot` 相同 JSON，HTTP 層不做欄位白名單過濾）。詳見 `docs/janus-http-mirror.md`。
+步進後 `GET /v1/tactical/snapshot` 或 `POST /v1/tactical/step-lockstep` 的 `view_snapshot_json` 會保留 **`lastSkillCast`** 與 **`units[].hp`**；對局結束時另有 **`finished`**／`winner`／`endReason`（見 `docs/combat-formula.md` 終局表）。與 Roma `GetTacticalViewSnapshot` 相同 JSON，HTTP 層不做欄位白名單過濾。詳見 `docs/janus-http-mirror.md`。
 
 **Compose smoke**：`SKILL_ID=1 ./scripts/janus-http-smoke.sh` 會先 bridge 移至敵方相鄰格（預設對局 **101→(15,10)** 再對 **(16,10)** 施放 Strike），再 step-lockstep 斷言 `lastSkillCast` / HP。
 

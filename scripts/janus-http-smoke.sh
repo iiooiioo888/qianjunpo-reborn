@@ -6,6 +6,8 @@
 # KindSkill E2E (bridge move if needed, then cast):
 #   MOVE_KIND=5 SKILL_ID=1 ./scripts/janus-http-smoke.sh
 #   SKILL_ID=1 ./scripts/janus-http-smoke.sh   # sets kind=5; targets default-duel enemy @ (16,10)
+# After a finished match, assert outcome on snapshot JSON (rebuild Compose images if schema changed):
+#   curl -sS "${JANUS_HTTP_BASE}/v1/tactical/snapshot?battle_id=…" | jq '{finished,winner,endReason}'
 set -euo pipefail
 
 JANUS_HTTP_BASE="${JANUS_HTTP_BASE:-http://127.0.0.1:18090}"

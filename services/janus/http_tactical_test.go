@@ -477,6 +477,57 @@ func TestHTTPTacticalSnapshotPreservesLastSkillCastAndHP(t *testing.T) {
 	}
 }
 
+func TestHTTPTacticalSnapshotVictoryOutcomeFields(t *testing.T) {
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	b, err := fix.Store.Get(roma.BattleID(fix.BattleID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	def := b.Match.Units[tactical.UnitIDPlayer1]
+	def.Stats.HP = def.Stats.HP.Sub(def.Stats.HP)
+	b.Match.Board.ClearUnit(def.Pos)
+
+	stepRaw, _ := json.Marshal(map[string]interface{}{
+		"session_id": fix.SessionID,
+		"battle_id":  fix.BattleID,
+		"steps":      1,
+	})
+	stepRes, err := http.Post(srv.URL+"/v1/tactical/step-lockstep", "application/json", bytes.NewReader(stepRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stepRes.Body.Close()
+	var stepOut stepLockstepJSON
+	if err := json.NewDecoder(stepRes.Body).Decode(&stepOut); err != nil {
+		t.Fatal(err)
+	}
+	if !stepOut.Finished {
+		t.Fatal("expected finished step-lockstep response")
+	}
+	var stepSnap tactical.ViewSnapshot
+	if err := json.Unmarshal(stepOut.ViewSnapshotJSON, &stepSnap); err != nil {
+		t.Fatal(err)
+	}
+	if !stepSnap.Finished || stepSnap.Winner == nil || *stepSnap.Winner != 0 || stepSnap.EndReason != tactical.EndAnnihilation {
+		t.Fatalf("step snapshot outcome: finished=%v winner=%v reason=%s", stepSnap.Finished, stepSnap.Winner, stepSnap.EndReason)
+	}
+
+	snapRes, err := http.Get(srv.URL + "/v1/tactical/snapshot?battle_id=" + fix.BattleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snapRes.Body.Close()
+	var snap tactical.ViewSnapshot
+	if err := json.NewDecoder(snapRes.Body).Decode(&snap); err != nil {
+		t.Fatal(err)
+	}
+	if !snap.Finished || snap.Winner == nil || *snap.Winner != 0 || snap.EndReason != tactical.EndAnnihilation {
+		t.Fatalf("GET snapshot outcome: finished=%v winner=%v reason=%s", snap.Finished, snap.Winner, snap.EndReason)
+	}
+}
+
 func TestHTTPTacticalCommandMethodNotAllowed(t *testing.T) {
 	fix := startJanusGatewayWithEnterBattle(t)
 	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
