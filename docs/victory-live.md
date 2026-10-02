@@ -30,4 +30,17 @@ go test ./pkg/integration/ -run TestPhase2VictoryViewSnapshot
 go test ./services/janus/ -run TestHTTPTacticalSnapshotReportsWipeoutVictory
 ```
 
+## Compose smoke（HTTP 透傳）
+
+`pkg/tactical` 或 Roma／Janus 映像更新後，請先 **重建** 再跑 smoke（否則容器內仍是舊 snapshot schema）：
+
+```bash
+docker compose build janus roma
+# 或 make compose-up（會依 Dockerfile 重建）
+export ACCESS_TOKEN=…   # 見 docs/janus-http-mirror.md
+WIPEOUT_SMOKE=1 ./scripts/janus-http-smoke.sh
+```
+
+腳本會：enter-battle 斷言進行中 `winner: null`、`endReason: "none"` → bridge 至敵方相鄰格 → 重複 Strike 至殲滅 → 斷言 step-lockstep `view_snapshot_json` 與 `GET /v1/tactical/snapshot` 皆為 `endReason: "wipeout"`、`winner: 0|1`。
+
 整合說明亦見 `docs/combat-formula.md`（占點／勝敗）與 `docs/skill-cast.md`（快照欄位慣例）。

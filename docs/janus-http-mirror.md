@@ -140,6 +140,13 @@ SKILL_ID=1 ./scripts/janus-http-smoke.sh
 # 等同 MOVE_KIND=5 SKILL_ID=1；見 docs/skill-cast.md
 ```
 
+**Wipeout 勝敗（`WIPEOUT_SMOKE=1`）**：在 KindSkill bridge 路徑上重複 Strike 至終局，斷言 `view_snapshot_json`／`GET /v1/tactical/snapshot` 的 `winner`（`0`/`1`）與 `endReason: "wipeout"`；進入戰局時斷言 `winner: null`、`endReason: "none"`。需 **Compose 重建** `janus`／`roma` 後執行（見 `docs/victory-live.md`）。
+
+```bash
+docker compose build janus roma
+WIPEOUT_SMOKE=1 ./scripts/janus-http-smoke.sh
+```
+
 ### grpcurl（選用）
 
 仍可用 gRPC **`:19090`** 做 Connect / EnterBattle，再對 **`:18090`** 發 HTTP 指令／快照；token 同樣須為 Lares 簽發。見歷史 PR #57 與 `pkg/integration/compose_janus_roma_test.go`。

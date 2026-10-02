@@ -6,6 +6,8 @@
 # KindSkill E2E (bridge move if needed, then cast):
 #   MOVE_KIND=5 SKILL_ID=1 ./scripts/janus-http-smoke.sh
 #   SKILL_ID=1 ./scripts/janus-http-smoke.sh   # sets kind=5; targets default-duel enemy @ (16,10)
+# Wipeout victory (Compose rebuild janus+roma after pkg/tactical changes; see docs/victory-live.md):
+#   WIPEOUT_SMOKE=1 ./scripts/janus-http-smoke.sh
 set -euo pipefail
 
 JANUS_HTTP_BASE="${JANUS_HTTP_BASE:-http://127.0.0.1:18090}"
@@ -18,7 +20,13 @@ FALLBACK_UNIT_ID="${FALLBACK_UNIT_ID:-101}"
 # Lockstep frames before a command resolves (pkg/lockstep.CommandDelayFrames + 1).
 LOCKSTEP_STEPS="${LOCKSTEP_STEPS:-4}"
 MAX_BRIDGE_MOVES="${MAX_BRIDGE_MOVES:-24}"
+MAX_WIPEOUT_STRIKES="${MAX_WIPEOUT_STRIKES:-40}"
+WIPEOUT_SMOKE="${WIPEOUT_SMOKE:-0}"
 BASE="${JANUS_HTTP_BASE%/}"
+
+if [[ "$WIPEOUT_SMOKE" == "1" ]]; then
+  SKILL_ID="${SKILL_ID:-1}"
+fi
 
 SKILL_MODE=0
 if [[ -n "$SKILL_ID" ]] || [[ "$MOVE_KIND" == "5" ]]; then
@@ -113,6 +121,95 @@ step_lockstep() {
 
 fetch_snapshot() {
   curl -sS "${BASE}/v1/tactical/snapshot?battle_id=${BATTLE_ID}"
+}
+
+# ViewSnapshot outcome contract (#94): in-progress winner=null, endReason=none.
+assert_snapshot_in_progress() {
+  local snapshot_json="$1"
+  local label="${2:-snapshot}"
+  if command -v jq >/dev/null 2>&1; then
+    local reason winner_json
+    reason=$(echo "$snapshot_json" | jq -r '.endReason // empty')
+    winner_json=$(echo "$snapshot_json" | jq -c '.winner')
+    if [[ "$reason" != "none" ]]; then
+      echo "${label}: expected endReason=none, got ${reason}" >&2
+      exit 1
+    fi
+    if [[ "$winner_json" != "null" ]]; then
+      echo "${label}: expected winner=null, got ${winner_json}" >&2
+      exit 1
+    fi
+  else
+    echo "$snapshot_json" | python3 -c '
+import json, sys
+label = sys.argv[1]
+data = json.load(sys.stdin)
+if data.get("endReason") != "none":
+    raise SystemExit(f"{label}: expected endReason=none, got {data.get('endReason')!r}")
+if "winner" not in data or data.get("winner") is not None:
+    raise SystemExit(f"{label}: expected winner=null, got {data.get('winner')!r}")
+print(f"ok: {label} in-progress outcome")
+' "$label"
+  fi
+}
+
+# Finished wipeout: endReason=wipeout, winner in 0|1 (player id).
+assert_wipeout_snapshot() {
+  local snapshot_json="$1"
+  local label="${2:-snapshot}"
+  if command -v jq >/dev/null 2>&1; then
+    local reason winner
+    reason=$(echo "$snapshot_json" | jq -r '.endReason // empty')
+    winner=$(echo "$snapshot_json" | jq -r '.winner // empty')
+    if [[ "$reason" != "wipeout" ]]; then
+      echo "${label}: expected endReason=wipeout, got ${reason}" >&2
+      echo "$snapshot_json" >&2
+      exit 1
+    fi
+    if [[ "$winner" != "0" && "$winner" != "1" ]]; then
+      echo "${label}: expected winner 0|1, got ${winner}" >&2
+      exit 1
+    fi
+    echo "ok: ${label} wipeout winner=${winner}"
+  else
+    echo "$snapshot_json" | python3 -c '
+import json, sys
+label = sys.argv[1]
+data = json.load(sys.stdin)
+reason = data.get("endReason")
+winner = data.get("winner")
+if reason != "wipeout":
+    raise SystemExit(f"{label}: expected endReason=wipeout, got {reason!r}")
+if winner not in (0, 1):
+    raise SystemExit(f"{label}: expected winner 0|1, got {winner!r}")
+print(f"ok: {label} wipeout winner={winner}")
+' "$label"
+  fi
+}
+
+enemy_hp_from_snapshot() {
+  local snapshot_json="$1"
+  local enemy_id="$2"
+  if command -v jq >/dev/null 2>&1; then
+    echo "$snapshot_json" | jq -r --argjson eid "$enemy_id" '
+      (.units // []) | map(select(.id == $eid)) | .[0].hp // empty
+    '
+  else
+    echo "$snapshot_json" | python3 -c '
+import json, sys
+eid = int(sys.argv[1])
+data = json.load(sys.stdin)
+for u in data.get("units") or []:
+    if int(u.get("id")) == eid:
+        print(u.get("hp", ""))
+        break
+' "$enemy_id"
+  fi
+}
+
+snapshot_end_reason() {
+  local snapshot_json="$1"
+  json_field "$snapshot_json" endReason
 }
 
 # Prints: skill_to_x skill_to_y bridge_x bridge_y
@@ -384,6 +481,10 @@ if [[ -z "$UNIT_ID" ]]; then
   UNIT_ID="$FALLBACK_UNIT_ID"
 fi
 
+if [[ "$WIPEOUT_SMOKE" == "1" ]]; then
+  assert_snapshot_in_progress "$SNAPSHOT_JSON" "enter-battle view_snapshot_json"
+fi
+
 if [[ "$SKILL_MODE" -eq 1 ]]; then
   if ! command -v python3 >/dev/null 2>&1; then
     echo "error: KindSkill smoke requires python3 (bridge planning)" >&2
@@ -416,12 +517,50 @@ if [[ "$SKILL_MODE" -eq 1 ]]; then
     bridge_moves=$((bridge_moves + 1))
   done
 
-  echo "==> POST ${BASE}/v1/tactical/command (kind=5 skill_id=${SKILL_ID} → ${SKILL_TO_X},${SKILL_TO_Y})"
-  CMD_BODY=$(post_command 5 "$UNIT_ID" "$SKILL_TO_X" "$SKILL_TO_Y" "$SKILL_ID")
-  assert_command_accepted "KindSkill" "$CMD_BODY"
-  STEP_BODY=$(step_lockstep "$LOCKSTEP_STEPS")
-  assert_skill_snapshot "$STEP_BODY" "$ENEMY_ID" "$ENEMY_HP_BEFORE"
-  echo "ok: battle_id=${BATTLE_ID} unit_id=${UNIT_ID} skill_id=${SKILL_ID} accepted=true bridge_moves=${bridge_moves}"
+  if [[ "$WIPEOUT_SMOKE" != "1" ]]; then
+    echo "==> POST ${BASE}/v1/tactical/command (kind=5 skill_id=${SKILL_ID} → ${SKILL_TO_X},${SKILL_TO_Y})"
+    CMD_BODY=$(post_command 5 "$UNIT_ID" "$SKILL_TO_X" "$SKILL_TO_Y" "$SKILL_ID")
+    assert_command_accepted "KindSkill" "$CMD_BODY"
+    STEP_BODY=$(step_lockstep "$LOCKSTEP_STEPS")
+    assert_skill_snapshot "$STEP_BODY" "$ENEMY_ID" "$ENEMY_HP_BEFORE"
+    echo "ok: battle_id=${BATTLE_ID} unit_id=${UNIT_ID} skill_id=${SKILL_ID} accepted=true bridge_moves=${bridge_moves}"
+    exit 0
+  fi
+
+  echo "==> wipeout smoke: repeated Strike until finished (max ${MAX_WIPEOUT_STRIKES} casts)"
+  strike_round=0
+  while [[ "$strike_round" -lt "$MAX_WIPEOUT_STRIKES" ]]; do
+    reason=$(snapshot_end_reason "$SNAPSHOT_JSON")
+    if [[ "$reason" == "wipeout" ]]; then
+      break
+    fi
+    enemy_hp=$(enemy_hp_from_snapshot "$SNAPSHOT_JSON" "$ENEMY_ID")
+    if [[ -z "$enemy_hp" || "$enemy_hp" -le 0 ]]; then
+      echo "==> enemy eliminated; step-lockstep for victory resolution"
+      STEP_BODY=$(step_lockstep "$LOCKSTEP_STEPS")
+      if command -v jq >/dev/null 2>&1; then
+        SNAPSHOT_JSON=$(echo "$STEP_BODY" | jq -c '.view_snapshot_json // {}')
+      else
+        SNAPSHOT_JSON=$(echo "$STEP_BODY" | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin).get("view_snapshot_json") or {}))')
+      fi
+      break
+    fi
+    echo "==> wipeout strike ${strike_round}: kind=5 skill_id=${SKILL_ID} → (${SKILL_TO_X},${SKILL_TO_Y}) enemy_hp=${enemy_hp}"
+    CMD_BODY=$(post_command 5 "$UNIT_ID" "$SKILL_TO_X" "$SKILL_TO_Y" "$SKILL_ID")
+    assert_command_accepted "KindSkill wipeout" "$CMD_BODY"
+    STEP_BODY=$(step_lockstep "$LOCKSTEP_STEPS")
+    if command -v jq >/dev/null 2>&1; then
+      SNAPSHOT_JSON=$(echo "$STEP_BODY" | jq -c '.view_snapshot_json // {}')
+    else
+      SNAPSHOT_JSON=$(echo "$STEP_BODY" | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin).get("view_snapshot_json") or {}))')
+    fi
+    strike_round=$((strike_round + 1))
+  done
+
+  assert_wipeout_snapshot "$SNAPSHOT_JSON" "step-lockstep view_snapshot_json"
+  GET_SNAP=$(fetch_snapshot)
+  assert_wipeout_snapshot "$GET_SNAP" "GET /v1/tactical/snapshot"
+  echo "ok: wipeout battle_id=${BATTLE_ID} unit_id=${UNIT_ID} strikes=${strike_round} bridge_moves=${bridge_moves}"
   exit 0
 fi
 
