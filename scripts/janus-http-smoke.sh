@@ -11,11 +11,7 @@ MOVE_KIND="${MOVE_KIND:-1}"
 TO_X="${TO_X:-5}"
 TO_Y="${TO_Y:-8}"
 FALLBACK_UNIT_ID="${FALLBACK_UNIT_ID:-101}"
-
-if [[ -z "${ACCESS_TOKEN:-}" ]]; then
-  echo "error: ACCESS_TOKEN is required (mint via Lares Login; see docs/janus-http-mirror.md)" >&2
-  exit 1
-fi
+BASE="${JANUS_HTTP_BASE%/}"
 
 if ! command -v curl >/dev/null 2>&1; then
   echo "error: curl is required" >&2
@@ -56,7 +52,21 @@ for u in data.get('units') or []:
   fi
 }
 
-BASE="${JANUS_HTTP_BASE%/}"
+mint_access_token() {
+  local mint_body
+  mint_body=$(curl -sS -X POST "${BASE}/v1/auth/dev-mint" \
+    -H 'Content-Type: application/json' -d '{}' || true)
+  json_field "$mint_body" access_token
+}
+
+if [[ -z "${ACCESS_TOKEN:-}" ]]; then
+  ACCESS_TOKEN=$(mint_access_token || true)
+  if [[ -z "$ACCESS_TOKEN" ]]; then
+    echo "error: ACCESS_TOKEN is required (set ACCESS_TOKEN, enable JANUS_HTTP_DEV_MINT, or Lares Login; see docs/janus-http-mirror.md)" >&2
+    exit 1
+  fi
+  echo "==> minted ACCESS_TOKEN via POST ${BASE}/v1/auth/dev-mint"
+fi
 
 echo "==> POST ${BASE}/v1/tactical/connect"
 CONNECT_BODY=$(curl -sS -X POST "${BASE}/v1/tactical/connect" \

@@ -163,6 +163,69 @@ func TestHTTPTacticalEnterBattleThenCommandAccepted(t *testing.T) {
 	}
 }
 
+func TestHTTPTacticalStepLockstepAdvancesFrame(t *testing.T) {
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	cmdRaw, _ := json.Marshal(map[string]interface{}{
+		"session_id": fix.SessionID,
+		"battle_id":  fix.BattleID,
+		"player_id":  0,
+		"kind":       uint32(tactical.KindMove),
+		"unit_id":    tactical.UnitIDPlayer0,
+		"to_x":       5,
+		"to_y":       8,
+	})
+	cmdRes, err := http.Post(srv.URL+"/v1/tactical/command", "application/json", bytes.NewReader(cmdRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cmdRes.Body.Close()
+	var cmdOut tacticalCommandJSON
+	if err := json.NewDecoder(cmdRes.Body).Decode(&cmdOut); err != nil {
+		t.Fatal(err)
+	}
+	if !cmdOut.Accepted {
+		t.Fatalf("command rejected: %s", cmdOut.RejectReason)
+	}
+
+	snapRes, err := http.Get(srv.URL + "/v1/tactical/snapshot?battle_id=" + fix.BattleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snapRes.Body.Close()
+	var before tactical.ViewSnapshot
+	if err := json.NewDecoder(snapRes.Body).Decode(&before); err != nil {
+		t.Fatal(err)
+	}
+	frameBefore := before.LockstepFrame
+
+	stepRaw, _ := json.Marshal(map[string]interface{}{
+		"session_id": fix.SessionID,
+		"battle_id":  fix.BattleID,
+		"steps":      1,
+	})
+	stepRes, err := http.Post(srv.URL+"/v1/tactical/step-lockstep", "application/json", bytes.NewReader(stepRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stepRes.Body.Close()
+	if stepRes.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(stepRes.Body)
+		t.Fatalf("step-lockstep status %d: %s", stepRes.StatusCode, b)
+	}
+	var stepOut stepLockstepJSON
+	if err := json.NewDecoder(stepRes.Body).Decode(&stepOut); err != nil {
+		t.Fatal(err)
+	}
+	if stepOut.LockstepFrame <= frameBefore {
+		t.Fatalf("expected frame advance from %d, got %d", frameBefore, stepOut.LockstepFrame)
+	}
+	if stepOut.StateHash == 0 || len(stepOut.ViewSnapshotJSON) == 0 {
+		t.Fatalf("expected state_hash and view_snapshot_json, got %+v", stepOut)
+	}
+}
+
 func TestHTTPTacticalCommandMirror(t *testing.T) {
 	fix := startJanusGatewayWithEnterBattle(t)
 	srv := newTacticalHTTPServer(t, fix.GW, tacticalHTTPOptions{

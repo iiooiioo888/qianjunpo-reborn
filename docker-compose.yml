@@ -133,6 +133,7 @@ services:
       ROMA_GRPC_ADDR: roma:9092
       JANUS_LARES_GRPC_ADDR: lares:9091
       LARES_TOKEN_SECRET: ${LARES_TOKEN_SECRET:-phase4-dev-secret}
+      JANUS_HTTP_DEV_MINT: ${JANUS_HTTP_DEV_MINT:-1}
       REDIS_URL: redis://redis:6379/0
     ports:
       - "19090:9090"

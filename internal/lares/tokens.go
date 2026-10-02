@@ -39,6 +39,22 @@ func (ti *TokenIssuer) now() time.Time {
 	return time.Now()
 }
 
+// DevStableAccount is the default account for browser Live preview mint (stable player_id).
+const DevStableAccount = "qjp-live-preview"
+
+// MintDevStableAccess issues Lares-signed access/refresh tokens without a password.
+// Used by Janus HTTP dev mint for same-origin /qjp/?live=1 (must stay gated in production).
+func (ti *TokenIssuer) MintDevStableAccess(account string) (TokenPair, error) {
+	if strings.TrimSpace(account) == "" {
+		account = DevStableAccount
+	}
+	if ti.Secret == nil {
+		return TokenPair{}, errors.New("lares: issuer not configured")
+	}
+	playerID := hashAccount(account)
+	return ti.mint(playerID, account, ti.now())
+}
+
 // Login validates credentials and mints token pair.
 func (ti *TokenIssuer) Login(username, password string) (TokenPair, error) {
 	if username == "" || password == "" {

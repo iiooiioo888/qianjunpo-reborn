@@ -16,6 +16,7 @@ import (
 	commonv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/common/v1"
 	gatewayv1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/gateway/v1"
 	"github.com/iiooiioo888/qianjunpo-reborn/internal/janus"
+	"github.com/iiooiioo888/qianjunpo-reborn/internal/lares"
 	etcdreg "github.com/iiooiioo888/qianjunpo-reborn/pkg/discovery/etcd"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/observability/metrics"
 	qjptrace "github.com/iiooiioo888/qianjunpo-reborn/pkg/observability/trace"
@@ -213,8 +214,13 @@ func main() {
 		defer etcdCloser()
 	}
 
+	var devMintIssuer *lares.TokenIssuer
+	if strings.TrimSpace(laresSecret) != "" {
+		devMintIssuer = &lares.TokenIssuer{Secret: []byte(laresSecret)}
+	}
+
 	go serveTCPBridge(tcpAddr, gw)
-	go serveHTTP(httpAddr, gw)
+	go serveHTTP(httpAddr, gw, devMintIssuer)
 
 	lis, err := net.Listen("tcp", grpcAddr)
 	if err != nil {
@@ -240,7 +246,7 @@ func serveTCPBridge(addr string, gw *janusGateway) {
 	}
 }
 
-func serveHTTP(addr string, gw *janusGateway) {
+func serveHTTP(addr string, gw *janusGateway, devMintIssuer *lares.TokenIssuer) {
 	metrics.Register(nil)
 	metrics.OnlinePlayers.Set(1)
 
@@ -251,6 +257,11 @@ func serveHTTP(addr string, gw *janusGateway) {
 		_, _ = w.Write([]byte(`{"status":"ok","service":"janus"}`))
 	})
 	registerTacticalHTTPRoutes(mux, gw, defaultTacticalHTTPOptions())
+	registerDevMintHTTPRoute(mux, devMintConfig{
+		Enabled: httpDevMintEnabled,
+		Issuer:  devMintIssuer,
+		Account: defaultDevMintAccount,
+	})
 	s := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	log.Fatal(s.ListenAndServe())
 }
