@@ -43,4 +43,6 @@ WIPEOUT_SMOKE=1 ./scripts/janus-http-smoke.sh
 
 腳本會：enter-battle 斷言進行中 `winner: null`、`endReason: "none"` → bridge 至敵方相鄰格 → 重複 Strike 至殲滅 → 斷言 step-lockstep `view_snapshot_json` 與 `GET /v1/tactical/snapshot` 皆為 `endReason: "wipeout"`、`winner: 0|1`。
 
+瀏覽器 static-preview：`/qjp/?live=1` 依相同 JSON 欄位顯示終局 overlay；離線契約檢查 `node client/scripts/static-preview-battle-end-smoke.mjs`（見 `client/static-preview/README.md`）。
+
 整合說明亦見 `docs/combat-formula.md`（占點／勝敗）與 `docs/skill-cast.md`（快照欄位慣例）。

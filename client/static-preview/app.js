@@ -9,6 +9,10 @@ import { resolveAppUrl } from './paths.js';
 import { TacticalBoardRenderer } from './board.js';
 import { applyMockVictoryPatch, isBattleFinished } from './battle-end.js';
 import {
+  rememberTerminalOutcome,
+  snapshotForBattleEndOverlay,
+} from './battle-end-ingest.js';
+import {
   createBattleEndOverlayElements,
   updateBattleEndOverlay,
 } from './battle-end-overlay.js';
@@ -72,6 +76,8 @@ let liveSessionId = '';
 let liveBattleId = battleIdFromLiveUrl(boot.liveUrlRaw);
 /** @type {object | null} sticky lastSkillCast when polls omit the field briefly */
 let stickyLastSkillCast = null;
+/** @type {object | null} sticky terminal winner/endReason for overlay (Live wipeout polls) */
+let stickyTerminalOutcome = null;
 
 function setStatus(text, isError = false) {
   els.status.textContent = text;
@@ -145,10 +151,14 @@ function ingestSnapshot(raw) {
   if (boot.mockVictory && !boot.live) {
     snap = applyMockVictoryPatch(snap, boot.mockVictory, LOCAL_PLAYER_OWNER);
   }
+  stickyTerminalOutcome = rememberTerminalOutcome(snap, stickyTerminalOutcome);
   if (snap.lastSkillCast) {
     stickyLastSkillCast = snap.lastSkillCast;
   }
   snapshot = snap;
+  if (boot.live && isBattleFinished(snapshot)) {
+    stopLivePoll();
+  }
 }
 
 function refreshHud() {
@@ -160,7 +170,7 @@ function refreshHud() {
   els.selection.textContent = formatSelectionLine(snapshot, renderer.selectedUnitId);
   els.skillCast.textContent = formatLastSkillCastLine(snapshot, stickyLastSkillCast);
   els.skillCast.className = lastSkillCastHudClass(snapshot, stickyLastSkillCast);
-  updateBattleEndOverlay(snapshot, {
+  updateBattleEndOverlay(snapshotForBattleEndOverlay(snapshot, stickyTerminalOutcome), {
     ...battleEndOverlay,
     localPlayerOwner: LOCAL_PLAYER_OWNER,
   });

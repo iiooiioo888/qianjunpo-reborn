@@ -4,8 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>千軍破 · 戰術棋盤 static-preview</title>
-    <!-- Dev 掛載 http://47.79.23.223/qjp/ 時取消下一行註解（不佔 Linkin :80 根路徑） -->
-    <!-- <base href="/qjp/" /> -->
+    <script>
+      (function () {
+        var path = location.pathname;
+        if (path === '/qjp' || path.indexOf('/qjp/') === 0) {
+          var base = document.createElement('base');
+          base.href = '/qjp/';
+          document.head.appendChild(base);
+        }
+      })();
+    </script>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
