@@ -358,6 +358,21 @@ if (
 ) {
   fail('static-preview missing battle end overlay (winner/endReason)');
 }
+const battleEndIngest = readFileSync(
+  join(root, 'static-preview/battle-end-ingest.js'),
+  'utf8',
+);
+if (
+  !battleEndIngest.includes('rememberTerminalOutcome') ||
+  !staticPreviewApp.includes('snapshotForBattleEndOverlay') ||
+  !staticPreviewApp.includes('stickyTerminalOutcome')
+) {
+  fail('static-preview missing sticky terminal battle-end ingest (Live wipeout)');
+}
+const staticPreviewIndex = readFileSync(join(root, 'static-preview/index.html'), 'utf8');
+if (!staticPreviewIndex.includes("base.href = '/qjp/'")) {
+  fail('static-preview index.html missing /qjp/ base bootstrap');
+}
 if (
   !staticPreviewApp.includes('TACTICAL_COMMAND_KIND_SKILL') ||
   !staticPreviewApp.includes('skill_id') ||

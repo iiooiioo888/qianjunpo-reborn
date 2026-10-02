@@ -25,7 +25,7 @@ Dev nginx 已將上述路徑反代到 Janus。`?live=1` 會先 **`POST v1/tactic
 
 暫定 mint 預設 body：`{"username":"smoke","password":"smoke"}`（與 `docs/janus-http-mirror.md` smoke 帳密一致）。可用 `?mintUrl=`、`?mintUser=`、`?mintPass=` 覆寫。
 
-子路徑部署時在 `index.html` 啟用：`<base href="/qjp/" />`。
+子路徑部署時 `index.html` 會在 pathname 為 `/qjp` 或 `/qjp/…` 時自動插入 `<base href="/qjp/" />`；`paths.js` 亦會辨識 `/qjp` 掛載。Nginx 請勿用會丟棄 query 的 `/qjp`→`/qjp/` 301（見 `deploy/nginx-qjp-snippet.conf`），否則 `?mockVictory=`／`?live=1` 會在重定向後消失。
 
 ## 本地開啟
 
@@ -37,7 +37,7 @@ npx --yes serve . -l 3456
 - Mock（預設）：<http://localhost:3456/> → `mock/demo_initial.json`（離線，僅本目錄即可）
 - Live：<http://localhost:3456/?live=1>（需同域反代 `v1/lares/login` + `v1/tactical/*`，或 `?accessToken=` / `?mintUrl=`）
 - 隱藏角色卡：`?cards=0`
-- Mock 終局 overlay：`?mockVictory=win|lose|draw`（僅 mock，直接寫入快照 `winner`／`endReason` 欄位預覽）
+- Mock 終局 overlay：`?mockVictory=win|lose|draw`（僅 mock，直接寫入快照 `winner`／`endReason` 欄位預覽）。請用 **`/qjp/?mockVictory=win`**（斜線在 `?` 前），勿用 `/qjp?mockVictory=win`（易被 301 吃掉 query）。
 
 僅部署本目錄（如 `deploy-web-preview.sh`）時不需 `client/assets`。
 
@@ -81,4 +81,12 @@ Compose 直打範例見 [`../README.md`](../README.md) 與 [`../../docs/janus-ht
 
 ## HUD
 
-`timeFlowRateParts`、`lockstepFrame`、`sync: mock` / `sync: live`、`lastSkillCast`（技能執行後；缺欄位時保留上一筆 sticky）、終局 **棋盤 overlay**（`winner`／`endReason`，見 `docs/victory-live.md`）
+`timeFlowRateParts`、`lockstepFrame`、`sync: mock` / `sync: live`、`lastSkillCast`（技能執行後；缺欄位時保留上一筆 sticky）、終局 **棋盤 overlay**（`winner`／`endReason`，見 `docs/victory-live.md`；Live 殲滅後若輪詢短暫回到 `endReason: "none"`，overlay 仍 sticky 至終局欄位，並停止輪詢）
+
+### Live 殲滅（wipeout）驗證
+
+| 步驟 | 指令／頁面 |
+|------|------------|
+| 核心 HTTP smoke | `WIPEOUT_SMOKE=1 ./scripts/janus-http-smoke.sh`（斷言 `endReason: "wipeout"`、`winner: 0\|1`） |
+| 離線 overlay 契約 | `node client/scripts/static-preview-battle-end-smoke.mjs` |
+| 瀏覽器 | `/qjp/?live=1` → Strike／移動至敵滅 → step-lockstep 後棋盤 overlay 顯示 **殲滅（全滅）** 與勝敗標題 |
