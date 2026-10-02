@@ -43,8 +43,9 @@
 | 僅一方尚有 HP>0 單位 | `EndAnnihilation` | 存活方 player ID |
 | 雙方皆無存活單位 | `EndMutualWipe` | `NoWinner`（平手） |
 | 達 `maxTurnFrames` 仍未殲滅 | `EndTimeout` | 總 HP 較高者；同 HP 則 `NoWinner` |
+| 據點連續獨占達 `ControlPoint.HoldFrames` | `EndCapture` | 獨占方 player ID |
 
-佔點勝尚未實作；本切片僅殲滅與超時比 HP。
+**占點（`ControlPoint`）**：預設 `NewMatch` 不帶據點（與 `DemoSchedule` replay 哈希相容）；需占點模式時用 `NewMatchWithControlPoints`。每個 lockstep 回合在殲滅判定之後、`maxTurnFrames` 超時之前呼叫 `tickCapture`：格上僅一方有 HP>0 單位則累加該方連續獨占計數，否則該據點計數清零；任一據點達 `HoldFrames` 即終局。整合測見 `pkg/tactical/victory_integration_test.go`（`TestCapturePointHoldLockstepIntegration`、`TestAnnihilationLockstepIntegration`、`TestTimeoutPassLockstepIntegration`）與 `pkg/integration/tactical_victory_test.go`（`TestPhase2VictoryConditionsIntegration`）。單元測見 `pkg/tactical/victory_test.go`。
 
 ## 範圍傷害選格與套用（AoE stub）
 
