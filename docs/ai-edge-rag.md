@@ -212,6 +212,56 @@ Example HUD-facing JSON after RAG + edge timeout (gateway or in-process serializ
 }
 ```
 
+### `POST /v1/suggest` (staggered edge vs RAG → one tactical suggestion)
+
+Alternates **edge-only** and **RAG-augmented** infer legs (`suggestion.infer_path` is `edge` or `rag`). Returns the usual infer JSON plus a single **move or skill** hint aligned with Janus `POST /v1/tactical/command` fields (`unit_id`, `to_x`, `to_y`, optional `skill_id`). Optional `battle_id` **write-back** stores the latest suggestion for polling.
+
+```bash
+make edge-infer
+curl -s -X POST localhost:8088/v1/suggest \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "battle_id": "default/0",
+    "persona": "guard",
+    "order": "flank east with cavalry",
+    "battle_context": {
+      "units_summary": "three cavalry on the east wing",
+      "terrain_summary": "hills favor archers"
+    }
+  }' | jq
+```
+
+Example success (RAG leg may include `rag_k` / `rag_hit_ids`):
+
+```json
+{
+  "text": "advance: …",
+  "model": "qwen2.5-3b-mock",
+  "latency_ms": 1,
+  "source": "edge",
+  "rag_k": 5,
+  "rag_hit_ids": ["tactic-flank", "…"],
+  "suggestion": {
+    "kind": "move",
+    "unit_id": 101,
+    "to_x": 8,
+    "to_y": 8,
+    "infer_path": "rag"
+  }
+}
+```
+
+| `suggestion.kind` | HUD maps to tactical `kind` |
+|-------------------|-----------------------------|
+| `move` | `1` (KindMove) |
+| `skill` | `5` (KindSkill); use `skill_id` (stub strike = `1`) |
+
+Poll write-back after `battle_id` was set on POST:
+
+```bash
+curl -s 'localhost:8088/v1/suggest/write-back?battle_id=default/0' | jq
+```
+
 ```bash
 make test-edge-infer   # mock HTTP handlers
 make test-ai-rag       # pkg/ai + pkg/rag focused tests

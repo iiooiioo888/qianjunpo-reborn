@@ -40,6 +40,7 @@ type InferResult struct {
 	RAGHitIDs      []string       // retrieved chunk ids in rank order when RAG ran
 	FallbackReason FallbackReason // set when Source == SourceNPC
 	FallbackDetail string         // e.g. HTTP status or backend error code
+	Suggestion     *InferSuggestion // optional tactical hint for HUD/curl
 }
 
 // WithRAGObservability attaches RAG Top-K metadata (safe for nil hit slice).

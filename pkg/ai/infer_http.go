@@ -2,14 +2,15 @@ package ai
 
 // InferHTTPResponse is the JSON body for a successful POST /v1/infer (edge-infer).
 type InferHTTPResponse struct {
-	Text           string   `json:"text"`
-	Model          string   `json:"model"`
-	LatencyMs      int64    `json:"latency_ms"`
-	Source         string   `json:"source"`
-	RAGK           int      `json:"rag_k,omitempty"`
-	RAGHitIDs      []string `json:"rag_hit_ids,omitempty"`
-	FallbackReason string   `json:"fallback_reason,omitempty"`
-	FallbackDetail string   `json:"fallback_detail,omitempty"`
+	Text           string           `json:"text"`
+	Model          string           `json:"model"`
+	LatencyMs      int64            `json:"latency_ms"`
+	Source         string           `json:"source"`
+	RAGK           int              `json:"rag_k,omitempty"`
+	RAGHitIDs      []string         `json:"rag_hit_ids,omitempty"`
+	FallbackReason string           `json:"fallback_reason,omitempty"`
+	FallbackDetail string           `json:"fallback_detail,omitempty"`
+	Suggestion     *InferSuggestion `json:"suggestion,omitempty"`
 }
 
 // InferPostBody is the JSON body pkg/ai sends to POST /v1/infer.
@@ -51,6 +52,10 @@ func InferResultToHTTP(r InferResult, model string, latencyMs int64) InferHTTPRe
 		RAGK:      r.RAGK,
 		RAGHitIDs: append([]string(nil), r.RAGHitIDs...),
 	}
+	if r.Suggestion != nil {
+		cp := *r.Suggestion
+		resp.Suggestion = &cp
+	}
 	if source == SourceNPC && r.FallbackReason != FallbackReasonNone {
 		resp.FallbackReason = string(r.FallbackReason)
 		resp.FallbackDetail = r.FallbackDetail
@@ -72,7 +77,7 @@ func InferResultFromHTTP(r InferHTTPResponse) InferResult {
 	if source == SourceEdge {
 		reason = FallbackReasonNone
 	}
-	return InferResult{
+	out := InferResult{
 		Text:           r.Text,
 		Source:         source,
 		RAGK:           r.RAGK,
@@ -80,6 +85,11 @@ func InferResultFromHTTP(r InferHTTPResponse) InferResult {
 		FallbackReason: reason,
 		FallbackDetail: r.FallbackDetail,
 	}
+	if r.Suggestion != nil {
+		cp := *r.Suggestion
+		out.Suggestion = &cp
+	}
+	return out
 }
 
 // RAGInferHTTPResponse builds the success contract for POST /v1/rag-infer.

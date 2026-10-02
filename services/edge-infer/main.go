@@ -42,6 +42,8 @@ func main() {
 	mux.HandleFunc("/health", srv.handleHealth)
 	mux.HandleFunc("/v1/infer", srv.handleInfer)
 	mux.HandleFunc("/v1/rag-infer", srv.handleRAGInfer)
+	mux.HandleFunc("/v1/suggest", srv.handleSuggest)
+	mux.HandleFunc("/v1/suggest/write-back", srv.handleSuggestGet)
 	mux.HandleFunc("/v1/load", srv.handleLoad)
 	log.Printf("edge-infer listening on %s backend=%s model=%s", addr, be.Name(), be.Model())
 	log.Fatal(http.ListenAndServe(addr, mux))
