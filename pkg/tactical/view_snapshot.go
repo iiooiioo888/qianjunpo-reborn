@@ -29,6 +29,15 @@ type ViewUnit struct {
 	MaxHP int64  `json:"maxHp"`
 }
 
+// ViewSkillCast is display-layer metadata for the latest KindSkill resolution (not in StateHash).
+type ViewSkillCast struct {
+	SkillID      uint16 `json:"skillId"`
+	CasterUnitID uint32 `json:"casterUnitId"`
+	TargetX      int    `json:"targetX"`
+	TargetY      int    `json:"targetY"`
+	LockstepFrame uint64 `json:"lockstepFrame"`
+}
+
 // ViewSnapshot is JSON consumed by the Cocos display layer (logic/display separation).
 type ViewSnapshot struct {
 	SchemaVersion     int        `json:"schemaVersion"`
@@ -39,6 +48,7 @@ type ViewSnapshot struct {
 	InitialStateHash  string     `json:"initialStateHash"`
 	Cells             [][]ViewCell `json:"cells"`
 	Units             []ViewUnit `json:"units"`
+	LastSkillCast     *ViewSkillCast `json:"lastSkillCast,omitempty"`
 }
 
 // MatchToViewSnapshot exports current match state for local client preview.
@@ -76,6 +86,16 @@ func MatchToViewSnapshot(m *Match, timeFlowRateParts uint32) ViewSnapshot {
 			HP: u.Stats.HP.Raw(), MaxHP: 100,
 		})
 	}
+	var lastCast *ViewSkillCast
+	if rec := m.LastSkillCast(); rec != nil {
+		lastCast = &ViewSkillCast{
+			SkillID:       uint16(rec.SkillID),
+			CasterUnitID:  rec.CasterUnitID,
+			TargetX:       rec.Target.X,
+			TargetY:       rec.Target.Y,
+			LockstepFrame: rec.Frame,
+		}
+	}
 	return ViewSnapshot{
 		SchemaVersion:     viewSnapshotSchemaVersion,
 		BoardSize:         board.Size,
@@ -85,6 +105,7 @@ func MatchToViewSnapshot(m *Match, timeFlowRateParts uint32) ViewSnapshot {
 		InitialStateHash:  fmt.Sprintf("%016x", m.initial),
 		Cells:             cells,
 		Units:             units,
+		LastSkillCast:     lastCast,
 	}
 }
 

@@ -77,6 +77,7 @@ type Match struct {
 	combatCfg combat.Config
 	counters  combat.CounterMatrix
 	cardPool  combat.CardPool
+	lastSkillCast *SkillCastRecord
 	recorder  *replay.Recorder
 	initial   uint64
 	recording replay.Recording
