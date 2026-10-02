@@ -477,6 +477,47 @@ func TestHTTPTacticalSnapshotPreservesLastSkillCastAndHP(t *testing.T) {
 	}
 }
 
+func TestHTTPTacticalSnapshotReportsWipeoutVictory(t *testing.T) {
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	b, err := fix.Store.Get(roma.BattleID(fix.BattleID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	def := b.Match.Units[tactical.UnitIDPlayer1]
+	def.Stats.HP = def.Stats.HP.Sub(def.Stats.HP)
+	b.Match.Board.ClearUnit(def.Pos)
+
+	stepRaw, _ := json.Marshal(map[string]interface{}{
+		"session_id": fix.SessionID,
+		"battle_id":  fix.BattleID,
+		"steps":      1,
+	})
+	stepRes, err := http.Post(srv.URL+"/v1/tactical/step-lockstep", "application/json", bytes.NewReader(stepRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stepRes.Body.Close()
+	var stepOut stepLockstepJSON
+	if err := json.NewDecoder(stepRes.Body).Decode(&stepOut); err != nil {
+		t.Fatal(err)
+	}
+	if !stepOut.Finished || stepOut.Winner != 0 {
+		t.Fatalf("step finished=%v winner=%d", stepOut.Finished, stepOut.Winner)
+	}
+	var stepSnap tactical.ViewSnapshot
+	if err := json.Unmarshal(stepOut.ViewSnapshotJSON, &stepSnap); err != nil {
+		t.Fatal(err)
+	}
+	if stepSnap.EndReason != "wipeout" {
+		t.Fatalf("endReason=%q", stepSnap.EndReason)
+	}
+	if stepSnap.Winner == nil || *stepSnap.Winner != 0 {
+		t.Fatalf("winner=%v", stepSnap.Winner)
+	}
+}
+
 func TestHTTPTacticalCommandMethodNotAllowed(t *testing.T) {
 	fix := startJanusGatewayWithEnterBattle(t)
 	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())

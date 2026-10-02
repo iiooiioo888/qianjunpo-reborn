@@ -49,6 +49,10 @@ type ViewSnapshot struct {
 	Cells             [][]ViewCell `json:"cells"`
 	Units             []ViewUnit `json:"units"`
 	LastSkillCast     *ViewSkillCast `json:"lastSkillCast,omitempty"`
+	// Winner is player id (0/1) or NoWinner (255) when finished; null while match in progress.
+	Winner *uint8 `json:"winner"`
+	// EndReason is none | wipeout | timeout | mutual_wipe | occupy (see EndReasonName).
+	EndReason string `json:"endReason"`
 }
 
 // MatchToViewSnapshot exports current match state for local client preview.
@@ -96,6 +100,13 @@ func MatchToViewSnapshot(m *Match, timeFlowRateParts uint32) ViewSnapshot {
 			LockstepFrame: rec.Frame,
 		}
 	}
+	var winner *uint8
+	endReason := EndReasonName(EndNone)
+	if m.Finished {
+		w := m.Winner
+		winner = &w
+		endReason = EndReasonName(m.EndReason)
+	}
 	return ViewSnapshot{
 		SchemaVersion:     viewSnapshotSchemaVersion,
 		BoardSize:         board.Size,
@@ -106,6 +117,8 @@ func MatchToViewSnapshot(m *Match, timeFlowRateParts uint32) ViewSnapshot {
 		Cells:             cells,
 		Units:             units,
 		LastSkillCast:     lastCast,
+		Winner:            winner,
+		EndReason:         endReason,
 	}
 }
 

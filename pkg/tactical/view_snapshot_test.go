@@ -35,4 +35,7 @@ func TestInitialViewSnapshotShape(t *testing.T) {
 	if back.Seed != 0xcafe {
 		t.Fatalf("seed=%d", back.Seed)
 	}
+	if back.EndReason != "none" || back.Winner != nil {
+		t.Fatalf("in-progress outcome winner=%v reason=%q", back.Winner, back.EndReason)
+	}
 }
