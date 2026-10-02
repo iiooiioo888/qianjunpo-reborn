@@ -1,0 +1,5 @@
+A. HARD OUTPUT: exact 64x32 pixel isometric terrain tile, single subject only, 2:1 isometric diamond footprint filling canvas, outside diamond transparent alpha zero, no sprite sheet no collage no gold frame no text,
+B. STYLE LOCK: cartoon pixel art, 1px hard black outline, no anti-aliasing, top-left light, palette terrain muted sage greens soft grass greens cool grey dirt accents #8B4513 #CD5C5C #DAA520 tiny flecks only,
+C. POSE LOCK: sand-table flat isometric meadow tile centered diamond, low flat grass surface height nearly flush with diamond plane,
+D. IDENTITY grass MUST SHOW FIRST: (1) silhouette simple grassy meadow diamond with soft tufts, (2) main color blocks soft green grass with subtle brown soil edge, (3) edge readability clean diamond rim hard pixel edge, (4) passability cue open walkable grass no rocks no cliffs,
+E. FORBIDDEN: opaque square corners wrong size not 64x32 photoreal gradient sprite sheet collage text gold frame buildings units mountain cliffs water roads trees
