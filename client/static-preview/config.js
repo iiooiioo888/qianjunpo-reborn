@@ -30,6 +30,8 @@ export const ISO25_TILE_ART_H = 32;
 export const TERRAIN_TILE_SRC = {
   0: 'tiles/ISO25_tile_grass_v02.png',
   1: 'tiles/ISO25_tile_mountain_v01.png',
+  2: 'tiles/ISO25_tile_forest_v01.png',
+  3: 'tiles/ISO25_tile_water_v01.png',
 };
 
 export const LIVE_POLL_INTERVAL_MS = 400;

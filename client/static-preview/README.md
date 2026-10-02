@@ -56,7 +56,7 @@ cp client/assets/resources/data/tactical/demo_initial.json client/static-preview
 
 ## ISO25 地格（STANDARD）
 
-草／山地貼圖由 `bash client/scripts/sync-wip-tile-textures.sh` 自 `art/25d/_wip/tiles` 複製至 `tiles/*.png`（檔名見 `config.js` `TERRAIN_TILE_SRC`）。缺圖時棋盤退回平面色塊。
+草／山／水／林地格貼圖由 `bash client/scripts/sync-wip-tile-textures.sh` 自 `art/25d/_wip/tiles` 複製至 `tiles/*.png`（檔名見 `config.js` `TERRAIN_TILE_SRC`）。缺圖時棋盤退回平面色塊。
 
 ## 互動
 
