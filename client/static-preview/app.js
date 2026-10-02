@@ -10,6 +10,7 @@ import { TacticalBoardRenderer } from './board.js';
 import {
   formatLockstepFrameLine,
   formatRateLine,
+  formatSelectionLine,
   liveLinkStateFromPollAge,
 } from './hud.js';
 import { applyMockMove } from './mock-move.js';
@@ -27,6 +28,7 @@ const boot = parseBootConfig();
 const els = {
   rate: document.getElementById('hud-rate'),
   frame: document.getElementById('hud-frame'),
+  selection: document.getElementById('hud-selection'),
   status: document.getElementById('hud-status'),
   retryLive: document.getElementById('hud-retry-live'),
   mintToken: document.getElementById('hud-mint-token'),
@@ -124,6 +126,7 @@ function refreshHud() {
   }
   els.rate.textContent = formatRateLine(snapshot);
   els.frame.textContent = formatLockstepFrameLine(snapshot, syncCtx);
+  els.selection.textContent = formatSelectionLine(snapshot, renderer.selectedUnitId);
   els.mode.textContent = boot.live
     ? `Live: ${boot.liveUrlRaw}`
     : `Mock: mock/demo_initial.json  ·  ?live=1 → ${boot.liveUrlRaw}`;

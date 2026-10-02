@@ -204,6 +204,7 @@ export class TacticalBootstrap extends Component {
     };
 
     const syncCharCardHighlight = (selectedUnitId: number | null) => {
+      hud.setSelectedUnitId(selectedUnitId);
       const snap = boardView.getSnapshot();
       const unit =
         selectedUnitId != null ? snap?.units.find((u) => u.id === selectedUnitId && u.hp > 0) : undefined;

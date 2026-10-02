@@ -64,3 +64,15 @@ export function liveLinkStateFromPollAge(pollAgeMs: number, pollIntervalMs: numb
   const threshold = Math.max(pollIntervalMs * 2, pollIntervalMs + 500);
   return pollAgeMs > threshold ? 'stale' : 'connected';
 }
+
+/** Grid coords for the locally selected unit (display-only). */
+export function formatSelectionLine(snap: ViewSnapshot | null, selectedUnitId: number | null): string {
+  if (selectedUnitId == null || snap == null) {
+    return 'selected unit: —';
+  }
+  const unit = snap.units.find((u) => u.id === selectedUnitId && u.hp > 0);
+  if (!unit) {
+    return `selected unit: id=${selectedUnitId}  ·  grid (—,—)`;
+  }
+  return `selected unit: id=${unit.id}  ·  grid (${unit.x}, ${unit.y})`;
+}
