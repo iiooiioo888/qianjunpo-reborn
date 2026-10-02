@@ -119,8 +119,7 @@ When `backend=ollama` and Ollama is down, `/health` returns HTTP 200 with `statu
 
 ## Game client wiring (`pkg/ai`)
 
-<<<<<<< HEAD
-`RAGInferClient` retrieves Top-5, builds a prompt prefix (`Knowledge:` block from `rag.FormatContext`), then calls edge HTTP with the augmented prompt plus `rag_k` / `rag_hit_ids` on the POST body. Edge-infer echoes those fields on success JSON so operators can prove Top-K entered the real infer path. No RAG or LLM output enters `pkg/fixed` / combat FP64 math.
+`RAGInferClient` retrieves Top-5 (query = optional `BattleContext` unit/terrain summary + order), builds a prompt prefix (`Battlefield:` + `Knowledge:` from `rag.FormatContext`), then calls edge HTTP with the augmented prompt plus `rag_k` / `rag_hit_ids` on the POST body. Use `InferWithBattle` in-process or `POST /v1/rag-infer` on edge-infer for curl verification. Edge-infer echoes those fields on success JSON so operators can prove Top-K entered the real infer path. No RAG or LLM output enters `pkg/fixed` / combat FP64 math.
 
 On successful retrieval, `RAGInferClient` emits structured `slog` at info level (`msg=ai infer rag augmented`) with `rag_k` and `rag_hit_ids` (optional `persona`). Set `RAGInferClient.LogRAG=false` to silence in tests. Example:
 
@@ -128,10 +127,7 @@ On successful retrieval, `RAGInferClient` emits structured `slog` at info level 
 {"time":"…","level":"INFO","msg":"ai infer rag augmented","rag_k":5,"rag_hit_ids":["tactic-flank","wei-cao","shu-zhang","tactic-spear","wu-zhou"],"persona":"cavalry"}
 ```
 
-`InferResult` also carries `RAGK` and `RAGHitIDs` after `InferWithContext`, including NPC fallback when retrieval succeeded but edge HTTP failed.
-=======
-`RAGInferClient` retrieves Top-5, builds a prompt prefix (optional `BattleContext` for live unit/terrain summary), then calls edge HTTP. Use `InferWithBattle` or `POST /v1/rag-infer` on edge-infer. No RAG or LLM output enters `pkg/fixed` / combat FP64 math.
->>>>>>> 5dafba0 (docs: note InferWithBattle and /v1/rag-infer in ai-edge-rag)
+`InferResult` also carries `RAGK` and `RAGHitIDs` after `InferWithContext` / `InferWithBattle`, including NPC fallback when retrieval succeeded but edge HTTP failed.
 
 `InferResult` fields:
 
