@@ -57,7 +57,8 @@ h1 {
 }
 
 .hud .retry-live,
-.hud .mint-token {
+.hud .mint-token,
+.hud .cast-skill {
   margin-top: 0.35rem;
   margin-right: 0.35rem;
   padding: 0.35rem 0.65rem;
@@ -71,8 +72,14 @@ h1 {
 }
 
 .hud .retry-live:hover,
-.hud .mint-token:hover {
+.hud .mint-token:hover,
+.hud .cast-skill:hover:not(:disabled) {
   border-color: var(--accent);
+}
+
+.hud .cast-skill:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .hud .mint-token {

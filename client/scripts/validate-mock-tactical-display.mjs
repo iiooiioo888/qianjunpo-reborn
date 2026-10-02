@@ -229,6 +229,31 @@ if (
 ) {
   fail('static-preview missing Live step-lockstep after accepted command');
 }
+if (
+  !staticPreviewHud.includes('formatLastSkillCastLine') ||
+  !staticPreviewApp.includes('hud-skill-cast') ||
+  !staticPreviewApp.includes('formatLastSkillCastLine')
+) {
+  fail('static-preview missing lastSkillCast HUD line');
+}
+if (
+  !staticPreviewApp.includes('TACTICAL_COMMAND_KIND_SKILL') ||
+  !staticPreviewApp.includes('skill_id') ||
+  !staticPreviewApp.includes('hud-cast-skill') ||
+  !staticPreviewApp.includes('runLiveSkillCommand')
+) {
+  fail('static-preview missing Live stub skill cast (kind=5 + skill_id)');
+}
+const staticPreviewStubSkill = readFileSync(
+  join(root, 'static-preview/stub-skill.js'),
+  'utf8',
+);
+if (
+  !staticPreviewStubSkill.includes('STUB_SKILL_STRIKE_ID') ||
+  !staticPreviewConfig.includes('stubSkillId')
+) {
+  fail('static-preview stub skill config/helpers missing');
+}
 
 const localUnit = raw.units.find((u) => u.owner === 0 && u.hp > 0);
 if (!localUnit || localUnit.id !== 101) {

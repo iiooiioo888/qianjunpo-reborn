@@ -8,6 +8,7 @@ import {
 import { resolveAppUrl } from './paths.js';
 import { TacticalBoardRenderer } from './board.js';
 import {
+  formatLastSkillCastLine,
   formatLockstepFrameLine,
   formatRateLine,
   formatSelectionLine,
@@ -15,6 +16,11 @@ import {
 } from './hud.js';
 import { applyMockMove } from './mock-move.js';
 import { computeLegalMoveDestinations } from './reachability.js';
+import {
+  findStubStrikeTarget,
+  isInAttackRange,
+  TACTICAL_COMMAND_KIND_SKILL,
+} from './stub-skill.js';
 import {
   hasLiveAccessToken,
   LIVE_ACCESS_TOKEN_MISSING_MESSAGE,
@@ -32,6 +38,8 @@ const els = {
   status: document.getElementById('hud-status'),
   retryLive: document.getElementById('hud-retry-live'),
   mintToken: document.getElementById('hud-mint-token'),
+  castSkill: document.getElementById('hud-cast-skill'),
+  skillCast: document.getElementById('hud-skill-cast'),
   mode: document.getElementById('hud-mode'),
   cards: document.getElementById('char-cards'),
   canvas: document.getElementById('board'),
@@ -110,7 +118,7 @@ const LIVE_LABEL_COMMAND_RETRY = '重試戰術指令';
 
 /** @type {'none' | 'prepare' | 'poll' | 'command'} */
 let liveRetryKind = 'none';
-/** @type {null | { unitId: number, to: { x: number, y: number }, message: string }} */
+/** @type {null | { unitId: number, to: { x: number, y: number }, kind: number, skillId?: number, message: string }} */
 let pendingCommandFailure = null;
 
 function stopLivePoll() {
@@ -127,6 +135,8 @@ function refreshHud() {
   els.rate.textContent = formatRateLine(snapshot);
   els.frame.textContent = formatLockstepFrameLine(snapshot, syncCtx);
   els.selection.textContent = formatSelectionLine(snapshot, renderer.selectedUnitId);
+  els.skillCast.textContent = formatLastSkillCastLine(snapshot);
+  updateCastSkillButton();
   els.mode.textContent = boot.live
     ? `Live: ${boot.liveUrlRaw}`
     : `Mock: mock/demo_initial.json  ·  ?live=1 → ${boot.liveUrlRaw}`;
@@ -182,7 +192,30 @@ function liveSnapshotUrlForBattle(battleId) {
   return resolveAppUrl(`${raw}${sep}battle_id=${encodeURIComponent(battleId)}`);
 }
 
-async function submitLiveCommand(unitId, to) {
+function updateCastSkillButton() {
+  if (!boot.live) {
+    els.castSkill.hidden = true;
+    return;
+  }
+  const selectedId = renderer.selectedUnitId;
+  if (selectedId == null || !snapshot) {
+    els.castSkill.hidden = true;
+    return;
+  }
+  const caster = snapshot.units.find((u) => u.id === selectedId && u.hp > 0);
+  if (!caster || caster.owner !== LOCAL_PLAYER_OWNER) {
+    els.castSkill.hidden = true;
+    return;
+  }
+  els.castSkill.hidden = false;
+  const target = findStubStrikeTarget(snapshot, caster);
+  els.castSkill.disabled = target == null;
+  els.castSkill.title = target
+    ? `POST kind=${TACTICAL_COMMAND_KIND_SKILL} skill_id=${boot.stubSkillId} → (${target.x},${target.y})`
+    : '射程內無敵方單位（可先移動靠近）';
+}
+
+async function submitLiveTacticalCommand(unitId, to, { kind = 1, skillId } = {}) {
   const unit = snapshot?.units.find((u) => u.id === unitId && u.hp > 0);
   if (!unit) {
     return { accepted: false, rejectReason: 'unit missing' };
@@ -190,12 +223,15 @@ async function submitLiveCommand(unitId, to) {
   const body = {
     battle_id: liveBattleId,
     player_id: unit.owner,
-    kind: 1,
+    kind,
     unit_id: unitId,
     to_x: to.x,
     to_y: to.y,
     session_id: liveSessionId,
   };
+  if (kind === TACTICAL_COMMAND_KIND_SKILL) {
+    body.skill_id = skillId ?? boot.stubSkillId;
+  }
   try {
     const res = await fetch(boot.commandUrl, {
       method: 'POST',
@@ -226,8 +262,8 @@ function formatLiveCommandError(result) {
   return 'Live 指令失敗：unknown';
 }
 
-function showCommandFailure(unitId, to, message) {
-  pendingCommandFailure = { unitId, to, message };
+function showCommandFailure(unitId, to, message, { kind = 1, skillId } = {}) {
+  pendingCommandFailure = { unitId, to, kind, skillId, message };
   setStatus(message, true);
   showLiveRetry('command', LIVE_LABEL_COMMAND_RETRY, () => {
     void runFailedCommandRetry();
@@ -238,14 +274,15 @@ async function runFailedCommandRetry() {
   if (!pendingCommandFailure) {
     return;
   }
-  const { unitId, to } = pendingCommandFailure;
-  setStatus('Live：送出移動指令…');
-  const result = await submitLiveCommand(unitId, to);
+  const { unitId, to, kind, skillId } = pendingCommandFailure;
+  const label = kind === TACTICAL_COMMAND_KIND_SKILL ? '技能' : '移動';
+  setStatus(`Live：送出${label}指令…`);
+  const result = await submitLiveTacticalCommand(unitId, to, { kind, skillId });
   if (result.accepted) {
     await handleAcceptedLiveCommand(result);
     return;
   }
-  showCommandFailure(unitId, to, formatLiveCommandError(result));
+  showCommandFailure(unitId, to, formatLiveCommandError(result), { kind, skillId });
 }
 
 function formatLiveStepError(step) {
@@ -306,12 +343,45 @@ async function handleAcceptedLiveCommand(result) {
 
 async function runLiveMoveCommand(unitId, to) {
   setStatus('Live：送出移動指令…');
-  const result = await submitLiveCommand(unitId, to);
+  const result = await submitLiveTacticalCommand(unitId, to, { kind: 1 });
   if (result.accepted) {
     await handleAcceptedLiveCommand(result);
     return;
   }
-  showCommandFailure(unitId, to, formatLiveCommandError(result));
+  showCommandFailure(unitId, to, formatLiveCommandError(result), { kind: 1 });
+}
+
+async function runLiveSkillCommand(unitId, to, skillId = boot.stubSkillId) {
+  setStatus(`Live：送出技能指令（kind=${TACTICAL_COMMAND_KIND_SKILL} skill_id=${skillId}）…`);
+  const result = await submitLiveTacticalCommand(unitId, to, {
+    kind: TACTICAL_COMMAND_KIND_SKILL,
+    skillId,
+  });
+  if (result.accepted) {
+    await handleAcceptedLiveCommand(result);
+    return;
+  }
+  showCommandFailure(unitId, to, formatLiveCommandError(result), {
+    kind: TACTICAL_COMMAND_KIND_SKILL,
+    skillId,
+  });
+}
+
+function runCastSkillFromHud() {
+  const selectedId = renderer.selectedUnitId;
+  if (selectedId == null || !snapshot) {
+    return;
+  }
+  const caster = snapshot.units.find((u) => u.id === selectedId && u.hp > 0);
+  if (!caster) {
+    return;
+  }
+  const target = findStubStrikeTarget(snapshot, caster);
+  if (!target) {
+    setStatus('射程內無敵方單位，無法施放 stub Strike。', true);
+    return;
+  }
+  void runLiveSkillCommand(selectedId, { x: target.x, y: target.y });
 }
 
 async function pollLive() {
@@ -475,6 +545,18 @@ function onCellClick(x, y) {
 
   const selected = renderer.selectedUnitId;
   if (selected != null) {
+    if (
+      boot.live &&
+      !localDrift &&
+      unitAtCell &&
+      unitAtCell.owner !== LOCAL_PLAYER_OWNER
+    ) {
+      const caster = snapshot.units.find((u) => u.id === selected && u.hp > 0);
+      if (caster && isInAttackRange(caster, x, y)) {
+        void runLiveSkillCommand(selected, { x, y });
+        return;
+      }
+    }
     const legal = renderer.legalCells;
     const isLegal = legal.some((c) => c.x === x && c.y === y);
     if (isLegal) {
@@ -560,6 +642,10 @@ bindCards();
 
 els.mintToken.addEventListener('click', () => {
   void runMintAccessToken();
+});
+
+els.castSkill.addEventListener('click', () => {
+  runCastSkillFromHud();
 });
 
 if (boot.live) {
