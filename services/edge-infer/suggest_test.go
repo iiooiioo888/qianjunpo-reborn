@@ -56,6 +56,26 @@ func TestSuggestHTTPWriteBackAndGet(t *testing.T) {
 	}
 }
 
+func TestSuggestDemoPage(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/v1/suggest/demo", nil)
+	rr := httptest.NewRecorder()
+	srv := &server{}
+	srv.handleSuggestDemo(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("code=%d", rr.Code)
+	}
+	if ct := rr.Header().Get("Content-Type"); ct != "text/html; charset=utf-8" {
+		t.Fatalf("content-type=%q", ct)
+	}
+	body := rr.Body.String()
+	if !bytes.Contains(rr.Body.Bytes(), []byte("POST /v1/suggest")) {
+		t.Fatalf("missing UI hook in demo HTML")
+	}
+	if body == "" {
+		t.Fatal("empty demo page")
+	}
+}
+
 func TestSuggestStaggerPathsAlternate(t *testing.T) {
 	ai.ResetStaggerForTests()
 	ai.GlobalSuggestionStore().ResetSuggestions()

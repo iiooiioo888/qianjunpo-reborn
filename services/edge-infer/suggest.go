@@ -70,6 +70,19 @@ func (s *server) handleSuggest(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(outcome.InferHTTPResponse)
 }
 
+func (s *server) handleSuggestDemo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if r.Method == http.MethodHead {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	_, _ = w.Write(suggestDemoHTML)
+}
+
 func (s *server) handleSuggestGet(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
