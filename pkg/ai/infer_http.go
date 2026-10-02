@@ -36,6 +36,28 @@ func EdgeInferHTTPResponseWithRAG(text, model string, latencyMs int64, ragK int,
 	}
 }
 
+// InferResultToHTTP maps in-process InferResult into the shared POST /v1/infer success JSON shape.
+// Gateways and Live HUD should use the same snake_case fields as InferHTTPResponse.
+func InferResultToHTTP(r InferResult, model string, latencyMs int64) InferHTTPResponse {
+	source := r.Source
+	if source == "" {
+		source = SourceEdge
+	}
+	resp := InferHTTPResponse{
+		Text:      r.Text,
+		Model:     model,
+		LatencyMs: latencyMs,
+		Source:    source,
+		RAGK:      r.RAGK,
+		RAGHitIDs: append([]string(nil), r.RAGHitIDs...),
+	}
+	if source == SourceNPC && r.FallbackReason != FallbackReasonNone {
+		resp.FallbackReason = string(r.FallbackReason)
+		resp.FallbackDetail = r.FallbackDetail
+	}
+	return resp
+}
+
 // InferResultFromHTTP maps a decoded success response into InferResult.
 // Empty text yields a zero result (caller should treat as bad response).
 func InferResultFromHTTP(r InferHTTPResponse) InferResult {

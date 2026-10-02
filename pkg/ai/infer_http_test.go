@@ -60,3 +60,43 @@ func TestInferResultFromHTTPNPCOnWire(t *testing.T) {
 		t.Fatalf("%+v", out)
 	}
 }
+
+func TestInferResultToHTTPNPCFallbackJSON(t *testing.T) {
+	in := InferResult{
+		Text:           NPCFallback("scout"),
+		Source:         SourceNPC,
+		FallbackReason: FallbackReasonHTTPStatus,
+		FallbackDetail: "502:backend_infer_failed",
+		RAGK:           5,
+		RAGHitIDs:      []string{"tactic-flank", "wei-cao"},
+	}
+	raw, err := json.Marshal(InferResultToHTTP(in, "", 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatal(err)
+	}
+	if m["source"] != SourceNPC || m["fallback_reason"] != string(FallbackReasonHTTPStatus) {
+		t.Fatalf("%v", m)
+	}
+	if m["fallback_detail"] != "502:backend_infer_failed" {
+		t.Fatalf("detail=%v", m["fallback_detail"])
+	}
+	if m["rag_k"] != float64(5) {
+		t.Fatalf("rag_k=%v", m["rag_k"])
+	}
+	ids, ok := m["rag_hit_ids"].([]interface{})
+	if !ok || len(ids) != 2 {
+		t.Fatalf("rag_hit_ids=%v", m["rag_hit_ids"])
+	}
+}
+
+func TestInferResultToHTTPRoundTripEdge(t *testing.T) {
+	orig := InferResultFromHTTP(EdgeInferHTTPResponseWithRAG("ok", "m", 2, 3, []string{"a"}))
+	back := InferResultFromHTTP(InferResultToHTTP(orig, "m", 2))
+	if back.Text != orig.Text || back.Source != orig.Source || back.RAGK != orig.RAGK || len(back.RAGHitIDs) != 1 {
+		t.Fatalf("orig=%+v back=%+v", orig, back)
+	}
+}
