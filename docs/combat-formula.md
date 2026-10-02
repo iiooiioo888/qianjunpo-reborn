@@ -59,3 +59,12 @@
 - **中心格占位**：近戰／遠程皆不可選施放者所在格（`InAttackRange` 要求 `d ≥ 1`）。中心可落在**友軍**格或空格；只要射程／LOS 合法且 splash 內有敵人即可施放，傷害僅對敵方單位升序 `applyStrike`，友軍在範圍內不扣血（整合測見 `TestApplyAoEStrikeFriendlyCenterSkipsAllies`、`TestSubmitKindAoEFriendlyCenterLockstepIntegration`）。
 - **遠程 AoE 與 LOS**：射線暢通時 `KindAoE` 與單體相同地通過 `AttackLineClear` 並在 lockstep 執行後對中心／splash 內敵人套傷；被第三方單位或不可通行地形擋住則 `AOE_LOS_BLOCKED`（暢通見 `TestSubmitKindAoERangedLoSClearDamagesEnemy`；單位占位阻擋見 `TestSubmitKindAoELoSBlockedRejected`；射線上不可通行地形見 `TestSubmitKindAoELoSTerrainBlockedRejected`；盤面與 #69 KindAttack 地形測對稱）。
 - **近戰 AoE 與 LOS**：與單體近戰相同，不跑 `AttackLineClear`；對照遠程阻擋盤面見 `TestSubmitKindAoEMeleeLoSNotCheckedUnitOnLineSubmitDamagesEnemy`、`TestSubmitKindAoEMeleeLoSNotCheckedTerrainOnLineSubmitDamagesEnemy`。
+
+## 技能／卡池 stub（Phase 2+）
+
+完整卡牌與兵種克制加深尚未入庫；目前提供**卡池 gate**與**技能目錄**，並以 `KindSkill` 進入與移動／攻擊相同的 `Match.Submit` → lockstep 路徑（不改克制矩陣本體）。
+
+- `combat.DefaultCardPool()`：預設 duel 卡池（`SkillStubStrike`、`SkillStubSplash`）。
+- `combat.LookupSkill`：stub 行為對應 `SkillBehaviorStrike`（單體，沿用 `validateAttack`／`applyStrike`）或 `SkillBehaviorSplash`（範圍，沿用 `validateAoE`／`ApplyAoEStrike`）。
+- 指令 `KindSkill`：`Command.SkillID` 為技能 id，`Command.To` 為目標格；replay payload v2 在 8-byte 座標後附加 `skill_id`（舊 8-byte 回放仍可 `Decode`）。
+- 整合測：`pkg/tactical/skill_test.go`（`TestSubmitKindSkillStrikeLockstepIntegration`、`TestSubmitKindSkillSplashLockstepIntegration`）、`pkg/integration/skill_stub_test.go`（`TestPhase2SkillStubIntegration`）。
