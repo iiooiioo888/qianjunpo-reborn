@@ -87,6 +87,31 @@ func TestInferBackendErrorJSON(t *testing.T) {
 	if errResp.Code != "backend_infer_failed" || errResp.Error == "" {
 		t.Fatalf("%+v", errResp)
 	}
+	if errResp.FallbackReason != string(ai.FallbackReasonHTTPStatus) {
+		t.Fatalf("fallback_reason=%q", errResp.FallbackReason)
+	}
+	if errResp.FallbackDetail != "502:backend_infer_failed" {
+		t.Fatalf("fallback_detail=%q", errResp.FallbackDetail)
+	}
+}
+
+func TestInferNPCFallbackOnWireJSON(t *testing.T) {
+	raw, err := json.Marshal(ai.InferHTTPResponse{
+		Text:           "Hold the line!",
+		Source:         ai.SourceNPC,
+		FallbackReason: string(ai.FallbackReasonTimeout),
+		FallbackDetail: "edge proxy timeout",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatal(err)
+	}
+	if m["source"] != ai.SourceNPC || m["fallback_reason"] != string(ai.FallbackReasonTimeout) {
+		t.Fatalf("%v", m)
+	}
 }
 
 func TestHealthOllamaDegradedViaHTTP(t *testing.T) {

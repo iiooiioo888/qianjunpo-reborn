@@ -139,7 +139,38 @@ Counters reflect fallbacks in **this OS process** (game gateway, tests, or a co-
 
 `make test-ai-rag` includes `pkg/ai/rag_infer_test.go` (`TestRAGInferTopKEntersPromptAndResult`, `TestRAGInferLogsAugmentation`), which assert Top-K chunk text is in the POST prompt, `rag_hit_ids`/`rag_k` on `InferResult` and edge JSON, and structured RAG slog—not only NPC fallback counters (`npc_fallback_metrics_test.go`).
 
-When edge `/v1/infer` fails, the service returns JSON `{"error","code":"backend_infer_failed"}` with HTTP 502; the client maps status + code into `FallbackDetail`.
+When edge `/v1/infer` fails, the service returns JSON with HTTP 502. Keys align with in-process NPC fallback (`fallback_reason` / `fallback_detail` use the same strings as `npc_fallback_by_reason`):
+
+```json
+{
+  "error": "backend unavailable",
+  "code": "backend_infer_failed",
+  "fallback_reason": "http_non_ok_status",
+  "fallback_detail": "502:backend_infer_failed"
+}
+```
+
+`pkg/ai.InferClient` still maps this into `InferResult` with `source=npc` and the same reason/detail (HTTP status path).
+
+### Live HUD consumers
+
+- **Per-infer line**: read `source`, `fallback_reason`, and `fallback_detail` from successful infer JSON (`POST /v1/infer` HTTP 200) or from `InferResultToHTTP` when a gateway wraps `InferClient` / `RAGInferClient` in-process. On edge model success, `source=edge` and fallback keys are omitted. On NPC template text, `source=npc` with a non-empty `fallback_reason` (`timeout`, `http_non_ok_status`, `no_infer_client`, …).
+- **RAG on fallback**: when Top-K ran before edge failed, `rag_k` / `rag_hit_ids` may still be present on the same JSON object (see `TestRAGInferSlowEdgeFallsBackWithinDeadline`).
+- **Aggregate counters**: `GET /health` → `npc_fallback_by_reason` (same reason strings as `fallback_reason`).
+- **Direct edge failure**: HTTP 502 body includes `fallback_reason` / `fallback_detail` as above; HUD can surface them without guessing from status code alone.
+
+Example HUD-facing JSON after RAG + edge timeout (gateway or in-process serialization):
+
+```json
+{
+  "text": "Hold the line!",
+  "source": "npc",
+  "fallback_reason": "timeout",
+  "fallback_detail": "context deadline exceeded",
+  "rag_k": 5,
+  "rag_hit_ids": ["tactic-flank", "wei-cao", "shu-zhang", "tactic-spear", "wu-zhou"]
+}
+```
 
 ```bash
 make test-edge-infer   # mock HTTP handlers

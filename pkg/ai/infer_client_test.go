@@ -84,6 +84,17 @@ func TestInferClientFallbackReasonHTTPStatus(t *testing.T) {
 	if !strings.Contains(out.FallbackDetail, "502") || !strings.Contains(out.FallbackDetail, "backend_infer_failed") {
 		t.Fatalf("detail %q", out.FallbackDetail)
 	}
+	raw, err := json.Marshal(InferResultToHTTP(out, "", 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wire map[string]interface{}
+	if err := json.Unmarshal(raw, &wire); err != nil {
+		t.Fatal(err)
+	}
+	if wire["source"] != SourceNPC || wire["fallback_reason"] != string(FallbackReasonHTTPStatus) {
+		t.Fatalf("HUD wire JSON: %v", wire)
+	}
 }
 
 func TestInferClientFallbackReasonBadResponse(t *testing.T) {

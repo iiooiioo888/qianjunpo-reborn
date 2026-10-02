@@ -4,6 +4,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -19,8 +20,10 @@ type inferRequest struct {
 }
 
 type inferErrorResponse struct {
-	Error string `json:"error"`
-	Code  string `json:"code"`
+	Error          string `json:"error"`
+	Code           string `json:"code"`
+	FallbackReason string `json:"fallback_reason,omitempty"`
+	FallbackDetail string `json:"fallback_detail,omitempty"`
 }
 
 type server struct {
@@ -91,9 +94,12 @@ func (s *server) handleInfer(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadGateway)
+		code := "backend_infer_failed"
 		_ = json.NewEncoder(w).Encode(inferErrorResponse{
-			Error: err.Error(),
-			Code:  "backend_infer_failed",
+			Error:          err.Error(),
+			Code:           code,
+			FallbackReason: string(ai.FallbackReasonHTTPStatus),
+			FallbackDetail: fmt.Sprintf("%d:%s", http.StatusBadGateway, code),
 		})
 		return
 	}
