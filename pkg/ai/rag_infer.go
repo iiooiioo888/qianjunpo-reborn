@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/rag"
@@ -14,6 +15,8 @@ type RAGInferClient struct {
 	Infer   *InferClient
 	Store   rag.Store
 	TopK    int
+	// LogRAG emits structured slog when Top-K hits augment the infer prompt; default true.
+	LogRAG *bool
 }
 
 // InferWithContext runs RAG retrieve → augmented prompt → InferClient (NPC fallback <1s on failure).
@@ -23,16 +26,22 @@ func (c *RAGInferClient) InferWithContext(ctx context.Context, persona, userProm
 		k = rag.DefaultTopK
 	}
 	augmented := userPrompt
+	var hitIDs []string
 	if c.Store != nil {
 		hits, err := c.Store.TopKText(ctx, userPrompt, k)
 		if err == nil && len(hits) > 0 {
+			hitIDs = rag.DocumentIDs(hits)
 			augmented = buildRAGPrompt(rag.FormatContext(hits), persona, userPrompt)
+			if c.shouldLogRAG() {
+				logRAGAugmented(persona, k, hitIDs)
+			}
 		}
 	}
 	if c.Infer == nil {
-		return npcFallbackResult(persona, FallbackReasonNoInferClient, "", c.shouldLogFallback())
+		out := npcFallbackResult(persona, FallbackReasonNoInferClient, "", c.shouldLogFallback())
+		return withRAGMeta(out, k, hitIDs)
 	}
-	return c.Infer.Infer(ctx, persona, augmented)
+	return c.Infer.InferWithRAGMeta(ctx, persona, augmented, k, hitIDs)
 }
 
 func (c *RAGInferClient) shouldLogFallback() bool {
@@ -40,6 +49,24 @@ func (c *RAGInferClient) shouldLogFallback() bool {
 		return c.Infer.shouldLogFallback()
 	}
 	return true
+}
+
+func (c *RAGInferClient) shouldLogRAG() bool {
+	if c.LogRAG != nil {
+		return *c.LogRAG
+	}
+	return true
+}
+
+func logRAGAugmented(persona string, ragK int, hitIDs []string) {
+	attrs := []any{
+		slog.Int("rag_k", ragK),
+		slog.Any("rag_hit_ids", hitIDs),
+	}
+	if persona != "" {
+		attrs = append(attrs, slog.String("persona", persona))
+	}
+	slog.Default().Info("ai infer rag augmented", attrs...)
 }
 
 func buildRAGPrompt(contextBlock, persona, userPrompt string) string {

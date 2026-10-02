@@ -30,6 +30,23 @@ func TestInferResultFromHTTPBackwardCompat(t *testing.T) {
 	if out.Source != SourceEdge || out.FallbackReason != FallbackReasonNone || out.Text != "ok" {
 		t.Fatalf("%+v", out)
 	}
+	if out.RAGK != 0 || len(out.RAGHitIDs) != 0 {
+		t.Fatalf("rag fields should be empty: %+v", out)
+	}
+}
+
+func TestInferResultFromHTTPRAGFields(t *testing.T) {
+	out := InferResultFromHTTP(InferHTTPResponse{
+		Text:      "line",
+		Model:     "m",
+		LatencyMs: 2,
+		Source:    SourceEdge,
+		RAGK:      5,
+		RAGHitIDs: []string{"tactic-flank", "wei-cao"},
+	})
+	if out.RAGK != 5 || len(out.RAGHitIDs) != 2 || out.RAGHitIDs[0] != "tactic-flank" {
+		t.Fatalf("%+v", out)
+	}
 }
 
 func TestInferResultFromHTTPNPCOnWire(t *testing.T) {

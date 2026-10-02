@@ -35,13 +35,17 @@ Snake_case fields mirror `pkg/ai.InferResult` for observability:
   "text": "advance: defend the gate",
   "model": "qwen2.5-3b-mock",
   "latency_ms": 1,
-  "source": "edge"
+  "source": "edge",
+  "rag_k": 5,
+  "rag_hit_ids": ["tactic-flank", "wei-cao", "shu-zhang", "tactic-spear", "wu-zhou"]
 }
 ```
 
 | Field | Meaning |
 |-------|---------|
 | `source` | `edge` on successful model output from this service |
+| `rag_k` | Top-K depth the client used when retrieving lore (omitted when plain `InferClient.Infer` with no RAG) |
+| `rag_hit_ids` | Retrieved chunk ids in rank order; echoed from the POST body when `RAGInferClient` augmented the prompt |
 | `fallback_reason` | Omitted on edge success; NPC reasons appear when a proxy returns `source=npc` (client-side fallback does not use this HTTP shape) |
 | `fallback_detail` | Omitted unless `fallback_reason` is set |
 
@@ -75,13 +79,22 @@ When `backend=ollama` and Ollama is down, `/health` returns HTTP 200 with `statu
 
 ## Game client wiring (`pkg/ai`)
 
-`RAGInferClient` retrieves Top-5, builds a prompt prefix, then calls edge HTTP. No RAG or LLM output enters `pkg/fixed` / combat FP64 math.
+`RAGInferClient` retrieves Top-5, builds a prompt prefix (`Knowledge:` block from `rag.FormatContext`), then calls edge HTTP with the augmented prompt plus `rag_k` / `rag_hit_ids` on the POST body. Edge-infer echoes those fields on success JSON so operators can prove Top-K entered the real infer path. No RAG or LLM output enters `pkg/fixed` / combat FP64 math.
+
+On successful retrieval, `RAGInferClient` emits structured `slog` at info level (`msg=ai infer rag augmented`) with `rag_k` and `rag_hit_ids` (optional `persona`). Set `RAGInferClient.LogRAG=false` to silence in tests. Example:
+
+```text
+{"time":"…","level":"INFO","msg":"ai infer rag augmented","rag_k":5,"rag_hit_ids":["tactic-flank","wei-cao","shu-zhang","tactic-spear","wu-zhou"],"persona":"cavalry"}
+```
+
+`InferResult` also carries `RAGK` and `RAGHitIDs` after `InferWithContext`, including NPC fallback when retrieval succeeded but edge HTTP failed.
 
 `InferResult` fields:
 
 | Field | When set |
 |-------|----------|
 | `Source` | `edge` (model) or `npc` (template) |
+| `RAGK` / `RAGHitIDs` | When RAG Top-K augmented the prompt (even if edge later fell back to NPC) |
 | `FallbackReason` | Non-empty when `Source=npc` (`timeout`, `http_non_ok_status`, `no_infer_client`, …) |
 | `FallbackDetail` | Optional (`502:backend_infer_failed`, transport error text) |
 
@@ -124,7 +137,7 @@ Each in-process NPC fallback (`source=npc`) increments an atomic counter keyed b
 
 Counters reflect fallbacks in **this OS process** (game gateway, tests, or a co-located edge-infer binary that links `pkg/ai`). A standalone edge-infer with no `InferClient` calls usually shows an empty map. After NPC fallbacks in that process, verify with `curl -s localhost:8088/health | jq '.npc_fallback_by_reason'` (e.g. `"no_infer_client": 1` when `RAGInferClient.Infer` is nil).
 
-`make test-ai-rag` includes `pkg/ai/npc_fallback_metrics_test.go`, which asserts `NPCFallbackCounts()` increments for every in-process `fallback_reason`: `request_build_failed`, `http_transport_error`, `timeout`, `http_non_ok_status`, `bad_or_empty_response`, and `no_infer_client` (`rag_infer_test.go`).
+`make test-ai-rag` includes `pkg/ai/rag_infer_test.go` (`TestRAGInferTopKEntersPromptAndResult`, `TestRAGInferLogsAugmentation`), which assert Top-K chunk text is in the POST prompt, `rag_hit_ids`/`rag_k` on `InferResult` and edge JSON, and structured RAG slog—not only NPC fallback counters (`npc_fallback_metrics_test.go`).
 
 When edge `/v1/infer` fails, the service returns JSON `{"error","code":"backend_infer_failed"}` with HTTP 502; the client maps status + code into `FallbackDetail`.
 
