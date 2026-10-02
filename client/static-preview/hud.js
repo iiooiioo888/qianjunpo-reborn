@@ -54,3 +54,17 @@ export function formatSelectionLine(snap, selectedUnitId) {
   }
   return `selected unit: id=${unit.id}  ·  grid (${unit.x}, ${unit.y})`;
 }
+
+/** Latest KindSkill resolution from authoritative snapshot (display-only). */
+export function formatLastSkillCastLine(snap) {
+  const cast = snap?.lastSkillCast;
+  if (!cast) {
+    return 'lastSkillCast: —';
+  }
+  const skillId = cast.skillId ?? cast.skill_id;
+  const caster = cast.casterUnitId ?? cast.caster_unit_id;
+  const tx = cast.targetX ?? cast.target_x;
+  const ty = cast.targetY ?? cast.target_y;
+  const frame = cast.lockstepFrame ?? cast.lockstep_frame ?? '?';
+  return `lastSkillCast: skill=${skillId}  caster=${caster}  → (${tx},${ty})  @ frame ${frame}`;
+}

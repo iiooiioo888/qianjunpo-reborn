@@ -1,5 +1,6 @@
 import { resolveAppUrl } from './paths.js';
 import { parseLiveGatewayConfig } from './live-gateway.js';
+import { STUB_SKILL_STRIKE_ID } from './stub-skill.js';
 
 /** Bundled mock for offline / deploy-web-preview (static-preview only). */
 export const MOCK_SNAPSHOT_URL = 'mock/demo_initial.json';
@@ -51,6 +52,8 @@ export function parseBootConfig() {
   const stepLockstepUrl = resolveAppUrl(stepLockstepUrlRaw);
   const showCards = params.get('cards') !== '0';
   const liveGateway = parseLiveGatewayConfig(params);
+  const stubSkillIdRaw = params.get('skillId') ?? params.get('skill_id');
+  const stubSkillId = stubSkillIdRaw != null ? Number(stubSkillIdRaw) : STUB_SKILL_STRIKE_ID;
   return {
     live,
     liveUrl,
@@ -61,6 +64,7 @@ export function parseBootConfig() {
     stepLockstepUrlRaw,
     showCards,
     liveGateway,
+    stubSkillId: Number.isFinite(stubSkillId) && stubSkillId > 0 ? stubSkillId : STUB_SKILL_STRIKE_ID,
   };
 }
 
