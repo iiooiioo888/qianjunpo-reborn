@@ -36,6 +36,8 @@ type InferClient struct {
 type InferResult struct {
 	Text           string
 	Source         string         // SourceEdge or SourceNPC
+	RAGK           int            // Top-K depth used when RAG augmented the prompt (0 when none)
+	RAGHitIDs      []string       // retrieved chunk ids in rank order when RAG ran
 	FallbackReason FallbackReason // set when Source == SourceNPC
 	FallbackDetail string         // e.g. HTTP status or backend error code
 }
@@ -84,13 +86,18 @@ func (c *InferClient) fallback(persona string, reason FallbackReason, detail str
 
 // Infer posts a prompt; on error or timeout returns NPC template within RequestTimeout.
 func (c *InferClient) Infer(ctx context.Context, persona, prompt string) InferResult {
+	return c.InferWithRAGMeta(ctx, persona, prompt, 0, nil)
+}
+
+// InferWithRAGMeta posts prompt plus optional RAG Top-K metadata for edge observability.
+func (c *InferClient) InferWithRAGMeta(ctx context.Context, persona, prompt string, ragK int, ragHitIDs []string) InferResult {
 	reqTimeout := c.requestTimeout()
 	ctx, cancel := context.WithTimeout(ctx, reqTimeout)
 	defer cancel()
-	body, _ := json.Marshal(map[string]string{"prompt": prompt})
+	body, _ := json.Marshal(InferPostBody{Prompt: prompt, RAGK: ragK, RAGHitIDs: ragHitIDs})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/v1/infer", bytes.NewReader(body))
 	if err != nil {
-		return c.fallback(persona, FallbackReasonRequestBuild, err.Error())
+		return withRAGMeta(c.fallback(persona, FallbackReasonRequestBuild, err.Error()), ragK, ragHitIDs)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := c.httpClient().Do(req)
@@ -104,7 +111,7 @@ func (c *InferClient) Infer(ctx context.Context, persona, prompt string) InferRe
 				reason = FallbackReasonTimeout
 			}
 		}
-		return c.fallback(persona, reason, err.Error())
+		return withRAGMeta(c.fallback(persona, reason, err.Error()), ragK, ragHitIDs)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -112,24 +119,37 @@ func (c *InferClient) Infer(ctx context.Context, persona, prompt string) InferRe
 		if code := readInferErrorCode(resp.Body); code != "" {
 			detail = detail + ":" + code
 		}
-		return c.fallback(persona, FallbackReasonHTTPStatus, detail)
+		return withRAGMeta(c.fallback(persona, FallbackReasonHTTPStatus, detail), ragK, ragHitIDs)
 	}
 	var decoded InferHTTPResponse
 	if err := json.NewDecoder(resp.Body).Decode(&decoded); err != nil {
-		return c.fallback(persona, FallbackReasonBadResponse, err.Error())
+		return withRAGMeta(c.fallback(persona, FallbackReasonBadResponse, err.Error()), ragK, ragHitIDs)
 	}
 	out := InferResultFromHTTP(decoded)
 	if out.Text == "" {
-		return c.fallback(persona, FallbackReasonBadResponse, "")
+		return withRAGMeta(c.fallback(persona, FallbackReasonBadResponse, ""), ragK, ragHitIDs)
 	}
 	if out.Source == SourceNPC {
 		reason := out.FallbackReason
 		if reason == FallbackReasonNone {
 			reason = FallbackReasonBadResponse
 		}
-		return c.fallback(persona, reason, out.FallbackDetail)
+		return withRAGMeta(c.fallback(persona, reason, out.FallbackDetail), ragK, ragHitIDs)
 	}
-	return out
+	return withRAGMeta(out, ragK, ragHitIDs)
+}
+
+func withRAGMeta(r InferResult, ragK int, ragHitIDs []string) InferResult {
+	if ragK <= 0 && len(ragHitIDs) == 0 {
+		return r
+	}
+	if r.RAGK == 0 {
+		r.RAGK = ragK
+	}
+	if len(r.RAGHitIDs) == 0 && len(ragHitIDs) > 0 {
+		r.RAGHitIDs = append([]string(nil), ragHitIDs...)
+	}
+	return r
 }
 
 type inferErrorBody struct {

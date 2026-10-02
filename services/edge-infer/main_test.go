@@ -38,7 +38,7 @@ func TestHealthMock(t *testing.T) {
 func TestInferMock(t *testing.T) {
 	m := &backend.MockBackend{}
 	srv := &server{backend: m, mock: m}
-	body := bytes.NewBufferString(`{"prompt":"defend gate"}`)
+	body := bytes.NewBufferString(`{"prompt":"defend gate","rag_k":5,"rag_hit_ids":["tactic-flank","wei-cao"]}`)
 	req := httptest.NewRequest(http.MethodPost, "/v1/infer", body)
 	rr := httptest.NewRecorder()
 	srv.handleInfer(rr, req)
@@ -54,6 +54,9 @@ func TestInferMock(t *testing.T) {
 	}
 	if resp.Source != ai.SourceEdge || resp.FallbackReason != "" || resp.FallbackDetail != "" {
 		t.Fatalf("observability fields: %+v", resp)
+	}
+	if resp.RAGK != 5 || len(resp.RAGHitIDs) != 2 || resp.RAGHitIDs[0] != "tactic-flank" {
+		t.Fatalf("rag echo: %+v", resp)
 	}
 }
 

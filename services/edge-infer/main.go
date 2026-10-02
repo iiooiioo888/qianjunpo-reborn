@@ -13,7 +13,9 @@ import (
 )
 
 type inferRequest struct {
-	Prompt string `json:"prompt"`
+	Prompt    string   `json:"prompt"`
+	RAGK      int      `json:"rag_k,omitempty"`
+	RAGHitIDs []string `json:"rag_hit_ids,omitempty"`
 }
 
 type inferErrorResponse struct {
@@ -95,7 +97,7 @@ func (s *server) handleInfer(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	resp := ai.EdgeInferHTTPResponse(out.Text, out.Model, out.LatencyMs)
+	resp := ai.EdgeInferHTTPResponseWithRAG(out.Text, out.Model, out.LatencyMs, req.RAGK, req.RAGHitIDs)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)
 }
