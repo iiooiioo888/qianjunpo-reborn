@@ -1,0 +1,5 @@
+A. HARD OUTPUT: exact 64x32 pixel isometric terrain tile, single subject only, 2:1 isometric diamond footprint filling canvas, outside diamond transparent alpha zero, no sprite sheet no collage no gold frame no text,
+B. STYLE LOCK: cartoon pixel art, 1px hard black outline, no anti-aliasing, top-left light, palette terrain cool lake blues teal shallow cyan muted slate shore accents #8B4513 #CD5C5C #DAA520 tiny flecks only,
+C. POSE LOCK: sand-table flat isometric water tile centered diamond, low flat water surface height nearly flush with diamond plane with subtle ripple pixels,
+D. IDENTITY water MUST SHOW FIRST: (1) silhouette open water diamond with soft shore rim, (2) main color blocks cool blue teal water with darker depth patches, (3) edge readability clean diamond rim hard pixel edge, (4) passability cue impassable or hard-to-cross water surface no ford bridge no path,
+E. FORBIDDEN: opaque square corners wrong size not 64x32 photoreal gradient sprite sheet collage text gold frame buildings units flat grass meadow mountain cliffs forest canopy trees roads boats

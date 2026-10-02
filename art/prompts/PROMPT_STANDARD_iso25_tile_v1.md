@@ -7,7 +7,7 @@
 
 ## 1. Purpose · 目的
 
-wan2.7-image 生成 **ISO25** 卡通像素地格（如 grass／mountain），與 2D track **同一 STYLE LOCK 調色語言**（`#8B4513` / `#CD5C5C` / `#DAA520` + terrain greens／greys），經 post-process 裁成精確 **64×32** 並套鑽石 alpha mask，供 art-manager 樣張過審。
+wan2.7-image 生成 **ISO25** 卡通像素地格（如 grass／mountain／water／forest），與 2D track **同一 STYLE LOCK 調色語言**（`#8B4513` / `#CD5C5C` / `#DAA520` + terrain greens／greys），經 post-process 裁成精確 **64×32** 並套鑽石 alpha mask，供 art-manager 樣張過審。
 
 ---
 
@@ -23,7 +23,7 @@ wan2.7-image 生成 **ISO25** 卡通像素地格（如 grass／mountain），與
 |----|-----------|
 | **A. HARD OUTPUT** | Exact **64×32**（API 可先大圖再 post），**one subject**，**2:1 isometric diamond** footprint；**outside diamond MUST alpha=0**（四角透明）；no sheet/collage/gold frame/text；solid dark or transparent-ready backdrop outside diamond |
 | **B. STYLE LOCK** | Cartoon pixel, **1px hard edge**, no AA, top-left light；palette **`#8B4513` / `#CD5C5C` / `#DAA520`** 小面積點綴 + **terrain greens／greys** 為主 |
-| **C. POSE LOCK** | **Flat sand-table tile**（非單位全身）；鑽石佔滿畫幅；草地＝平鋪可走；山地＝rocky／highland **impassable readable** 立體可讀 |
+| **C. POSE LOCK** | **Flat sand-table tile**（非單位全身）；鑽石佔滿畫幅；草地＝平鋪可走；山地＝rocky／highland **impassable readable**；水域＝水面不可／難通；樹林＝可走覆蓋感（勿做成石山） |
 | **D. IDENTITY SLOT** | MUST SHOW FIRST：地類輪廓（grass tufts／rock peak）→ 主色塊 → 邊緣可讀 → 通行語意（passable vs impassable） |
 | **E. FORBIDDEN** | opaque square corners + wrong size not 64x32 + multi-tile sheet + collage + text + gold frame + photoreal + buildings／units on tile（除非 Example 明確） |
 
@@ -47,6 +47,8 @@ E. FORBIDDEN: opaque square corners wrong size not 64x32 photoreal gradient spri
 
 - `ISO25_tile_grass_v02.txt`
 - `ISO25_tile_mountain_v01.txt`
+- `ISO25_tile_water_v01.txt`
+- `ISO25_tile_forest_v01.txt`
 
 ---
 
