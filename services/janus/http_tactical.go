@@ -23,6 +23,7 @@ type tacticalCommandBody struct {
 	UnitID    uint32 `json:"unit_id"`
 	ToX       int32  `json:"to_x"`
 	ToY       int32  `json:"to_y"`
+	SkillID   uint32 `json:"skill_id"`
 }
 
 type tacticalCommandJSON struct {
@@ -282,6 +283,7 @@ func handleTacticalCommand(w http.ResponseWriter, r *http.Request, gw *janusGate
 		UnitId:    body.UnitID,
 		ToX:       body.ToX,
 		ToY:       body.ToY,
+		SkillId:   body.SkillID,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)

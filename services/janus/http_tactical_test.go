@@ -17,6 +17,9 @@ import (
 	romav1 "github.com/iiooiioo888/qianjunpo-reborn/gen/go/roma/v1"
 	"github.com/iiooiioo888/qianjunpo-reborn/internal/janus"
 	"github.com/iiooiioo888/qianjunpo-reborn/internal/roma"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/combat"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/lockstep"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/tactical"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/timesync"
 	"google.golang.org/grpc"
@@ -27,6 +30,7 @@ import (
 // janusRomaHTTPFixture wires in-process Janus gRPC + mock Roma for HTTP mirror tests.
 type janusRomaHTTPFixture struct {
 	GW               *janusGateway
+	Store            *roma.Store
 	BattleID         string
 	SessionID        string
 	InitialStateHash uint64
@@ -349,6 +353,130 @@ func TestHTTPTacticalCommandMirrorDisabled(t *testing.T) {
 	}
 }
 
+func TestHTTPTacticalCommandKindSkillRequiresSkillID(t *testing.T) {
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	raw, _ := json.Marshal(map[string]interface{}{
+		"session_id": fix.SessionID,
+		"battle_id":  fix.BattleID,
+		"player_id":  0,
+		"kind":       uint32(tactical.KindSkill),
+		"unit_id":    tactical.UnitIDPlayer0,
+		"to_x":       9,
+		"to_y":       9,
+	})
+	res, err := http.Post(srv.URL+"/v1/tactical/command", "application/json", bytes.NewReader(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	var out tacticalCommandJSON
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Accepted || !strings.Contains(out.RejectReason, "skill_id") {
+		t.Fatalf("expected skill_id required, got %+v", out)
+	}
+}
+
+func TestHTTPTacticalSnapshotPreservesLastSkillCastAndHP(t *testing.T) {
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	b, err := fix.Store.Get(roma.BattleID(fix.BattleID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	attacker := b.Match.Units[tactical.UnitIDPlayer0]
+	neighbor := board.Coord{X: attacker.Pos.X + 1, Y: attacker.Pos.Y}
+	b.Match.Board.ClearUnit(b.Match.Units[tactical.UnitIDPlayer1].Pos)
+	defender := b.Match.Units[tactical.UnitIDPlayer1]
+	defender.Pos = neighbor
+	b.Match.Units[tactical.UnitIDPlayer1] = defender
+	if !b.Match.Board.SetUnit(neighbor, tactical.UnitIDPlayer1) {
+		t.Fatal("place defender adjacent")
+	}
+	hpBefore := defender.Stats.HP.Raw()
+
+	skillBody, _ := json.Marshal(map[string]interface{}{
+		"session_id": fix.SessionID,
+		"battle_id":  fix.BattleID,
+		"player_id":  0,
+		"kind":       uint32(tactical.KindSkill),
+		"unit_id":    tactical.UnitIDPlayer0,
+		"to_x":       neighbor.X,
+		"to_y":       neighbor.Y,
+		"skill_id":   uint32(combat.SkillStubStrike),
+	})
+	cmdRes, err := http.Post(srv.URL+"/v1/tactical/command", "application/json", bytes.NewReader(skillBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cmdRes.Body.Close()
+	var cmdOut tacticalCommandJSON
+	if err := json.NewDecoder(cmdRes.Body).Decode(&cmdOut); err != nil {
+		t.Fatal(err)
+	}
+	if !cmdOut.Accepted {
+		t.Fatalf("skill command rejected: %s", cmdOut.RejectReason)
+	}
+
+	steps := int(lockstep.CommandDelayFrames) + 1
+	stepRaw, _ := json.Marshal(map[string]interface{}{
+		"session_id": fix.SessionID,
+		"battle_id":  fix.BattleID,
+		"steps":      steps,
+	})
+	stepRes, err := http.Post(srv.URL+"/v1/tactical/step-lockstep", "application/json", bytes.NewReader(stepRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stepRes.Body.Close()
+	var stepOut stepLockstepJSON
+	if err := json.NewDecoder(stepRes.Body).Decode(&stepOut); err != nil {
+		t.Fatal(err)
+	}
+	var stepSnap tactical.ViewSnapshot
+	if err := json.Unmarshal(stepOut.ViewSnapshotJSON, &stepSnap); err != nil {
+		t.Fatal(err)
+	}
+	if stepSnap.LastSkillCast == nil {
+		t.Fatal("step-lockstep view_snapshot_json missing lastSkillCast")
+	}
+	if stepSnap.LastSkillCast.SkillID != uint16(combat.SkillStubStrike) {
+		t.Fatalf("skillId=%d", stepSnap.LastSkillCast.SkillID)
+	}
+	var victimHP int64
+	for _, u := range stepSnap.Units {
+		if u.ID == tactical.UnitIDPlayer1 {
+			victimHP = u.HP
+			break
+		}
+	}
+	if victimHP >= hpBefore {
+		t.Fatalf("expected defender hp drop from %d, got %d", hpBefore, victimHP)
+	}
+
+	snapRes, err := http.Get(srv.URL + "/v1/tactical/snapshot?battle_id=" + fix.BattleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snapRes.Body.Close()
+	var snap tactical.ViewSnapshot
+	if err := json.NewDecoder(snapRes.Body).Decode(&snap); err != nil {
+		t.Fatal(err)
+	}
+	if snap.LastSkillCast == nil || snap.LastSkillCast.SkillID != uint16(combat.SkillStubStrike) {
+		t.Fatalf("GET snapshot lastSkillCast: %+v", snap.LastSkillCast)
+	}
+	for _, u := range snap.Units {
+		if u.ID == tactical.UnitIDPlayer1 && u.HP >= hpBefore {
+			t.Fatalf("GET snapshot hp not updated: %d", u.HP)
+		}
+	}
+}
+
 func TestHTTPTacticalCommandMethodNotAllowed(t *testing.T) {
 	fix := startJanusGatewayWithEnterBattle(t)
 	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
@@ -373,13 +501,13 @@ func newTacticalHTTPServer(t *testing.T, gw *janusGateway, opts tacticalHTTPOpti
 
 // startJanusGatewayRomaOnly stands up Janus + mock Roma without EnterBattle (no live battle).
 func startJanusGatewayRomaOnly(t *testing.T) janusRomaHTTPFixture {
-	gw, _ := startJanusGRPCWithRoma(t)
-	return janusRomaHTTPFixture{GW: gw, BattleID: "default/0"}
+	gw, store, _ := startJanusGRPCWithRoma(t)
+	return janusRomaHTTPFixture{GW: gw, Store: store, BattleID: "default/0"}
 }
 
 // startJanusGatewayWithEnterBattle runs Connect → EnterBattle so Roma holds an in-memory battle.
 func startJanusGatewayWithEnterBattle(t *testing.T) janusRomaHTTPFixture {
-	gw, jc := startJanusGRPCWithRoma(t)
+	gw, store, jc := startJanusGRPCWithRoma(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -404,13 +532,14 @@ func startJanusGatewayWithEnterBattle(t *testing.T) janusRomaHTTPFixture {
 	}
 	return janusRomaHTTPFixture{
 		GW:               gw,
+		Store:            store,
 		BattleID:         battleID,
 		SessionID:        connect.GetSessionId(),
 		InitialStateHash: enter.GetInitialStateHash(),
 	}
 }
 
-func startJanusGRPCWithRoma(t *testing.T) (*janusGateway, gatewayv1.JanusGatewayClient) {
+func startJanusGRPCWithRoma(t *testing.T) (*janusGateway, *roma.Store, gatewayv1.JanusGatewayClient) {
 	romaLis := bufconn.Listen(bufSize)
 	romaSrv := grpc.NewServer()
 	romaStore := roma.NewStore(nil)
@@ -460,5 +589,5 @@ func startJanusGRPCWithRoma(t *testing.T) (*janusGateway, gatewayv1.JanusGateway
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = janusConn.Close() })
-	return gw, gatewayv1.NewJanusGatewayClient(janusConn)
+	return gw, romaStore, gatewayv1.NewJanusGatewayClient(janusConn)
 }

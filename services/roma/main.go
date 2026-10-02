@@ -69,6 +69,7 @@ func (s *romaServer) SubmitTacticalCommand(_ context.Context, req *romav1.Submit
 		cmd.GetUnitId(),
 		cmd.GetToX(),
 		cmd.GetToY(),
+		cmd.GetSkillId(),
 	)
 	if err != nil {
 		return &romav1.SubmitTacticalCommandResponse{

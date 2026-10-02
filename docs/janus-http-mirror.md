@@ -182,7 +182,7 @@ Response：
 }
 ```
 
-`view_snapshot_json` 為 Roma 戰術顯示層 JSON（與 `GET /v1/tactical/snapshot` body 同型）；`units[].id` 為下指令時應使用的 `unit_id`（預設對局常見 **101** / **201**）。
+`view_snapshot_json` 為 Roma 戰術顯示層 JSON（與 `GET /v1/tactical/snapshot` body 同型）；`units[].id` 為下指令時應使用的 `unit_id`（預設對局常見 **101** / **201**）。技能執行後 JSON 含 **`units[].hp`** 與可選 **`lastSkillCast`**（#89）；HTTP 直接透傳 Roma bytes，不剝欄位。
 
 ## POST `/v1/tactical/command`
 
@@ -199,6 +199,23 @@ Request body（snake_case，與 `TacticalCommandClient.ts` 對齊）：
   "to_y": 8
 }
 ```
+
+技能施放（`kind` = **5**，`KindSkill`）需附加 **`skill_id`**（例如 `1` = `SkillStubStrike`）：
+
+```json
+{
+  "session_id": "optional",
+  "battle_id": "default/0",
+  "player_id": 0,
+  "kind": 5,
+  "unit_id": 101,
+  "to_x": 3,
+  "to_y": 8,
+  "skill_id": 1
+}
+```
+
+`kind` 為 move/attack/pass 時可省略 `skill_id`。`kind=5` 且缺 `skill_id` 時 Roma 拒絕（`reject_reason` 含 `skill_id`）。
 
 Response：
 

@@ -100,6 +100,7 @@ func (c *RomaClient) SubmitTacticalCommand(ctx context.Context, target string, r
 			UnitId:   req.GetUnitId(),
 			ToX:      req.GetToX(),
 			ToY:      req.GetToY(),
+			SkillId:  req.GetSkillId(),
 		},
 	})
 	if err != nil {
