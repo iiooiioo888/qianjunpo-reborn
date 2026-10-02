@@ -4,7 +4,7 @@ Janus `:8090`（宿主機 `make compose-up` 時為 `:18090`) 提供與 gRPC 戰�
 
 | Method | Path | gRPC equivalent |
 |--------|------|-----------------|
-| `POST` | `/v1/auth/dev-mint` | （無；Lares `TokenIssuer` 本機簽發，供 Live 預覽） |
+| `POST` | `/v1/lares/login` | Lares gRPC `Login`（Janus HTTP 鏡像，供 Live 預覽） |
 | `POST` | `/v1/tactical/connect` | `Connect` |
 | `POST` | `/v1/tactical/enter-battle` | `EnterBattle` |
 | `GET` | `/v1/tactical/snapshot?battle_id=…` | `GetBattleSnapshot` |
@@ -22,45 +22,50 @@ Janus `:8090`（宿主機 `make compose-up` 時為 `:18090`) 提供與 gRPC 戰�
 
 Janus 會以相同 secret 做本機 HMAC 校驗，並可透過 Lares gRPC `Validate` 備援。**沒有**「任意字串 `dev` 即通過」的 StaticAuth 路徑；對 Compose 送 `"access_token":"dev"` 通常會在 Connect 階段失敗（例如 HTTP **502**，body 含 `janus: unauthorized`）。
 
-### Dev-stable mint（同域 Live 預覽，非字面 `dev`）
+### Lares Login HTTP 鏡像（同域 Live 預覽，非字面 `dev`）
 
-瀏覽器 **`/qjp/?live=1`** 可同域呼叫 **`POST /v1/auth/dev-mint`**（nginx 反代至 Janus HTTP），取得與 **LaresAuth** 相同 HMAC 格式的短期 **`access_token`**。預設帳號 **`qjp-live-preview`**（`player_id` 穩定）；**沒有**接受字面字串 `dev` 作為 token 的路徑。
+瀏覽器 **`/qjp/?live=1`** 可同域呼叫 **`POST /v1/lares/login`**（nginx 反代至 Janus HTTP base，例如 `http://127.0.0.1:18090/v1/lares/login`），取得與 **LaresAuth** 相同 HMAC 格式的短期 **`access_token`**。任意非空帳密即可（smoke 腳本與預覽預設 **`smoke` / `smoke`**）；**沒有**接受字面字串 `dev` 作為 token 的路徑。
 
 | 環境變數 | Compose 典型值 | 說明 |
 |----------|----------------|------|
-| `JANUS_HTTP_DEV_MINT` | `1`（可關 `0`） | 關閉時端點回 **404** |
+| `JANUS_HTTP_DEV_MINT` | `1`（可關 `0`） | 關閉時 **`POST /v1/lares/login`** 回 **404** |
 | `LARES_TOKEN_SECRET` | 與 Lares/Janus 共用 | 簽章密鑰（`internal/lares.TokenIssuer`） |
-| `JANUS_DEV_MINT_ACCOUNT` | （省略＝`qjp-live-preview`） | 覆寫預設 dev-stable 帳號 |
 
-Request（body 可省略或 `{}`）：
+Request：
 
 ```json
-{ "account": "optional-override" }
+{
+  "username": "smoke",
+  "password": "smoke"
+}
 ```
 
-Response：
+Response（UI 至少讀 **`access_token`**；其餘字段與 Lares `Login` 對齊，snake_case）：
 
 ```json
 {
   "access_token": "<Lares-signed access token>",
+  "refresh_token": "…",
   "access_expires_unix": 1700000900,
+  "refresh_expires_unix": 1700604800,
   "player_id": 123456789,
-  "account_id": "qjp-live-preview"
+  "account_id": "smoke"
 }
 ```
 
-TTL 與 Lares `Login` access 相同（目前 **15 分鐘**）。生產環境請保持 **`JANUS_HTTP_DEV_MINT=0`**。
+Access TTL 目前 **15 分鐘**。生產環境請保持 **`JANUS_HTTP_DEV_MINT=0`**。
 
 ```bash
-export ACCESS_TOKEN=$(curl -sS -X POST 'http://127.0.0.1:18090/v1/auth/dev-mint' \
-  -H 'Content-Type: application/json' -d '{}' \
+export ACCESS_TOKEN=$(curl -sS -X POST 'http://127.0.0.1:18090/v1/lares/login' \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"smoke","password":"smoke"}' \
   | jq -r '.access_token')
 ```
 
 ### 取得可用的 `ACCESS_TOKEN`（curl / smoke）
 
 1. **建議**：在本機 shell 匯出 **`ACCESS_TOKEN`**（或 `export ACCESS_TOKEN=…`），所有 curl 與腳本共用，**不要把真 token 寫進 repo**。
-2. **Compose / 同域預覽**：`POST /v1/auth/dev-mint`（見上一節；需 `JANUS_HTTP_DEV_MINT=1`）。
+2. **Compose / 同域預覽**：`POST /v1/lares/login`（見上一節；需 `JANUS_HTTP_DEV_MINT=1`）。
 3. **簽發 — Lares gRPC `Login`（任意非空帳密即可；player_id 由帳號衍生）：
 
    ```bash
@@ -71,7 +76,7 @@ export ACCESS_TOKEN=$(curl -sS -X POST 'http://127.0.0.1:18090/v1/auth/dev-mint'
 
    `LARES_TOKEN_SECRET` 須與 compose 內 Janus/Lares 一致（預設見上表；可自 `.env` 覆寫）。
 
-3. **簽章格式（除錯用）**：Lares 使用 **stub token**（非 production JWT），形狀為  
+4. **簽章格式（除錯用）**：Lares 使用 **stub token**（非 production JWT），形狀為  
    `base64url(payload).base64url(hmac-sha256(secret, payload))`，其中  
    `payload` 明文為 `access|<player_id>|<account>|<exp_unix>`（refresh 則為 `refresh|…`）。  
    實作見 `internal/lares/tokens.go`；手動拼 token 時 secret 必須與 **`LARES_TOKEN_SECRET`** 相同。
@@ -243,5 +248,4 @@ Response：
 | Variable | Default | Meaning |
 |----------|---------|---------|
 | `JANUS_HTTP_TACTICAL_COMMAND` | enabled (`1`) | Set to `0` / `false` / `disabled` to return HTTP 503 with `accepted: false` instead of forwarding to Roma. |
-| `JANUS_HTTP_DEV_MINT` | `0`（Compose 預設 `1`） | Enable `POST /v1/auth/dev-mint` for dev-stable Lares tokens. |
-| `JANUS_DEV_MINT_ACCOUNT` | `qjp-live-preview` | Default account for dev-mint when body omits `account`. |
+| `JANUS_HTTP_DEV_MINT` | `0`（Compose 預設 `1`） | Enable `POST /v1/lares/login` HTTP mirror on Janus. |

@@ -54,18 +54,19 @@ for u in data.get('units') or []:
 
 mint_access_token() {
   local mint_body
-  mint_body=$(curl -sS -X POST "${BASE}/v1/auth/dev-mint" \
-    -H 'Content-Type: application/json' -d '{}' || true)
+  mint_body=$(curl -sS -X POST "${BASE}/v1/lares/login" \
+    -H 'Content-Type: application/json' \
+    -d '{"username":"smoke","password":"smoke"}' || true)
   json_field "$mint_body" access_token
 }
 
 if [[ -z "${ACCESS_TOKEN:-}" ]]; then
   ACCESS_TOKEN=$(mint_access_token || true)
   if [[ -z "$ACCESS_TOKEN" ]]; then
-    echo "error: ACCESS_TOKEN is required (set ACCESS_TOKEN, enable JANUS_HTTP_DEV_MINT, or Lares Login; see docs/janus-http-mirror.md)" >&2
+    echo "error: ACCESS_TOKEN is required (set ACCESS_TOKEN, enable JANUS_HTTP_DEV_MINT + POST /v1/lares/login, or Lares gRPC Login; see docs/janus-http-mirror.md)" >&2
     exit 1
   fi
-  echo "==> minted ACCESS_TOKEN via POST ${BASE}/v1/auth/dev-mint"
+  echo "==> minted ACCESS_TOKEN via POST ${BASE}/v1/lares/login (smoke/smoke)"
 fi
 
 echo "==> POST ${BASE}/v1/tactical/connect"

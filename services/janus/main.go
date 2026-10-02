@@ -257,10 +257,9 @@ func serveHTTP(addr string, gw *janusGateway, devMintIssuer *lares.TokenIssuer) 
 		_, _ = w.Write([]byte(`{"status":"ok","service":"janus"}`))
 	})
 	registerTacticalHTTPRoutes(mux, gw, defaultTacticalHTTPOptions())
-	registerDevMintHTTPRoute(mux, devMintConfig{
-		Enabled: httpDevMintEnabled,
+	registerLaresLoginHTTPRoute(mux, laresLoginHTTPConfig{
+		Enabled: httpLaresLoginEnabled,
 		Issuer:  devMintIssuer,
-		Account: defaultDevMintAccount,
 	})
 	s := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
 	log.Fatal(s.ListenAndServe())
