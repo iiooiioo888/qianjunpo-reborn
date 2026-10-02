@@ -56,8 +56,10 @@ h1 {
   color: var(--error);
 }
 
-.hud .retry-live {
+.hud .retry-live,
+.hud .mint-token {
   margin-top: 0.35rem;
+  margin-right: 0.35rem;
   padding: 0.35rem 0.65rem;
   font-size: 0.85rem;
   font-family: inherit;
@@ -68,8 +70,14 @@ h1 {
   border-radius: 4px;
 }
 
-.hud .retry-live:hover {
+.hud .retry-live:hover,
+.hud .mint-token:hover {
   border-color: var(--accent);
+}
+
+.hud .mint-token {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .board-panel {
