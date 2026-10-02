@@ -37,6 +37,7 @@ npx --yes serve . -l 3456
 - Mock（預設）：<http://localhost:3456/> → `mock/demo_initial.json`（離線，僅本目錄即可）
 - Live：<http://localhost:3456/?live=1>（需同域反代 `v1/lares/login` + `v1/tactical/*`，或 `?accessToken=` / `?mintUrl=`）
 - 隱藏角色卡：`?cards=0`
+- Mock 終局 overlay：`?mockVictory=win|lose|draw`（僅 mock，直接寫入快照 `winner`／`endReason` 欄位預覽）
 
 僅部署本目錄（如 `deploy-web-preview.sh`）時不需 `client/assets`。
 
@@ -80,4 +81,4 @@ Compose 直打範例見 [`../README.md`](../README.md) 與 [`../../docs/janus-ht
 
 ## HUD
 
-`timeFlowRateParts`、`lockstepFrame`、`sync: mock` / `sync: live`、`lastSkillCast`（技能執行後）
+`timeFlowRateParts`、`lockstepFrame`、`sync: mock` / `sync: live`、`lastSkillCast`（技能執行後；缺欄位時保留上一筆 sticky）、終局 **棋盤 overlay**（`winner`／`endReason`，見 `docs/victory-live.md`）
