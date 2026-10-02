@@ -19,6 +19,7 @@ import {
   LIVE_ACCESS_TOKEN_MISSING_MESSAGE,
   mintLiveAccessToken,
   prepareLiveJanusSession,
+  stepTacticalLockstep,
 } from './live-gateway.js';
 
 const boot = parseBootConfig();
@@ -238,25 +239,73 @@ async function runFailedCommandRetry() {
   setStatus('Live：送出移動指令…');
   const result = await submitLiveCommand(unitId, to);
   if (result.accepted) {
-    clearCommandFailure();
-    const hashPart = result.stateHash != null ? ` hash=${result.stateHash}` : '';
-    renderer.clearSelection();
-    setStatus(`Live：指令已接受 frame=${result.lockstepFrame ?? '?'}${hashPart}（等待快照）`);
-    await pollLive();
+    await handleAcceptedLiveCommand(result);
     return;
   }
   showCommandFailure(unitId, to, formatLiveCommandError(result));
+}
+
+function formatLiveStepError(step) {
+  if (step.text) {
+    return `Live step-lockstep 失敗：HTTP ${step.status} ${step.text}`;
+  }
+  return `Live step-lockstep 失敗：HTTP ${step.status}`;
+}
+
+async function applyLiveLockstepAfterCommand() {
+  setStatus('Live：POST step-lockstep（步進權威帧）…');
+  const step = await stepTacticalLockstep(boot.stepLockstepUrl, {
+    sessionId: liveSessionId,
+    battleId: liveBattleId,
+  });
+  if (!step.ok) {
+    throw new Error(formatLiveStepError(step));
+  }
+  if (step.viewSnapshot) {
+    snapshot = validateSnapshot(step.viewSnapshot);
+    lastPollAt = Date.now();
+    syncCtx = {
+      source: 'live',
+      link: localDrift ? 'stale' : 'connected',
+      pollIntervalMs: LIVE_POLL_INTERVAL_MS,
+    };
+    renderer.clearSelection();
+    render();
+  }
+  const hashPart = step.stateHash != null ? ` hash=${step.stateHash}` : '';
+  setStatus(
+    `Live：lockstep 已步進 frame=${step.lockstepFrame ?? '?'}${hashPart}（恢復快照輪詢）`,
+  );
+  await pollLive();
+}
+
+async function handleAcceptedLiveCommand(result) {
+  clearCommandFailure();
+  const hashPart = result.stateHash != null ? ` hash=${result.stateHash}` : '';
+  renderer.clearSelection();
+  setStatus(`Live：指令已接受 frame=${result.lockstepFrame ?? '?'}${hashPart}（步進 lockstep）`);
+  try {
+    await applyLiveLockstepAfterCommand();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    syncCtx = {
+      source: 'live',
+      link: 'error',
+      pollIntervalMs: LIVE_POLL_INTERVAL_MS,
+    };
+    refreshHud();
+    setStatus(`${msg}。可點「重連 Live」或「重試戰術指令」。`, true);
+    showLiveRetry('poll', LIVE_LABEL_POLL_RECONNECT, () => {
+      void runLivePrepare();
+    });
+  }
 }
 
 async function runLiveMoveCommand(unitId, to) {
   setStatus('Live：送出移動指令…');
   const result = await submitLiveCommand(unitId, to);
   if (result.accepted) {
-    clearCommandFailure();
-    const hashPart = result.stateHash != null ? ` hash=${result.stateHash}` : '';
-    renderer.clearSelection();
-    setStatus(`Live：指令已接受 frame=${result.lockstepFrame ?? '?'}${hashPart}（等待快照）`);
-    await pollLive();
+    await handleAcceptedLiveCommand(result);
     return;
   }
   showCommandFailure(unitId, to, formatLiveCommandError(result));

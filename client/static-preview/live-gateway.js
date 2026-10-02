@@ -7,6 +7,10 @@ import { resolveAppUrl } from './paths.js';
 
 export const DEFAULT_CONNECT_PATH = 'v1/tactical/connect';
 export const DEFAULT_ENTER_BATTLE_PATH = 'v1/tactical/enter-battle';
+export const DEFAULT_STEP_LOCKSTEP_PATH = 'v1/tactical/step-lockstep';
+
+/** pkg/lockstep.CommandDelayFrames (3) + 1 frame until delayed commands execute. */
+export const TACTICAL_LOCKSTEP_STEPS_AFTER_COMMAND = 4;
 
 /**
  * 暫定契約（與核心 LaresAuth/Login HTTP 鏡像並行對齊；路徑／欄位以核心合入後為準）。
@@ -168,4 +172,46 @@ export async function prepareLiveJanusSession(gw, battleIdHint = 'default/0') {
   sessionId = readSessionId(enterRes.json) || sessionId;
   const initialSnapshot = extractInitialSnapshot(enterRes.json);
   return { sessionId, battleId, initialSnapshot };
+}
+
+function readLockstepFrame(json) {
+  if (!json || typeof json !== 'object') {
+    return undefined;
+  }
+  const frame = json.lockstep_frame ?? json.lockstepFrame;
+  return typeof frame === 'number' ? frame : undefined;
+}
+
+function readStateHash(json) {
+  if (!json || typeof json !== 'object') {
+    return undefined;
+  }
+  const hash = json.state_hash ?? json.stateHash;
+  return typeof hash === 'number' ? hash : undefined;
+}
+
+/**
+ * POST step-lockstep (`docs/janus-http-mirror.md`).
+ * @returns {Promise<{ ok: boolean, lockstepFrame?: number, stateHash?: number, finished?: boolean, winner?: number, viewSnapshot: object | null, status: number, text: string }>}
+ */
+export async function stepTacticalLockstep(
+  stepUrl,
+  { sessionId, battleId, steps = TACTICAL_LOCKSTEP_STEPS_AFTER_COMMAND },
+) {
+  const stepRes = await postJson(stepUrl, {
+    session_id: sessionId,
+    battle_id: battleId,
+    steps,
+  });
+  const json = stepRes.json;
+  return {
+    ok: stepRes.res.ok && json != null,
+    lockstepFrame: readLockstepFrame(json),
+    stateHash: readStateHash(json),
+    finished: Boolean(json?.finished),
+    winner: typeof json?.winner === 'number' ? json.winner : undefined,
+    viewSnapshot: extractInitialSnapshot(json),
+    status: stepRes.res.status,
+    text: stepRes.text,
+  };
 }
