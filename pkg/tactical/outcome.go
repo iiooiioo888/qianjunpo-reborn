@@ -11,4 +11,5 @@ const (
 	EndAnnihilation EndReason = 1
 	EndTimeout      EndReason = 2
 	EndMutualWipe   EndReason = 3
+	EndCapture      EndReason = 4
 )

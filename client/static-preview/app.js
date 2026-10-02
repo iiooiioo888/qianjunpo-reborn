@@ -14,7 +14,12 @@ import {
 } from './hud.js';
 import { applyMockMove } from './mock-move.js';
 import { computeLegalMoveDestinations } from './reachability.js';
-import { prepareLiveJanusSession } from './live-gateway.js';
+import {
+  hasLiveAccessToken,
+  LIVE_ACCESS_TOKEN_MISSING_MESSAGE,
+  mintLiveAccessToken,
+  prepareLiveJanusSession,
+} from './live-gateway.js';
 
 const boot = parseBootConfig();
 
@@ -23,6 +28,7 @@ const els = {
   frame: document.getElementById('hud-frame'),
   status: document.getElementById('hud-status'),
   retryLive: document.getElementById('hud-retry-live'),
+  mintToken: document.getElementById('hud-mint-token'),
   mode: document.getElementById('hud-mode'),
   cards: document.getElementById('char-cards'),
   canvas: document.getElementById('board'),
@@ -47,6 +53,15 @@ let liveBattleId = battleIdFromLiveUrl(boot.liveUrlRaw);
 function setStatus(text, isError = false) {
   els.status.textContent = text;
   els.status.classList.toggle('error', isError);
+}
+
+function hideMintTokenButton() {
+  els.mintToken.hidden = true;
+}
+
+function showMintTokenButton() {
+  els.mintToken.hidden = false;
+  els.mintToken.textContent = LIVE_LABEL_MINT_TOKEN;
 }
 
 function hideLiveRetry() {
@@ -85,6 +100,7 @@ function restoreCommandFailureHud() {
   });
 }
 
+const LIVE_LABEL_MINT_TOKEN = '一鍵取 token';
 const LIVE_LABEL_PREPARE_RETRY = '重試 Live 建局（connect → enter-battle）';
 const LIVE_LABEL_POLL_RECONNECT = '重連 Live';
 const LIVE_LABEL_COMMAND_RETRY = '重試戰術指令';
@@ -294,11 +310,70 @@ async function pollLive() {
   }
 }
 
+async function runMintAccessToken() {
+  hideLiveRetry();
+  setStatus(`Live：POST ${boot.liveGateway.mintUrlRaw}（暫定 Lares login 鏡像）…`);
+  try {
+    const token = await mintLiveAccessToken(boot.liveGateway);
+    boot.liveGateway.accessToken = token;
+    hideMintTokenButton();
+    setStatus('Live：已取得 accessToken；開始建局…');
+    await runLivePrepare();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    syncCtx = { source: 'live', link: 'error', pollIntervalMs: LIVE_POLL_INTERVAL_MS };
+    refreshHud();
+    setStatus(`取 token 失敗：${msg}`, true);
+    showMintTokenButton();
+    showLiveRetry('prepare', LIVE_LABEL_PREPARE_RETRY, () => {
+      void startLiveWithToken();
+    });
+  }
+}
+
+async function ensureLiveAccessToken() {
+  if (hasLiveAccessToken(boot.liveGateway)) {
+    hideMintTokenButton();
+    return true;
+  }
+  try {
+    const token = await mintLiveAccessToken(boot.liveGateway);
+    boot.liveGateway.accessToken = token;
+    hideMintTokenButton();
+    return true;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    setStatus(`自動 mint 失敗：${msg}。可點「${LIVE_LABEL_MINT_TOKEN}」重試。`, true);
+    showMintTokenButton();
+    return false;
+  }
+}
+
+async function startLiveWithToken() {
+  syncCtx.source = 'live';
+  if (!hasLiveAccessToken(boot.liveGateway)) {
+    setStatus('Live：無 accessToken，嘗試同域自動 mint…');
+    const ok = await ensureLiveAccessToken();
+    if (!ok) {
+      return;
+    }
+  }
+  await runLivePrepare();
+}
+
 async function runLivePrepare() {
   stopLivePoll();
   lastPollAt = 0;
   clearCommandFailure();
   hideLiveRetry();
+  if (!hasLiveAccessToken(boot.liveGateway)) {
+    setStatus(LIVE_ACCESS_TOKEN_MISSING_MESSAGE, true);
+    showMintTokenButton();
+    showLiveRetry('prepare', LIVE_LABEL_MINT_TOKEN, () => {
+      void runMintAccessToken();
+    });
+    return;
+  }
   setStatus('Live：POST connect → enter-battle…');
   try {
     const prepared = await prepareLiveJanusSession(boot.liveGateway, liveBattleId);
@@ -316,15 +391,17 @@ async function runLivePrepare() {
     syncCtx = { source: 'live', link: 'error', pollIntervalMs: LIVE_POLL_INTERVAL_MS };
     refreshHud();
     setStatus(msg, true);
+    if (msg.includes(LIVE_ACCESS_TOKEN_MISSING_MESSAGE) || msg.includes('unauthorized')) {
+      showMintTokenButton();
+    }
     showLiveRetry('prepare', LIVE_LABEL_PREPARE_RETRY, () => {
-      void runLivePrepare();
+      void startLiveWithToken();
     });
   }
 }
 
 function startLive() {
-  syncCtx.source = 'live';
-  void runLivePrepare();
+  void startLiveWithToken();
 }
 
 function unitAt(x, y) {
@@ -428,6 +505,10 @@ els.canvas.addEventListener('click', (ev) => {
 });
 
 bindCards();
+
+els.mintToken.addEventListener('click', () => {
+  void runMintAccessToken();
+});
 
 if (boot.live) {
   startLive();

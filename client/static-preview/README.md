@@ -17,7 +17,13 @@
 
 Dev nginx 已將上述路徑反代到 Janus。`?live=1` 會先 **`POST v1/tactical/connect`** → **`POST v1/tactical/enter-battle`**（#60），再輪詢快照／發指令；可用 `?connectUrl=`、`?enterBattleUrl=` 覆寫路徑。
 
-**accessToken**：預覽須帶 Lares 簽發 token，例如 `?live=1&accessToken=<token>`（預設空，勿對現網使用字面 `dev`）。缺 token 時狀態列提示並可重試建局。
+**accessToken**（三種方式，擇一）：
+
+1. **推薦正式 URL**：<http://47.79.23.223/qjp/?live=1> — 無 query token 時會自動 `POST v1/lares/login`（**暫定契約**，與 `LaresAuth/Login` 對齊；核心 HTTP 鏡像合入後路徑可能微調）。
+2. **一鍵**：自動 mint 失敗時點 HUD **「一鍵取 token」**（同上路徑）。
+3. **手動**：`?live=1&accessToken=<token>`（Lares 簽發；勿對現網使用字面 `dev`）。
+
+暫定 mint 預設 body：`{"username":"smoke","password":"smoke"}`（與 `docs/janus-http-mirror.md` smoke 帳密一致）。可用 `?mintUrl=`、`?mintUser=`、`?mintPass=` 覆寫。
 
 子路徑部署時在 `index.html` 啟用：`<base href="/qjp/" />`。
 
@@ -29,7 +35,7 @@ npx --yes serve . -l 3456
 ```
 
 - Mock（預設）：<http://localhost:3456/> → `mock/demo_initial.json`（離線，僅本目錄即可）
-- Live：<http://localhost:3456/?live=1&accessToken=…>（本地需自行反代 `v1/` 或 `?liveUrl=` 指到可達端點）
+- Live：<http://localhost:3456/?live=1>（需同域反代 `v1/lares/login` + `v1/tactical/*`，或 `?accessToken=` / `?mintUrl=`）
 - 隱藏角色卡：`?cards=0`
 
 僅部署本目錄（如 `deploy-web-preview.sh`）時不需 `client/assets`。
@@ -57,6 +63,7 @@ cp client/assets/resources/data/tactical/demo_initial.json client/static-preview
 
 | curl | 頁面 |
 |------|------|
+| `POST …/v1/lares/login`（暫定） | `live-gateway.js` `mintLiveAccessToken`（`?mintUrl=`） |
 | `POST …/v1/tactical/connect` | `live-gateway.js`（`?connectUrl=`） |
 | `POST …/v1/tactical/enter-battle` | 同上（`?enterBattleUrl=`） |
 | `GET …/v1/tactical/snapshot?battle_id=…` | 預設 `liveUrl`（Enter 後 `battle_id`） |

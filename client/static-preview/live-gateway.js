@@ -8,24 +8,78 @@ import { resolveAppUrl } from './paths.js';
 export const DEFAULT_CONNECT_PATH = 'v1/tactical/connect';
 export const DEFAULT_ENTER_BATTLE_PATH = 'v1/tactical/enter-battle';
 
+/**
+ * 暫定契約（與核心 LaresAuth/Login HTTP 鏡像並行對齊；路徑／欄位以核心合入後為準）。
+ * POST JSON `{ "username", "password" }` → `{ "access_token" }`（或 camelCase `accessToken`）。
+ * 對應 gRPC：`qianjunpo.lares.v1.LaresAuth/Login`（見 `proto/lares/v1/lares.proto`）。
+ */
+export const DEFAULT_MINT_PATH = 'v1/lares/login';
+
 export const LIVE_ACCESS_TOKEN_MISSING_MESSAGE =
-  '需提供 Lares 簽發 accessToken（?accessToken=…）';
+  '需提供 Lares 簽發 accessToken（?accessToken=… 或同域一鍵 mint）';
+
+const DEFAULT_MINT_USERNAME = 'smoke';
+const DEFAULT_MINT_PASSWORD = 'smoke';
 
 export function parseLiveGatewayConfig(params) {
   const connectUrlRaw = params.get('connectUrl') || DEFAULT_CONNECT_PATH;
   const enterBattleUrlRaw = params.get('enterBattleUrl') || DEFAULT_ENTER_BATTLE_PATH;
+  const mintUrlRaw =
+    params.get('mintUrl') || params.get('loginUrl') || DEFAULT_MINT_PATH;
   const accessToken = params.get('accessToken') ?? '';
   const zoneId = params.get('zoneId') || 'default';
   const shard = Number(params.get('shard') || '0');
+  const mintUsername =
+    params.get('mintUser') || params.get('username') || DEFAULT_MINT_USERNAME;
+  const mintPassword =
+    params.get('mintPass') || params.get('password') || DEFAULT_MINT_PASSWORD;
   return {
     connectUrl: resolveAppUrl(connectUrlRaw),
     connectUrlRaw,
     enterBattleUrl: resolveAppUrl(enterBattleUrlRaw),
     enterBattleUrlRaw,
+    mintUrl: resolveAppUrl(mintUrlRaw),
+    mintUrlRaw,
+    mintUsername,
+    mintPassword,
     accessToken,
     zoneId,
     shard,
   };
+}
+
+export function hasLiveAccessToken(gw) {
+  return String(gw.accessToken ?? '').trim().length > 0;
+}
+
+function readAccessTokenFromJson(json) {
+  if (!json || typeof json !== 'object') {
+    return '';
+  }
+  const token = json.access_token ?? json.accessToken;
+  return typeof token === 'string' ? token.trim() : '';
+}
+
+/**
+ * 同域暫定 mint：POST `gw.mintUrl`（預設 `v1/lares/login`）。
+ * @returns {Promise<string>} Lares access token
+ */
+export async function mintLiveAccessToken(gw) {
+  const body = {
+    username: gw.mintUsername,
+    password: gw.mintPassword,
+  };
+  const mintRes = await postJson(gw.mintUrl, body);
+  if (!mintRes.res.ok) {
+    throw new Error(
+      `Mint HTTP ${mintRes.res.status}（${gw.mintUrlRaw}）：${mintRes.text || '(empty)'}`,
+    );
+  }
+  const token = readAccessTokenFromJson(mintRes.json);
+  if (!token) {
+    throw new Error(`Mint 回應缺少 access_token（${gw.mintUrlRaw}）`);
+  }
+  return token;
 }
 
 function readSessionId(json) {

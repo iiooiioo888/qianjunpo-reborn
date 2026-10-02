@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/rag"
 )
 
 func inferClientNoLog(base string, extra func(*InferClient)) *InferClient {
@@ -125,13 +127,11 @@ func TestInferClientSlowInferFallsBackWithinDeadline(t *testing.T) {
 
 func TestRAGInferWiring(t *testing.T) {
 	var gotPrompt string
+	var post InferPostBody
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var body struct {
-			Prompt string `json:"prompt"`
-		}
-		_ = json.NewDecoder(r.Body).Decode(&body)
-		gotPrompt = body.Prompt
-		_ = json.NewEncoder(w).Encode(map[string]string{"text": "ok"})
+		_ = json.NewDecoder(r.Body).Decode(&post)
+		gotPrompt = post.Prompt
+		_ = json.NewEncoder(w).Encode(EdgeInferHTTPResponseWithRAG("ok", "m", 1, post.RAGK, post.RAGHitIDs))
 	}))
 	defer srv.Close()
 
@@ -141,12 +141,16 @@ func TestRAGInferWiring(t *testing.T) {
 	}
 	off := false
 	client.Infer.LogFallback = &off
+	client.LogRAG = &off
 	out := client.InferWithContext(context.Background(), "guard", "flank east with cavalry")
 	if out.Text != "ok" || out.Source != SourceEdge {
 		t.Fatalf("%+v", out)
 	}
 	if gotPrompt == "" || !strings.Contains(gotPrompt, "Knowledge:") || !strings.Contains(gotPrompt, "flank") || !strings.Contains(gotPrompt, "Order:") {
 		t.Fatalf("prompt=%q", gotPrompt)
+	}
+	if out.RAGK != rag.DefaultTopK || len(out.RAGHitIDs) == 0 {
+		t.Fatalf("rag meta: k=%d ids=%v", out.RAGK, out.RAGHitIDs)
 	}
 }
 
