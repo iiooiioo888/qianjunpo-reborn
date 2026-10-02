@@ -56,10 +56,12 @@ message SubmitCommandResponse {
 // TacticalCommand mirrors pkg/tactical.Command (grid coords are 0..18).
 message TacticalCommand {
   uint32 player_id = 1;
-  uint32 kind = 2; // 1=move, 2=attack, 3=pass
+  uint32 kind = 2; // 1=move, 2=attack, 3=pass, 4=aoe, 5=skill
   uint32 unit_id = 3;
   int32 to_x = 4;
   int32 to_y = 5;
+  // KindSkill (5) only; ignored for move/attack/pass.
+  uint32 skill_id = 6;
 }
 
 message SubmitTacticalCommandRequest {

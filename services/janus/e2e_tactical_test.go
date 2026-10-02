@@ -226,6 +226,7 @@ func (s *e2eRomaServer) SubmitTacticalCommand(_ context.Context, req *romav1.Sub
 		cmd.GetUnitId(),
 		cmd.GetToX(),
 		cmd.GetToY(),
+		cmd.GetSkillId(),
 	)
 	if err != nil {
 		return &romav1.SubmitTacticalCommandResponse{

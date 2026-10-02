@@ -8,6 +8,7 @@ set -euo pipefail
 JANUS_HTTP_BASE="${JANUS_HTTP_BASE:-http://127.0.0.1:18090}"
 PLAYER_ID="${PLAYER_ID:-0}"
 MOVE_KIND="${MOVE_KIND:-1}"
+SKILL_ID="${SKILL_ID:-}"
 TO_X="${TO_X:-5}"
 TO_Y="${TO_Y:-8}"
 FALLBACK_UNIT_ID="${FALLBACK_UNIT_ID:-101}"
@@ -100,10 +101,15 @@ if [[ -z "$UNIT_ID" ]]; then
   UNIT_ID="$FALLBACK_UNIT_ID"
 fi
 
-echo "==> POST ${BASE}/v1/tactical/command (unit_id=${UNIT_ID})"
+echo "==> POST ${BASE}/v1/tactical/command (unit_id=${UNIT_ID}, kind=${MOVE_KIND})"
+CMD_JSON="{\"session_id\":\"${SESSION_ID}\",\"battle_id\":\"${BATTLE_ID}\",\"player_id\":${PLAYER_ID},\"kind\":${MOVE_KIND},\"unit_id\":${UNIT_ID},\"to_x\":${TO_X},\"to_y\":${TO_Y}"
+if [[ -n "$SKILL_ID" ]]; then
+  CMD_JSON="${CMD_JSON},\"skill_id\":${SKILL_ID}"
+fi
+CMD_JSON="${CMD_JSON}}"
 CMD_BODY=$(curl -sS -X POST "${BASE}/v1/tactical/command" \
   -H 'Content-Type: application/json' \
-  -d "{\"session_id\":\"${SESSION_ID}\",\"battle_id\":\"${BATTLE_ID}\",\"player_id\":${PLAYER_ID},\"kind\":${MOVE_KIND},\"unit_id\":${UNIT_ID},\"to_x\":${TO_X},\"to_y\":${TO_Y}}")
+  -d "$CMD_JSON")
 
 ACCEPTED=$(json_field "$CMD_BODY" accepted)
 if [[ "$ACCEPTED" != "True" && "$ACCEPTED" != "true" ]]; then

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/combat"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/hash"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/tactical"
 )
@@ -18,7 +19,7 @@ func tacticalSeed(zoneID string, shard uint32) uint64 {
 	return h.Sum64()
 }
 
-func protoToCommand(playerID, kind, unitID uint32, toX, toY int32) (tactical.Command, error) {
+func protoToCommand(playerID, kind, unitID uint32, toX, toY int32, skillID uint32) (tactical.Command, error) {
 	if playerID >= tactical.PlayerCount {
 		return tactical.Command{}, fmt.Errorf("roma: invalid player %d", playerID)
 	}
@@ -31,13 +32,19 @@ func protoToCommand(playerID, kind, unitID uint32, toX, toY int32) (tactical.Com
 	switch cmd.Kind {
 	case tactical.KindMove, tactical.KindAttack, tactical.KindPass:
 		return cmd, nil
+	case tactical.KindSkill:
+		if skillID == 0 {
+			return tactical.Command{}, fmt.Errorf("roma: kind skill requires skill_id")
+		}
+		cmd.SkillID = combat.SkillID(skillID)
+		return cmd, nil
 	default:
 		return tactical.Command{}, fmt.Errorf("roma: unknown tactical kind %d", kind)
 	}
 }
 
-func (s *Store) SubmitTacticalCommand(id BattleID, playerID, kind, unitID uint32, toX, toY int32) (uint64, uint64, error) {
-	cmd, err := protoToCommand(playerID, kind, unitID, toX, toY)
+func (s *Store) SubmitTacticalCommand(id BattleID, playerID, kind, unitID uint32, toX, toY int32, skillID uint32) (uint64, uint64, error) {
+	cmd, err := protoToCommand(playerID, kind, unitID, toX, toY, skillID)
 	if err != nil {
 		return 0, 0, err
 	}

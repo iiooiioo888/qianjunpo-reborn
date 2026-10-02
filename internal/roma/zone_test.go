@@ -15,7 +15,7 @@ func TestZonePartitionInMemory(t *testing.T) {
 	if b.StateHash() == 0 {
 		t.Fatal("expected non-zero hash")
 	}
-	_, hash, err := store.SubmitTacticalCommand(b.ID, 0, uint32(tactical.KindMove), tactical.UnitIDPlayer0, 5, 8)
+	_, hash, err := store.SubmitTacticalCommand(b.ID, 0, uint32(tactical.KindMove), tactical.UnitIDPlayer0, 5, 8, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

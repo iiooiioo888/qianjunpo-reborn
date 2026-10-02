@@ -103,7 +103,7 @@ func (s *Store) SubmitCommand(id BattleID, playerID uint32, moveX, moveY int32) 
 		return 0, errors.New("roma: unit not found")
 	}
 	to := board.Coord{X: u.Pos.X + int(moveX), Y: u.Pos.Y + int(moveY)}
-	_, hash, err := s.SubmitTacticalCommand(id, playerID, uint32(tactical.KindMove), unitID, int32(to.X), int32(to.Y))
+	_, hash, err := s.SubmitTacticalCommand(id, playerID, uint32(tactical.KindMove), unitID, int32(to.X), int32(to.Y), 0)
 	return hash, err
 }
 

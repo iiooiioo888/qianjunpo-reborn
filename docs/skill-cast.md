@@ -32,14 +32,21 @@ err := m.Submit(tactical.Command{
 
 整合測：`TestSubmitKindSkillStrikeViewSnapshotShowsCastAndDamage`（`pkg/tactical/skill_test.go`）、`TestPhase2SkillCastViewSnapshotIntegration`（`pkg/integration/skill_cast_snapshot_test.go`）。
 
-## Roma / Janus / proto 缺口（本次未改 wire）
+## Live / HTTP 施放（Janus → Roma）
+
+`kind` = **`5`**（`tactical.KindSkill`）時 body 必帶 **`skill_id`**（stub：`1` = Strike、`2` = Splash，見 `pkg/combat/skills.go`）。移動／攻擊／pass 可省略 `skill_id`。
+
+```bash
+curl -sS -X POST 'http://127.0.0.1:18090/v1/tactical/command' \
+  -H 'Content-Type: application/json' \
+  -d '{"battle_id":"default/0","player_id":0,"kind":5,"unit_id":101,"to_x":3,"to_y":8,"skill_id":1}'
+```
+
+步進後 `GET /v1/tactical/snapshot` 或 `POST /v1/tactical/step-lockstep` 的 `view_snapshot_json` 會保留 **`lastSkillCast`** 與 **`units[].hp`**（與 Roma `GetTacticalViewSnapshot` 相同 JSON，HTTP 層不做欄位白名單過濾）。詳見 `docs/janus-http-mirror.md`。
 
 | 層 | 現狀 |
 |----|------|
-| `pkg/tactical` | ✅ `KindSkill` + `SkillID` 已打通 Submit → lockstep → 傷害 |
-| `proto/gateway` `SubmitTacticalCommandRequest` | ❌ 無 `skill_id` 欄位；`kind=5` 無法帶技能 id |
-| `proto/roma` `TacticalCommand` | ❌ 註解仍為 move/attack/pass；無 `skill_id` |
-| `internal/roma/protoToCommand` | ❌ 僅接受 move/attack/pass；`KindSkill` 會被拒 |
-| Janus HTTP `POST /v1/tactical/command` | ❌ JSON body 無 `skill_id`（見 `services/janus/http_tactical.go`） |
-
-Live／HTTP 施放技能需核心協調新增 `skill_id` 並擴充 Roma 轉換；本 PR 以 **程式內 `Match.Submit`** 與整合測驗收。詳見 `docs/combat-formula.md` 技能 stub 小節。
+| `pkg/tactical` | ✅ Submit → lockstep → 傷害 + snapshot |
+| `proto/gateway` / `proto/roma` | ✅ `skill_id` 欄位 |
+| `internal/roma/protoToCommand` | ✅ `KindSkill` + `SkillID` |
+| Janus HTTP `POST /v1/tactical/command` | ✅ JSON `skill_id` |

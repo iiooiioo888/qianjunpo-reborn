@@ -19,7 +19,7 @@ func TestTacticalViewSnapshotMatchesDemoSchedule(t *testing.T) {
 	for frame := uint64(0); frame < tactical.DemoTargetFrame(); frame++ {
 		for idx < len(sched) && sched[idx].SubmitFrame == frame {
 			item := sched[idx]
-			_, _, err := store.SubmitTacticalCommand(b.ID, uint32(item.Cmd.PlayerID), uint32(item.Cmd.Kind), item.Cmd.UnitID, int32(item.Cmd.To.X), int32(item.Cmd.To.Y))
+			_, _, err := store.SubmitTacticalCommand(b.ID, uint32(item.Cmd.PlayerID), uint32(item.Cmd.Kind), item.Cmd.UnitID, int32(item.Cmd.To.X), int32(item.Cmd.To.Y), uint32(item.Cmd.SkillID))
 			if err != nil {
 				t.Fatalf("submit frame %d: %v", frame, err)
 			}
