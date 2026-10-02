@@ -3,6 +3,7 @@ package tactical
 import (
 	"testing"
 
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/fixed"
 )
 
@@ -37,6 +38,26 @@ func TestTimeoutHigherHPWins(t *testing.T) {
 	m.decideTimeoutWinner()
 	if m.Winner != 0 || m.EndReason != EndTimeout {
 		t.Fatalf("expected timeout win P0, got winner=%d reason=%d", m.Winner, m.EndReason)
+	}
+}
+
+func TestCapturePointEmptyResetsHold(t *testing.T) {
+	m := NewMatchWithControlPoints(46, []ControlPoint{
+		{Pos: board.Coord{9, 9}, HoldFrames: 3},
+	})
+	u0 := m.Units[UnitIDPlayer0]
+	m.Board.ClearUnit(u0.Pos)
+	u0.Pos = board.Coord{9, 9}
+	m.Board.SetUnit(u0.Pos, u0.ID)
+	m.tickCapture()
+	if m.captureHold[0] != 1 {
+		t.Fatalf("expected hold 1, got %d", m.captureHold[0])
+	}
+	m.Board.ClearUnit(u0.Pos)
+	u0.Pos = board.Coord{2, 8}
+	m.tickCapture()
+	if m.captureHold[0] != 0 {
+		t.Fatalf("expected hold reset, got %d", m.captureHold[0])
 	}
 }
 

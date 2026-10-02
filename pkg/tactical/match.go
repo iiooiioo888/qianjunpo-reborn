@@ -71,6 +71,9 @@ type Match struct {
 	Winner    uint8
 	EndReason EndReason
 
+	controlPoints []ControlPoint
+	captureHold   []uint8
+
 	combatCfg combat.Config
 	counters  combat.CounterMatrix
 	recorder  *replay.Recorder
@@ -231,6 +234,9 @@ func (m *Match) StepLockstep() {
 		})
 	}
 	m.checkVictory()
+	if !m.Finished {
+		m.tickCapture()
+	}
 	if !m.Finished && m.Frame >= maxTurnFrames {
 		m.decideTimeoutWinner()
 	}
