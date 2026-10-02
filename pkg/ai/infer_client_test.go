@@ -165,6 +165,35 @@ func TestRAGInferWiring(t *testing.T) {
 	}
 }
 
+func TestRAGInferWiringBattleContextInPrompt(t *testing.T) {
+	var gotPrompt string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Prompt string `json:"prompt"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		gotPrompt = body.Prompt
+		_ = json.NewEncoder(w).Encode(EdgeInferHTTPResponse("ok", "m", 1))
+	}))
+	defer srv.Close()
+
+	client, err := DefaultRAGInferClient(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	off := false
+	client.Infer.LogFallback = &off
+	out := client.InferWithBattle(context.Background(), "guard", "flank east", BattleContext{
+		TerrainSummary: "river blocks north advance",
+	})
+	if out.RAGK != 5 {
+		t.Fatalf("rag_k=%d", out.RAGK)
+	}
+	if !strings.Contains(gotPrompt, "river") || !strings.Contains(gotPrompt, "Battlefield:") {
+		t.Fatalf("prompt=%q", gotPrompt)
+	}
+}
+
 func TestRAGInferNoInferClient(t *testing.T) {
 	logs := withSlogCapture(t, func() {
 		store, err := DefaultRAGInferClient("http://example.com")
