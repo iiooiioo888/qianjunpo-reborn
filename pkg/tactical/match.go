@@ -76,6 +76,7 @@ type Match struct {
 
 	combatCfg combat.Config
 	counters  combat.CounterMatrix
+	cardPool  combat.CardPool
 	recorder  *replay.Recorder
 	initial   uint64
 	recording replay.Recording
@@ -114,6 +115,7 @@ func NewMatchWithConfig(seed uint64, cfg combat.Config) *Match {
 		buffer:   newCommandBuffer(),
 		combatCfg: cfg,
 		counters:  cfg.Counters,
+		cardPool:  combat.DefaultCardPool(),
 		Winner:    NoWinner,
 	}
 	m.initial = m.StateHash()
@@ -183,6 +185,10 @@ func (m *Match) Submit(cmd Command) error {
 		}
 	case KindAoE:
 		if err := m.validateAoE(cmd, u); err != nil {
+			return err
+		}
+	case KindSkill:
+		if err := m.validateSkill(cmd, u); err != nil {
 			return err
 		}
 	default:
@@ -278,7 +284,17 @@ func (m *Match) apply(cmd Command) {
 			return
 		}
 		_ = m.ApplyAoEStrike(u.ID, cmd.To, combat.DefaultAoERadius)
+	case KindSkill:
+		m.applySkill(cmd, u)
 	}
+}
+
+// CardPool returns the skill deck gate for this match (stub).
+func (m *Match) CardPool() combat.CardPool {
+	if m == nil {
+		return combat.CardPool{}
+	}
+	return m.cardPool
 }
 
 func (m *Match) applyStrike(attacker, defender *Unit) {
@@ -412,22 +428,22 @@ func maxFrame(sched []ScheduledCommand) uint64 {
 // DemoSchedule returns a scripted duel (submit frames respect CommandDelayFrames).
 func DemoSchedule() []ScheduledCommand {
 	return []ScheduledCommand{
-		{0, Command{0, KindMove, UnitIDPlayer0, board.Coord{5, 8}}},
-		{0, Command{1, KindMove, UnitIDPlayer1, board.Coord{13, 10}}},
-		{4, Command{0, KindMove, UnitIDPlayer0, board.Coord{8, 8}}},
-		{4, Command{1, KindMove, UnitIDPlayer1, board.Coord{11, 10}}},
-		{8, Command{0, KindMove, UnitIDPlayer0, board.Coord{9, 8}}},
-		{8, Command{1, KindMove, UnitIDPlayer1, board.Coord{10, 10}}},
-		{12, Command{0, KindMove, UnitIDPlayer0, board.Coord{9, 9}}},
-		{12, Command{1, KindPass, UnitIDPlayer1, board.Coord{10, 10}}},
-		{16, Command{0, KindAttack, UnitIDPlayer0, board.Coord{10, 10}}},
-		{16, Command{1, KindAttack, UnitIDPlayer1, board.Coord{9, 9}}},
-		{20, Command{0, KindAttack, UnitIDPlayer0, board.Coord{10, 10}}},
-		{20, Command{1, KindAttack, UnitIDPlayer1, board.Coord{9, 9}}},
-		{24, Command{0, KindAttack, UnitIDPlayer0, board.Coord{10, 10}}},
-		{24, Command{1, KindAttack, UnitIDPlayer1, board.Coord{9, 9}}},
-		{28, Command{0, KindAttack, UnitIDPlayer0, board.Coord{10, 10}}},
-		{28, Command{1, KindPass, UnitIDPlayer1, board.Coord{10, 10}}},
+		{0, Command{PlayerID: 0, Kind: KindMove, UnitID: UnitIDPlayer0, To: board.Coord{5, 8}}},
+		{0, Command{PlayerID: 1, Kind: KindMove, UnitID: UnitIDPlayer1, To: board.Coord{13, 10}}},
+		{4, Command{PlayerID: 0, Kind: KindMove, UnitID: UnitIDPlayer0, To: board.Coord{8, 8}}},
+		{4, Command{PlayerID: 1, Kind: KindMove, UnitID: UnitIDPlayer1, To: board.Coord{11, 10}}},
+		{8, Command{PlayerID: 0, Kind: KindMove, UnitID: UnitIDPlayer0, To: board.Coord{9, 8}}},
+		{8, Command{PlayerID: 1, Kind: KindMove, UnitID: UnitIDPlayer1, To: board.Coord{10, 10}}},
+		{12, Command{PlayerID: 0, Kind: KindMove, UnitID: UnitIDPlayer0, To: board.Coord{9, 9}}},
+		{12, Command{PlayerID: 1, Kind: KindPass, UnitID: UnitIDPlayer1, To: board.Coord{10, 10}}},
+		{16, Command{PlayerID: 0, Kind: KindAttack, UnitID: UnitIDPlayer0, To: board.Coord{10, 10}}},
+		{16, Command{PlayerID: 1, Kind: KindAttack, UnitID: UnitIDPlayer1, To: board.Coord{9, 9}}},
+		{20, Command{PlayerID: 0, Kind: KindAttack, UnitID: UnitIDPlayer0, To: board.Coord{10, 10}}},
+		{20, Command{PlayerID: 1, Kind: KindAttack, UnitID: UnitIDPlayer1, To: board.Coord{9, 9}}},
+		{24, Command{PlayerID: 0, Kind: KindAttack, UnitID: UnitIDPlayer0, To: board.Coord{10, 10}}},
+		{24, Command{PlayerID: 1, Kind: KindAttack, UnitID: UnitIDPlayer1, To: board.Coord{9, 9}}},
+		{28, Command{PlayerID: 0, Kind: KindAttack, UnitID: UnitIDPlayer0, To: board.Coord{10, 10}}},
+		{28, Command{PlayerID: 1, Kind: KindPass, UnitID: UnitIDPlayer1, To: board.Coord{10, 10}}},
 	}
 }
 
