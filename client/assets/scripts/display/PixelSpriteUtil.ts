@@ -15,6 +15,10 @@ export function applyPixelArtSampling(frame: SpriteFrame | null): void {
  */
 export const UNIT_ART_CANVAS_PX = 128;
 
+/** ISO25 地格畫布（像素，2:1 diamond）；stem 見 {@link TerrainTileSpriteRegistry}。 */
+export const ISO25_TILE_ART_WIDTH_PX = 64;
+export const ISO25_TILE_ART_HEIGHT_PX = 32;
+
 /** v03 角色卡畫布（像素）；寬 × 高。 */
 export const CHAR_CARD_ART_WIDTH_PX = 320;
 export const CHAR_CARD_ART_HEIGHT_PX = 400;
@@ -41,6 +45,34 @@ export function boardUnitDisplaySize(
     size /= 2;
   }
   return Math.min(size, cellSizePx);
+}
+
+/**
+ * 棋盤格內 ISO25 地格顯示尺寸（寬×高）：僅整數倍放大或 ÷2 縮小，保持 2:1。
+ */
+export function boardIsoTileDisplaySize(
+  cellSizePx: number,
+  artW = ISO25_TILE_ART_WIDTH_PX,
+  artH = ISO25_TILE_ART_HEIGHT_PX,
+  maxUpscale = 2,
+): { width: number; height: number } {
+  for (let k = maxUpscale; k >= 1; k--) {
+    const w = artW * k;
+    const h = artH * k;
+    if (w <= cellSizePx && h <= cellSizePx) {
+      return { width: w, height: h };
+    }
+  }
+  let w = artW;
+  let h = artH;
+  while (w > cellSizePx || h > cellSizePx) {
+    if (w % 2 !== 0 || h % 2 !== 0) {
+      break;
+    }
+    w /= 2;
+    h /= 2;
+  }
+  return { width: Math.min(w, cellSizePx), height: Math.min(h, cellSizePx) };
 }
 
 /**

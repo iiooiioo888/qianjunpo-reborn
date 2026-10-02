@@ -3,10 +3,15 @@ import {
   CharacterCardSpriteRegistry,
 } from './CharacterCardSpriteRegistry';
 import { ICON_ASSET_IDS, IconSpriteRegistry } from './IconSpriteRegistry';
+import {
+  TERRAIN_TILE_TEXTURE_KEYS,
+  TerrainTileSpriteRegistry,
+} from './TerrainTileSpriteRegistry';
 import { UNIT_TEXTURE_KEYS, UnitSpriteRegistry } from './UnitSpriteRegistry';
 
 export interface TexturePreloadReport {
   units: Record<string, boolean>;
+  terrainTiles: Record<string, boolean>;
   characterCards: Record<string, boolean>;
   hudIcons: Record<string, boolean>;
 }
@@ -41,6 +46,11 @@ const UNIT_KEYS_FOR_REPORT = [
   UNIT_TEXTURE_KEYS.cavalry,
 ] as const;
 
+const TERRAIN_TILE_KEYS_FOR_REPORT = [
+  TERRAIN_TILE_TEXTURE_KEYS.plain,
+  TERRAIN_TILE_TEXTURE_KEYS.mountain,
+] as const;
+
 const CHAR_KEYS_FOR_REPORT = [
   CHAR_CARD_TEXTURE_KEYS.char_caocao,
   CHAR_CARD_TEXTURE_KEYS.char_zhangfei,
@@ -51,6 +61,7 @@ export async function preloadTacticalDisplayTextures(): Promise<TexturePreloadRe
   applyDevTextureStemOverrides();
   await Promise.all([
     UnitSpriteRegistry.preload(),
+    TerrainTileSpriteRegistry.preload(),
     IconSpriteRegistry.preload(),
     CharacterCardSpriteRegistry.preload(),
   ]);
@@ -62,6 +73,10 @@ export function buildTexturePreloadReport(): TexturePreloadReport {
   for (const key of UNIT_KEYS_FOR_REPORT) {
     units[key] = UnitSpriteRegistry.isSpriteLoaded(key);
   }
+  const terrainTiles: Record<string, boolean> = {};
+  for (const key of TERRAIN_TILE_KEYS_FOR_REPORT) {
+    terrainTiles[key] = TerrainTileSpriteRegistry.isSpriteLoaded(key);
+  }
   const characterCards: Record<string, boolean> = {};
   for (const key of CHAR_KEYS_FOR_REPORT) {
     characterCards[key] = CharacterCardSpriteRegistry.isSpriteLoaded(key);
@@ -70,22 +85,29 @@ export function buildTexturePreloadReport(): TexturePreloadReport {
   for (const id of HUD_ICON_IDS) {
     hudIcons[id] = IconSpriteRegistry.isSpriteLoaded(id);
   }
-  return { units, characterCards, hudIcons };
+  return { units, terrainTiles, characterCards, hudIcons };
 }
 
 /** Mock HUD 第三行附註：缺圖時說明占位，不 crash。 */
 export function formatTexturePreloadHudNote(report: TexturePreloadReport): string {
   const missingUnits = Object.entries(report.units).filter(([, ok]) => !ok).map(([k]) => k);
+  const missingTiles = Object.entries(report.terrainTiles).filter(([, ok]) => !ok).map(([k]) => k);
   const missingCards = Object.entries(report.characterCards).filter(([, ok]) => !ok).map(([k]) => k);
   const missingIcons = Object.entries(report.hudIcons).filter(([, ok]) => !ok).length;
   const anyMissing =
-    missingUnits.length > 0 || missingCards.length > 0 || missingIcons > 0;
+    missingUnits.length > 0 ||
+    missingTiles.length > 0 ||
+    missingCards.length > 0 ||
+    missingIcons > 0;
   if (!anyMissing) {
     return '貼圖：registry 已載入（Nearest／整數倍）';
   }
   const parts: string[] = [];
   if (missingUnits.length) {
     parts.push(`單位占位(${missingUnits.join(',')})`);
+  }
+  if (missingTiles.length) {
+    parts.push(`地格占位(${missingTiles.join(',')})`);
   }
   if (missingCards.length) {
     parts.push(`角色卡占位(${missingCards.join(',')})`);

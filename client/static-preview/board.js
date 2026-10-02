@@ -1,4 +1,5 @@
 import { BOARD_SIZE, LOCAL_PLAYER_OWNER } from './config.js';
+import { boardIsoTileDisplaySize, loadTerrainTileImages } from './tile-images.js';
 
 const OWNER_COLORS = {
   0: { fill: '#3d7ee8', stroke: '#1a4a9e', label: 'P0' },
@@ -28,7 +29,16 @@ export class TacticalBoardRenderer {
     this.padding = 12;
     this.selectedUnitId = null;
     this.legalCells = [];
+    /** @type {Map<number, HTMLImageElement>} */
+    this.terrainTiles = new Map();
+    this._lastSnap = null;
     this.resize();
+    void loadTerrainTileImages().then((tiles) => {
+      this.terrainTiles = tiles;
+      if (this._lastSnap) {
+        this.draw(this._lastSnap);
+      }
+    });
   }
 
   resize() {
@@ -56,7 +66,23 @@ export class TacticalBoardRenderer {
     this.legalCells = [];
   }
 
+  drawTerrainTile(ctx, terrain, px, py, cellPx) {
+    const img =
+      this.terrainTiles.get(terrain) ??
+      this.terrainTiles.get(0);
+    if (!img?.complete || !img.naturalWidth) {
+      return false;
+    }
+    const { width: dw, height: dh } = boardIsoTileDisplaySize(cellPx);
+    const dx = px + (cellPx - dw) / 2;
+    const dy = py + (cellPx - dh) / 2;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, dw, dh);
+    return true;
+  }
+
   draw(snap) {
+    this._lastSnap = snap;
     const ctx = this.ctx;
     const { cellPx, padding } = this;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -70,8 +96,11 @@ export class TacticalBoardRenderer {
         const cell = snap.cells[y][x];
         const px = padding + x * cellPx;
         const py = padding + y * cellPx;
-        ctx.fillStyle = TERRAIN_TINT[cell.terrain] ?? TERRAIN_TINT[0];
-        ctx.fillRect(px + 1, py + 1, cellPx - 2, cellPx - 2);
+        const drewTile = this.drawTerrainTile(ctx, cell.terrain, px, py, cellPx);
+        if (!drewTile) {
+          ctx.fillStyle = TERRAIN_TINT[cell.terrain] ?? TERRAIN_TINT[0];
+          ctx.fillRect(px + 1, py + 1, cellPx - 2, cellPx - 2);
+        }
         if (!cell.passable) {
           ctx.fillStyle = 'rgba(0,0,0,0.35)';
           ctx.fillRect(px + 1, py + 1, cellPx - 2, cellPx - 2);

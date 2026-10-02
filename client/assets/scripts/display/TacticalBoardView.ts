@@ -1,9 +1,11 @@
-import { _decorator, Color, Component, Graphics, Node, UITransform } from 'cc';
+import { _decorator, Color, Component, Graphics, Node, Sprite, UITransform } from 'cc';
 import { Coord } from '../logic/BoardCoord';
 import { shouldRedrawGrid, shouldRedrawUnits } from '../logic/SnapshotDisplayDiff';
 import { BOARD_SIZE, parseViewSnapshot, ViewSnapshot } from '../logic/TacticalSnapshot';
 import { cellPixelOrigin, drawLegalMoveCell, drawSelectedUnitCell } from './BoardSelectionVisuals';
+import { boardIsoTileDisplaySize } from './PixelSpriteUtil';
 import { terrainFillColor } from './TerrainPalette';
+import { TerrainTileSpriteRegistry } from './TerrainTileSpriteRegistry';
 import { UnitPlaceholderView } from './UnitPlaceholderView';
 
 const { ccclass, property } = _decorator;
@@ -14,6 +16,7 @@ export class TacticalBoardView extends Component {
   cellSize = 32;
 
   private gridGfx: Graphics | null = null;
+  private tileLayer: Node | null = null;
   private highlightGfx: Graphics | null = null;
   private unitLayer: Node | null = null;
   private snapshot: ViewSnapshot | null = null;
@@ -25,6 +28,8 @@ export class TacticalBoardView extends Component {
     const n = BOARD_SIZE;
     ui.setContentSize(n * this.cellSize, n * this.cellSize);
     this.gridGfx = this.getComponent(Graphics) ?? this.addComponent(Graphics);
+    this.tileLayer = new Node('Tiles');
+    this.tileLayer.setParent(this.node);
     const highlightNode = new Node('MoveHighlights');
     highlightNode.setParent(this.node);
     this.highlightGfx = highlightNode.addComponent(Graphics);
@@ -122,24 +127,38 @@ export class TacticalBoardView extends Component {
   private redrawGrid(): void {
     const snap = this.snapshot;
     const g = this.gridGfx;
-    if (!snap || !g) {
+    const tiles = this.tileLayer;
+    if (!snap || !g || !tiles) {
       return;
     }
     g.clear();
+    tiles.removeAllChildren();
     const cs = this.cellSize;
+    const tileSize = boardIsoTileDisplaySize(cs);
     for (let y = 0; y < snap.boardSize; y++) {
       for (let x = 0; x < snap.boardSize; x++) {
         const cell = snap.cells[y][x];
-        g.fillColor = terrainFillColor(cell.terrain);
         const px = x * cs;
         const py = (snap.boardSize - 1 - y) * cs;
-        g.rect(px, py, cs - 1, cs - 1);
-        g.fill();
+        const sf = TerrainTileSpriteRegistry.getSpriteFrameForTerrain(cell.terrain);
+        if (sf) {
+          const node = new Node(`tile_${x}_${y}`);
+          node.setParent(tiles);
+          const sprite = node.addComponent(Sprite);
+          sprite.sizeMode = Sprite.SizeMode.CUSTOM;
+          sprite.spriteFrame = sf;
+          const ui = node.getComponent(UITransform) ?? node.addComponent(UITransform);
+          ui.setContentSize(tileSize.width, tileSize.height);
+          node.setPosition(px + cs / 2, py + cs / 2, 0);
+        } else {
+          g.fillColor = terrainFillColor(cell.terrain);
+          g.rect(px, py, cs - 1, cs - 1);
+          g.fill();
+        }
         if (!cell.passable) {
-          g.strokeColor = new Color(40, 40, 48, 200);
-          g.lineWidth = 1;
-          g.rect(px + 0.5, py + 0.5, cs - 2, cs - 2);
-          g.stroke();
+          g.fillColor = new Color(0, 0, 0, 90);
+          g.rect(px + 1, py + 1, cs - 2, cs - 2);
+          g.fill();
         }
       }
     }

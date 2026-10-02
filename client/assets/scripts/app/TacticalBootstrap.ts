@@ -300,6 +300,10 @@ export class TacticalBootstrap extends Component {
       this.textureHudNote = formatTexturePreloadHudNote(report);
       iconStrip.buildStrip();
       charStrip.buildStrip();
+      const snapRaw = this.mockSnapshotRaw ?? boardView.getSnapshot();
+      if (snapRaw) {
+        applySnapshot(snapRaw, null);
+      }
       if (this.useLiveJanus) {
         const startLivePoller = () => {
           this.poller?.stop();
