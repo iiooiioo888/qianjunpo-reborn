@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>edge-infer · suggest demo (#96)</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; line-height: 1.45; }
+    body { max-width: 52rem; margin: 1.5rem auto; padding: 0 1rem; }
+    label { display: block; font-weight: 600; margin-top: 0.75rem; }
+    input, textarea { width: 100%; box-sizing: border-box; margin-top: 0.25rem; }
+    textarea { min-height: 4rem; font-family: ui-monospace, monospace; font-size: 0.9rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    button { padding: 0.5rem 1rem; cursor: pointer; }
+    pre { background: #f4f4f5; padding: 0.75rem; overflow: auto; border-radius: 6px; }
+    .hint { color: #555; font-size: 0.9rem; }
+    .suggestion { border: 1px solid #ccc; border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+    .suggestion strong { font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+  <h1>Infer suggestions (test page)</h1>
+  <p class="hint">
+    Lightweight consumer for <code>POST /v1/suggest</code> and
+    <code>GET /v1/suggest/write-back</code>. Not part of Live Janus HUD / static-preview.
+    Start with <code>make edge-infer</code> (default mock backend).
+  </p>
+
+  <label for="battle_id">battle_id (write-back key)</label>
+  <input id="battle_id" value="default/0" autocomplete="off" />
+
+  <label for="persona">persona</label>
+  <input id="persona" value="guard" />
+
+  <label for="order">order</label>
+  <input id="order" value="flank east with cavalry" />
+
+  <label for="units">battle_context.units_summary</label>
+  <input id="units" value="three cavalry on the east wing" />
+
+  <label for="terrain">battle_context.terrain_summary</label>
+  <input id="terrain" value="hills favor archers" />
+
+  <div class="row">
+    <button type="button" id="btn-suggest">POST /v1/suggest</button>
+    <button type="button" id="btn-writeback">GET write-back</button>
+  </div>
+
+  <div id="suggestion-card" class="suggestion" hidden>
+    <strong id="sug-title"></strong>
+    <p id="sug-detail"></p>
+  </div>
+
+  <label for="out">Raw JSON</label>
+  <textarea id="out" readonly></textarea>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    function payload() {
+      return {
+        battle_id: $("battle_id").value.trim(),
+        persona: $("persona").value.trim(),
+        order: $("order").value.trim(),
+        battle_context: {
+          units_summary: $("units").value.trim(),
+          terrain_summary: $("terrain").value.trim(),
+        },
+      };
+    }
+
+    function showSuggestion(sug) {
+      const card = $("suggestion-card");
+      if (!sug) {
+        card.hidden = true;
+        return;
+      }
+      card.hidden = false;
+      const kind = sug.kind || "?";
+      $("sug-title").textContent = "suggestion: " + kind + " (infer_path=" + (sug.infer_path || "?") + ")";
+      let detail = "unit_id=" + sug.unit_id + " → (" + sug.to_x + ", " + sug.to_y + ")";
+      if (kind === "skill" && sug.skill_id) {
+        detail += " · skill_id=" + sug.skill_id;
+      }
+      $("sug-detail").textContent = detail;
+    }
+
+    async function postSuggest() {
+      $("out").value = "…";
+      showSuggestion(null);
+      const res = await fetch("/v1/suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload()),
+      });
+      const text = await res.text();
+      $("out").value = text;
+      try {
+        const data = JSON.parse(text);
+        showSuggestion(data.suggestion);
+      } catch (_) {}
+    }
+
+    async function getWriteBack() {
+      const id = encodeURIComponent($("battle_id").value.trim());
+      $("out").value = "…";
+      showSuggestion(null);
+      const res = await fetch("/v1/suggest/write-back?battle_id=" + id);
+      const text = await res.text();
+      $("out").value = text;
+      try {
+        const data = JSON.parse(text);
+        showSuggestion(data.suggestion);
+      } catch (_) {}
+    }
+
+    $("btn-suggest").addEventListener("click", () => postSuggest().catch((e) => { $("out").value = String(e); }));
+    $("btn-writeback").addEventListener("click", () => getWriteBack().catch((e) => { $("out").value = String(e); }));
+  </script>
+</body>
+</html>

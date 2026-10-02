@@ -216,6 +216,16 @@ Example HUD-facing JSON after RAG + edge timeout (gateway or in-process serializ
 
 Alternates **edge-only** and **RAG-augmented** infer legs (`suggestion.infer_path` is `edge` or `rag`). Returns the usual infer JSON plus a single **move or skill** hint aligned with Janus `POST /v1/tactical/command` fields (`unit_id`, `to_x`, `to_y`, optional `skill_id`). Optional `battle_id` **write-back** stores the latest suggestion for polling.
 
+**Clickable test page** (edge-infer only; does not use `static-preview` overlay/tile/battle-end):
+
+```bash
+make edge-infer
+# open in browser:
+#   http://localhost:8088/v1/suggest/demo
+```
+
+The page calls the same-origin `POST /v1/suggest` and `GET /v1/suggest/write-back` buttons and renders `suggestion` (move/skill) plus raw JSON. Production HUD can later embed the same contract without this HTML.
+
 ```bash
 make edge-infer
 curl -s -X POST localhost:8088/v1/suggest \
