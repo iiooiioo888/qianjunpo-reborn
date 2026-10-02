@@ -32,6 +32,20 @@ type tacticalCommandJSON struct {
 	StateHash     uint64 `json:"state_hash,omitempty"`
 }
 
+type stepLockstepBody struct {
+	SessionID string `json:"session_id"`
+	BattleID  string `json:"battle_id"`
+	Steps     uint32 `json:"steps"`
+}
+
+type stepLockstepJSON struct {
+	LockstepFrame    uint64          `json:"lockstep_frame"`
+	StateHash        uint64          `json:"state_hash"`
+	Finished         bool            `json:"finished"`
+	Winner           uint32          `json:"winner,omitempty"`
+	ViewSnapshotJSON json.RawMessage `json:"view_snapshot_json,omitempty"`
+}
+
 type zoneRefJSON struct {
 	ZoneID string `json:"zone_id"`
 	Shard  uint32 `json:"shard"`
@@ -109,6 +123,9 @@ func registerTacticalHTTPRoutes(mux *http.ServeMux, gw *janusGateway, opts tacti
 	})
 	mux.HandleFunc("/v1/tactical/enter-battle", func(w http.ResponseWriter, r *http.Request) {
 		handleTacticalEnterBattle(w, r, gw)
+	})
+	mux.HandleFunc("/v1/tactical/step-lockstep", func(w http.ResponseWriter, r *http.Request) {
+		handleTacticalStepLockstep(w, r, gw)
 	})
 }
 
@@ -282,4 +299,43 @@ func writeTacticalCommandJSON(w http.ResponseWriter, status int, payload tactica
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func handleTacticalStepLockstep(w http.ResponseWriter, r *http.Request, gw *janusGateway) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var body stepLockstepBody
+	if !decodeGatewayMirrorBody(w, r, &body) {
+		return
+	}
+	if body.BattleID == "" {
+		http.Error(w, "missing battle_id", http.StatusBadRequest)
+		return
+	}
+	steps := body.Steps
+	if steps == 0 {
+		steps = 1
+	}
+	resp, err := gw.StepTacticalLockstep(r.Context(), &gatewayv1.StepTacticalLockstepRequest{
+		SessionId: body.SessionID,
+		BattleId:  body.BattleID,
+		Steps:     steps,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	var viewSnap json.RawMessage
+	if raw := resp.GetViewSnapshotJson(); len(raw) > 0 {
+		viewSnap = json.RawMessage(raw)
+	}
+	writeGatewayMirrorJSON(w, http.StatusOK, stepLockstepJSON{
+		LockstepFrame:    resp.GetLockstepFrame(),
+		StateHash:        resp.GetStateHash(),
+		Finished:         resp.GetFinished(),
+		Winner:           resp.GetWinner(),
+		ViewSnapshotJSON: viewSnap,
+	})
 }

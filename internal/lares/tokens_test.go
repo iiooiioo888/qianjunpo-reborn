@@ -38,6 +38,25 @@ func TestDualTokenHandshake(t *testing.T) {
 	}
 }
 
+func TestMintDevStableAccess(t *testing.T) {
+	now := time.Unix(1_700_000_000, 0)
+	issuer := &TokenIssuer{Secret: []byte("phase4-dev"), Now: func() time.Time { return now }}
+	pair, err := issuer.MintDevStableAccess("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pair.AccountID != DevStableAccount {
+		t.Fatalf("account=%q", pair.AccountID)
+	}
+	pair2, err := issuer.MintDevStableAccess(DevStableAccount)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pair2.PlayerID != pair.PlayerID {
+		t.Fatal("expected stable player_id for dev-stable account")
+	}
+}
+
 func TestAccessExpires(t *testing.T) {
 	start := time.Unix(1_700_000_000, 0)
 	issuer := &TokenIssuer{Secret: []byte("k"), Now: func() time.Time { return start }}
