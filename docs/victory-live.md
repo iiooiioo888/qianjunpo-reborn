@@ -19,15 +19,53 @@
 2. 將敵方單位 HP 打到 0（移動＋攻擊或 `kind=5` 技能），再 **step-lockstep** 直到該單位從棋盤清除。
 3. 下一幀快照應為 `endReason: "wipeout"`、`winner: 0` 或 `1`。
 
-占點模式需 `NewMatchWithControlPoints`（目前 Roma Join 預設對局不帶據點）；超時則在雙方只 pass 時於 `maxTurnFrames`（64）觸發。
+**占點（occupy）** 需 `NewMatchWithControlPoints`（Roma Join 預設對局不帶據點；測試會在 store 內替換 match）。P0 出生格 `(2,8)` 若為唯一據點且 `HoldFrames=2`，連續兩步 lockstep（無需指令）即終局：`endReason: "occupy"`、`winner: 0`。
 
-## 測試
+**超時（timeout）** 在雙方每幀 `kind=3` pass 時於 `maxTurnFrames`（64）觸發。HP 較高者勝（`winner: 0|1`）；同 HP 和局為 `winner: 255`、`endReason: "timeout"`。
+
+## 測試（驗收）
+
+進行中契約：
 
 ```bash
-go test ./pkg/tactical/ -run 'ViewSnapshot|Annihilation|Capture'
+go test ./pkg/tactical/ -run TestViewSnapshotInProgressHasNoWinner
+go test ./pkg/tactical/ -run TestInitialViewSnapshotShape
+```
+
+殲滅（既有，勿改契約）：
+
+```bash
+go test ./pkg/tactical/ -run TestViewSnapshotAnnihilationExportsWinnerAndReason
 go test ./internal/roma/ -run TestTacticalViewSnapshotJSONReportsWipeout
-go test ./pkg/integration/ -run TestPhase2VictoryViewSnapshot
+go test ./pkg/integration/ -run TestPhase2VictoryViewSnapshotIntegration
 go test ./services/janus/ -run TestHTTPTacticalSnapshotReportsWipeoutVictory
+```
+
+**占點 smoke**（ViewSnapshot `endReason: "occupy"`、`winner` 為占點方）：
+
+```bash
+go test ./pkg/tactical/ -run TestViewSnapshotCaptureExportsOccupy
+go test ./internal/roma/ -run TestTacticalViewSnapshotJSONReportsOccupy
+go test ./pkg/integration/ -run TestPhase2OccupyViewSnapshotIntegration
+go test ./services/janus/ -run TestHTTPTacticalSnapshotReportsOccupyVictory
+```
+
+**超時 smoke**（ViewSnapshot `endReason: "timeout"`、`winner` 依 HP 或和局 `255`）：
+
+```bash
+go test ./pkg/tactical/ -run 'TestViewSnapshotTimeout|TestTimeout'
+go test ./internal/roma/ -run TestTacticalViewSnapshotJSONReportsTimeout
+go test ./pkg/integration/ -run TestPhase2TimeoutViewSnapshotIntegration
+go test ./services/janus/ -run TestHTTPTacticalSnapshotReportsTimeoutVictory
+```
+
+一次跑齊勝敗快照相關測：
+
+```bash
+go test ./pkg/tactical/ -run ViewSnapshot
+go test ./internal/roma/ -run 'ViewSnapshotJSONReports'
+go test ./pkg/integration/ -run 'ViewSnapshotIntegration|VictoryViewSnapshot'
+go test ./services/janus/ -run 'SnapshotReports.*Victory'
 ```
 
 ## Compose smoke（HTTP 透傳）
@@ -44,5 +82,7 @@ WIPEOUT_SMOKE=1 ./scripts/janus-http-smoke.sh
 腳本會：enter-battle 斷言進行中 `winner: null`、`endReason: "none"` → bridge 至敵方相鄰格 → 重複 Strike 至殲滅 → 斷言 step-lockstep `view_snapshot_json` 與 `GET /v1/tactical/snapshot` 皆為 `endReason: "wipeout"`、`winner: 0|1`。
 
 瀏覽器 static-preview：`/qjp/?live=1` 依相同 JSON 欄位顯示終局 overlay；離線契約檢查 `node client/scripts/static-preview-battle-end-smoke.mjs`（見 `client/static-preview/README.md`）。
+
+占點／超時目前以 **上述 `go test` smoke** 驗收（Roma Join 預設無據點；超時需 64 步 pass，不納入 shell smoke）。手動驗證時可改 store 內 match 或本地 `NewMatchWithControlPoints` 後走相同 HTTP 路徑。
 
 整合說明亦見 `docs/combat-formula.md`（占點／勝敗）與 `docs/skill-cast.md`（快照欄位慣例）。
