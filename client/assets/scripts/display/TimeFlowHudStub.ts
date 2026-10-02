@@ -1,6 +1,7 @@
 import { _decorator, Color, Component, Label, Node, UITransform } from 'cc';
 import {
   formatLockstepFrameLine,
+  formatSelectionLine,
   HudLockstepSyncContext,
   mockSyncContextFromBootstrap,
 } from './LockstepHudFormat';
@@ -23,7 +24,12 @@ export class TimeFlowHudStub extends Component {
   frameLabel: Label | null = null;
 
   @property(Label)
+  selectionLabel: Label | null = null;
+
+  @property(Label)
   statusLabel: Label | null = null;
+
+  private lastSelectedUnitId: number | null = null;
 
   onLoad(): void {
     if (!this.rateLabel) {
@@ -46,10 +52,20 @@ export class TimeFlowHudStub extends Component {
       this.frameLabel.fontSize = 18;
       this.frameLabel.lineHeight = 22;
     }
+    if (!this.selectionLabel) {
+      const n = new Node('SelectionLabel');
+      n.setParent(this.node);
+      n.setPosition(0, -56, 0);
+      const ui = n.addComponent(UITransform);
+      ui.setContentSize(480, 40);
+      this.selectionLabel = n.addComponent(Label);
+      this.selectionLabel.fontSize = 18;
+      this.selectionLabel.lineHeight = 22;
+    }
     if (!this.statusLabel) {
       const n = new Node('StatusLabel');
       n.setParent(this.node);
-      n.setPosition(0, -56, 0);
+      n.setPosition(0, -84, 0);
       const ui = n.addComponent(UITransform);
       ui.setContentSize(520, 36);
       this.statusLabel = n.addComponent(Label);
@@ -59,7 +75,7 @@ export class TimeFlowHudStub extends Component {
     }
     const retryN = new Node('LivePrepareRetry');
     retryN.setParent(this.node);
-    retryN.setPosition(0, -88, 0);
+    retryN.setPosition(0, -116, 0);
     const retryUi = retryN.addComponent(UITransform);
     retryUi.setContentSize(520, 28);
     const retryLbl = retryN.addComponent(Label);
@@ -87,6 +103,20 @@ export class TimeFlowHudStub extends Component {
     if (this.frameLabel && this.lastSnapshot) {
       this.frameLabel.string = formatLockstepFrameLine(this.lastSnapshot, this.lastSync);
     }
+    this.syncSelectionLabel();
+  }
+
+  /** Local board selection (grid x,y from latest snapshot). */
+  setSelectedUnitId(unitId: number | null): void {
+    this.lastSelectedUnitId = unitId;
+    this.syncSelectionLabel();
+  }
+
+  private syncSelectionLabel(): void {
+    if (!this.selectionLabel) {
+      return;
+    }
+    this.selectionLabel.string = formatSelectionLine(this.lastSnapshot, this.lastSelectedUnitId);
   }
 
   private lastSnapshot: ViewSnapshot | null = null;
@@ -130,6 +160,7 @@ export class TimeFlowHudStub extends Component {
     if (this.frameLabel) {
       this.frameLabel.string = formatLockstepFrameLine(snap, this.lastSync);
     }
+    this.syncSelectionLabel();
   }
 
   /** @deprecated 使用 updateFromSnapshot */

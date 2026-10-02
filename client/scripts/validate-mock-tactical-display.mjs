@@ -85,7 +85,13 @@ if (
 ) {
   fail('TimeFlowHudStub missing lockstep sync HUD line (LockstepHudFormat)');
 }
-
+if (
+  !lockstepHudSrc.includes('formatSelectionLine') ||
+  !hudSrc.includes('setSelectedUnitId') ||
+  !hudSrc.includes('formatSelectionLine')
+) {
+  fail('TimeFlowHudStub/LockstepHudFormat missing selected unit grid HUD line');
+}
 const unitRegistrySrc = readFileSync(join(displayDir, 'UnitSpriteRegistry.ts'), 'utf8');
 for (const stem of UNIT_STANDARD_STEMS) {
   if (!unitRegistrySrc.includes(`'${stem}'`)) {
@@ -162,11 +168,22 @@ if (
   fail('TimeFlowHudStub/TacticalBootstrap missing Live tactical command retry HUD');
 }
 const staticPreviewApp = readFileSync(join(root, 'static-preview/app.js'), 'utf8');
+const staticPreviewHud = readFileSync(join(root, 'static-preview/hud.js'), 'utf8');
 if (
   !staticPreviewApp.includes('pendingCommandFailure') ||
   !staticPreviewApp.includes('LIVE_LABEL_COMMAND_RETRY')
 ) {
   fail('static-preview missing Live command failure retry UX');
+}
+if (
+  !staticPreviewHud.includes('formatSelectionLine') ||
+  !staticPreviewApp.includes('hud-selection') ||
+  !staticPreviewApp.includes('formatSelectionLine')
+) {
+  fail('static-preview missing selected unit grid HUD line');
+}
+if (!bootstrapSrc.includes('setSelectedUnitId')) {
+  fail('TacticalBootstrap missing HUD selection coord wiring');
 }
 const liveGatewayPreview = readFileSync(
   join(root, 'static-preview/live-gateway.js'),
