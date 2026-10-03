@@ -214,7 +214,20 @@ Example HUD-facing JSON after RAG + edge timeout (gateway or in-process serializ
 
 ### `POST /v1/suggest` (staggered edge vs RAG → one tactical suggestion)
 
-Alternates **edge-only** and **RAG-augmented** infer legs (`suggestion.infer_path` is `edge` or `rag`). Returns the usual infer JSON plus a single **move or skill** hint aligned with Janus `POST /v1/tactical/command` fields (`unit_id`, `to_x`, `to_y`, optional `skill_id`). Optional `battle_id` **write-back** stores the latest suggestion for polling.
+Alternates **edge-only** and **RAG-augmented** infer legs (`suggestion.infer_path` is `edge` or `rag`). Returns the usual infer JSON plus a single **move or skill** hint and a top-level **`command`** object aligned with Janus `POST /v1/tactical/command` (auto-battle pollers can POST `command` as-is). Optional `battle_id` **write-back** stores the latest suggestion for polling.
+
+**Auto-battle consumption** (no guessing):
+
+| Field | Role |
+|-------|------|
+| `suggestion.kind` | Human/debug: `move` or `skill` |
+| `suggestion.unit_id`, `to_x`, `to_y`, `skill_id` | Same semantics as tactical command |
+| `suggestion.infer_path` | `edge` or `rag` (observability) |
+| `command.kind` | `1` = move, `5` = skill (`KindMove` / `KindSkill`) |
+| `command.player_id` | Always `0` for player-0 suggestions |
+| `command.battle_id` | Echoes request `battle_id` when set |
+
+When edge infer is down or the model is unavailable, the handler still returns **HTTP 200** with `source: "npc"`, non-empty `text`, plus **`suggestion` and `command`** derived from the NPC template (stub tactical move/skill).
 
 **Clickable test page** (edge-infer only; does not use `static-preview` overlay/tile/battle-end):
 
@@ -257,16 +270,40 @@ Example success (RAG leg may include `rag_k` / `rag_hit_ids`):
     "to_x": 8,
     "to_y": 8,
     "infer_path": "rag"
+  },
+  "command": {
+    "battle_id": "default/0",
+    "player_id": 0,
+    "kind": 1,
+    "unit_id": 101,
+    "to_x": 8,
+    "to_y": 8
   }
 }
 ```
 
-| `suggestion.kind` | HUD maps to tactical `kind` |
-|-------------------|-----------------------------|
+| `suggestion.kind` | `command.kind` |
+|-------------------|----------------|
 | `move` | `1` (KindMove) |
-| `skill` | `5` (KindSkill); use `skill_id` (stub strike = `1`) |
+| `skill` | `5` (KindSkill); `command.skill_id` required (stub strike = `1`) |
 
-Poll write-back after `battle_id` was set on POST:
+Auto-tick loop (mirror): poll suggest, then submit command to Janus:
+
+```bash
+# 1) Fetch suggestion + command (edge-infer)
+curl -s -X POST localhost:8088/v1/suggest \
+  -H 'Content-Type: application/json' \
+  -d '{"battle_id":"default/0","persona":"guard","order":"flank east"}' | jq '.command'
+
+# 2) POST the command object to Janus (after EnterBattle)
+curl -sS -X POST 'http://127.0.0.1:18090/v1/tactical/command' \
+  -H 'Content-Type: application/json' \
+  -d @- <<'EOF'
+{"battle_id":"default/0","player_id":0,"kind":1,"unit_id":101,"to_x":8,"to_y":8}
+EOF
+```
+
+Poll write-back after `battle_id` was set on POST (includes `command`):
 
 ```bash
 curl -s 'localhost:8088/v1/suggest/write-back?battle_id=default/0' | jq

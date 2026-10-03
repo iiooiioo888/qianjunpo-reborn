@@ -43,14 +43,25 @@ func RunStaggeredSuggest(
 		hitIDs = retrieved.HitIDs
 	}
 	text, model, latencyMs, err := infer(ctx, prompt)
+	var resp InferHTTPResponse
 	if err != nil {
-		return StaggeredSuggestOutcome{}, err
+		npc := npcFallbackResult(in.Persona, FallbackReasonHTTPStatus, err.Error(), true)
+		text = npc.Text
+		sug := DeriveSuggestion(path, text, hitIDs)
+		resp = InferResultToHTTP(npc.WithRAGObservability(ragK, hitIDs), "", 0)
+		resp.Suggestion = &sug
+		AttachTacticalCommand(&resp, in.BattleID)
+		if writeBack != nil && in.BattleID != "" {
+			writeBack.WriteSuggestion(in.BattleID, sug)
+		}
+		return StaggeredSuggestOutcome{InferHTTPResponse: resp, Suggestion: sug}, nil
 	}
 	sug := DeriveSuggestion(path, text, hitIDs)
 	if writeBack != nil && in.BattleID != "" {
 		writeBack.WriteSuggestion(in.BattleID, sug)
 	}
-	resp := EdgeInferHTTPResponseWithRAG(text, model, latencyMs, ragK, hitIDs)
+	resp = EdgeInferHTTPResponseWithRAG(text, model, latencyMs, ragK, hitIDs)
 	resp.Suggestion = &sug
+	AttachTacticalCommand(&resp, in.BattleID)
 	return StaggeredSuggestOutcome{InferHTTPResponse: resp, Suggestion: sug}, nil
 }

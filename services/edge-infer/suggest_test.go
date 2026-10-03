@@ -39,6 +39,9 @@ func TestSuggestHTTPWriteBackAndGet(t *testing.T) {
 	if postResp.Suggestion.Kind != ai.SuggestionKindMove && postResp.Suggestion.Kind != ai.SuggestionKindSkill {
 		t.Fatalf("suggestion=%+v", postResp.Suggestion)
 	}
+	if postResp.Command == nil || postResp.Command.UnitID == 0 {
+		t.Fatalf("command=%+v", postResp.Command)
+	}
 
 	getReq := httptest.NewRequest(http.MethodGet, "/v1/suggest/write-back?battle_id=default/0", nil)
 	getRR := httptest.NewRecorder()
@@ -53,6 +56,37 @@ func TestSuggestHTTPWriteBackAndGet(t *testing.T) {
 	sug, ok := getPayload["suggestion"].(map[string]interface{})
 	if !ok || sug["kind"] == nil {
 		t.Fatalf("payload=%v", getPayload)
+	}
+	cmd, ok := getPayload["command"].(map[string]interface{})
+	if !ok || cmd["kind"] == nil {
+		t.Fatalf("payload=%v", getPayload)
+	}
+}
+
+func TestSuggestHTTPInferDownFallback(t *testing.T) {
+	ai.ResetStaggerForTests()
+	ai.GlobalSuggestionStore().ResetSuggestions()
+	srv := &server{backend: inferFailBackend{}}
+	body := bytes.NewBufferString(`{
+		"battle_id":"default/0",
+		"persona":"guard",
+		"order":"hold the gate"
+	}`)
+	req := httptest.NewRequest(http.MethodPost, "/v1/suggest", body)
+	rr := httptest.NewRecorder()
+	srv.handleSuggest(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("post code=%d body=%s", rr.Code, rr.Body.String())
+	}
+	var postResp ai.InferHTTPResponse
+	if err := json.NewDecoder(rr.Body).Decode(&postResp); err != nil {
+		t.Fatal(err)
+	}
+	if postResp.Source != ai.SourceNPC || postResp.Text == "" {
+		t.Fatalf("expected npc fallback: %+v", postResp)
+	}
+	if postResp.Suggestion == nil || postResp.Command == nil {
+		t.Fatalf("missing consumable fields: %+v", postResp)
 	}
 }
 
