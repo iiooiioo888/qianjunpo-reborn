@@ -1,0 +1,192 @@
+:root {
+  --bg: #0f1419;
+  --panel: #1a222d;
+  --text: #e8ecf1;
+  --muted: #8b98a8;
+  --accent: #c9a227;
+  --infantry: #4a7c59;
+  --archer: #5a6b8a;
+  --cavalry: #8a5a4a;
+  --player: #2d6cdf;
+  --enemy: #c0392b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+#app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1rem 1.25rem 2rem;
+}
+
+.top-bar h1 {
+  margin: 0 0 0.25rem;
+  font-size: 1.35rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.subtitle code {
+  color: var(--accent);
+}
+
+.screen.hidden {
+  display: none;
+}
+
+#screen-deploy {
+  margin-top: 1.5rem;
+  padding: 1.25rem;
+  background: var(--panel);
+  border-radius: 8px;
+  max-width: 420px;
+}
+
+#screen-deploy h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0 0 1rem;
+}
+
+.troop-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.troop-row {
+  display: grid;
+  grid-template-columns: 2rem 3rem 1fr 3rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.type-badge.infantry {
+  background: var(--infantry);
+}
+.type-badge.archer {
+  background: var(--archer);
+}
+.type-badge.cavalry {
+  background: var(--cavalry);
+}
+
+.troop-row label {
+  font-size: 0.9rem;
+}
+
+.troop-row output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+button.primary {
+  width: 100%;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #d4af37, #a8841a);
+  color: #1a1208;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+button.primary:hover {
+  filter: brightness(1.08);
+}
+
+button.secondary {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--muted);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+}
+
+.battle-layout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+  align-items: flex-start;
+}
+
+#field-canvas {
+  display: block;
+  background: #121820;
+  border-radius: 8px;
+  border: 1px solid #2a3544;
+  cursor: crosshair;
+  max-width: 100%;
+  height: auto;
+}
+
+.side-panel {
+  flex: 1;
+  min-width: 220px;
+  padding: 1rem;
+  background: var(--panel);
+  border-radius: 8px;
+}
+
+.side-panel h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+}
+
+.help-list {
+  margin: 0 0 1rem;
+  padding-left: 1.2rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.help-list strong {
+  color: var(--text);
+}
+
+.status {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  background: #0d1117;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  min-height: 2.5rem;
+}

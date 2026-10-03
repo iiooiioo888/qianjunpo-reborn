@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>千軍破 · 戰場預覽（field）</title>
+    <link rel="stylesheet" href="field.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="top-bar">
+        <h1>戰場預覽</h1>
+        <p class="subtitle">獨立靜態頁 · 路徑 <code>/qjp/field/</code> · 不接 Live API</p>
+      </header>
+
+      <section id="screen-deploy" class="screen">
+        <h2>出征前選兵</h2>
+        <p class="hint">步、弓、騎各編制一支，調整兵力後按「出征進戰場」。</p>
+        <div class="troop-rows">
+          <div class="troop-row" data-type="infantry">
+            <span class="type-badge infantry">步</span>
+            <label>步兵</label>
+            <input type="range" min="10" max="500" value="120" data-input="troops" />
+            <output data-output="troops">120</output>
+          </div>
+          <div class="troop-row" data-type="archer">
+            <span class="type-badge archer">弓</span>
+            <label>弓兵</label>
+            <input type="range" min="10" max="500" value="100" data-input="troops" />
+            <output data-output="troops">100</output>
+          </div>
+          <div class="troop-row" data-type="cavalry">
+            <span class="type-badge cavalry">騎</span>
+            <label>騎兵</label>
+            <input type="range" min="10" max="500" value="80" data-input="troops" />
+            <output data-output="troops">80</output>
+          </div>
+        </div>
+        <button type="button" id="btn-expedition" class="primary">出征進戰場</button>
+      </section>
+
+      <section id="screen-battle" class="screen hidden">
+        <div class="battle-layout">
+          <canvas id="field-canvas" width="960" height="640" aria-label="斜角戰場"></canvas>
+          <aside class="side-panel">
+            <h3>操作說明</h3>
+            <ol class="help-list">
+              <li>先<strong>點選</strong>己方一支小兵堆（外框高亮）。</li>
+              <li>再點<strong>空格</strong>（綠色提示）移動。</li>
+              <li>或點<strong>敵軍堆</strong>（紅框）攻擊，只扣該支兵力。</li>
+            </ol>
+            <p id="status-line" class="status">請選取己方單位。</p>
+            <button type="button" id="btn-back-deploy" class="secondary">返回選兵</button>
+          </aside>
+        </div>
+      </section>
+    </div>
+    <script type="module" src="field-main.js"></script>
+  </body>
+</html>
