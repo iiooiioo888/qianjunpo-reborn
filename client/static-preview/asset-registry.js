@@ -16,7 +16,7 @@ export const TERRAIN_TILE_SRC = {
 
 export const UNIT_TEXTURE_SRC = {
   0: `${TEXTURE_2D_BASE}/units/PX2D_unit_infantry.png`,
-  1: `${TEXTURE_2D_BASE}/units/PX2D_unit_infantry.png`,
+  1: `${TEXTURE_2D_BASE}/units/PX2D_unit_archer.png`,
   2: `${TEXTURE_2D_BASE}/units/PX2D_unit_cavalry.png`,
 };
 

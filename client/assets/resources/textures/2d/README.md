@@ -7,6 +7,7 @@
 | 邏輯鍵 (`UnitTextureKey`) | 預設 stem（無擴展名） | `ViewUnit.type` |
 |---------------------------|----------------------|-----------------|
 | `infantry` | `PX2D_unit_infantry` | `0`（預設） |
+| `archer` | `PX2D_unit_archer` | `1` |
 | `cavalry` | `PX2D_unit_cavalry` | `2` |
 
 - **STANDARD 畫布**：128×128（常數 `UNIT_ART_CANVAS_PX`）；棋盤格內僅 **Nearest** + **整數倍** 縮放（1×／2× 或反覆 ÷2），見 `PixelSpriteUtil.boardUnitDisplaySize`。

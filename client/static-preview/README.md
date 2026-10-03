@@ -66,7 +66,7 @@ cp client/assets/resources/data/tactical/demo_initial.json client/static-preview
 bash client/static-preview/scripts/sync-textures-from-assets.sh
 ```
 
-自 `client/assets/resources/textures/2d/` 與 `art/2d/_wip/characters/`（v04 卡，**唯讀複製**）同步到 `textures/2d/`（`asset-registry.js`）。單位 `PX2D_unit_infantry`／`cavalry`、地格 0–3、32px HUD／城鎮圖標、角色卡皆走此路徑；缺檔才色塊 fallback。
+自 `client/assets/resources/textures/2d/` 與 `art/2d/_wip/characters/`（v04 卡，**唯讀複製**）同步到 `textures/2d/`（`asset-registry.js`）。單位 `PX2D_unit_infantry`／`archer`／`cavalry`、地格 0–3、32px HUD／城鎮圖標、角色卡皆走此路徑；缺檔才色塊 fallback。
 
 ## ISO25 地格（STANDARD）
 
