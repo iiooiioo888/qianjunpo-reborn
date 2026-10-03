@@ -1,6 +1,7 @@
 import { createBattleFromDeploy, handleCellClick } from './field-battle.js';
 import { drawBattlefield } from './field-render.js';
 import { pickGridCell } from './field-iso.js';
+import { loadFieldAssets } from './field-assets.js';
 
 const deployScreen = document.getElementById('screen-deploy');
 const battleScreen = document.getElementById('screen-battle');
@@ -16,6 +17,7 @@ let deployTroops = { infantry: 120, archer: 100, cavalry: 80 };
 let battleState = null;
 
 let lastOrigin = { originX: 0, originY: 0 };
+let assetsReady = false;
 
 function readDeployFromDom() {
   document.querySelectorAll('.troop-row').forEach((row) => {
@@ -33,6 +35,7 @@ document.querySelectorAll('.troop-row [data-input="troops"]').forEach((input) =>
 });
 
 btnExpedition.addEventListener('click', () => {
+  if (!assetsReady) return;
   readDeployFromDom();
   battleState = createBattleFromDeploy(deployTroops);
   deployScreen.classList.add('hidden');
@@ -54,7 +57,7 @@ function syncStatus() {
 }
 
 function redraw() {
-  if (!battleState) return;
+  if (!battleState || !assetsReady) return;
   const ctx = canvas.getContext('2d');
   lastOrigin = drawBattlefield(ctx, canvas, battleState);
 }
@@ -80,4 +83,18 @@ canvas.addEventListener('click', (ev) => {
 
 window.addEventListener('resize', () => redraw());
 
+loadFieldAssets()
+  .then(() => {
+    assetsReady = true;
+    btnExpedition.disabled = false;
+    readDeployFromDom();
+  })
+  .catch((err) => {
+    console.error(err);
+    if (statusLine) {
+      statusLine.textContent = '手繪資源載入失敗，請重新整理。';
+    }
+  });
+
 readDeployFromDom();
+btnExpedition.disabled = true;

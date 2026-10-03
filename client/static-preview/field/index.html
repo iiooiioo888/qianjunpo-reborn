@@ -16,27 +16,48 @@
       <section id="screen-deploy" class="screen">
         <h2>出征前選兵</h2>
         <p class="hint">步、弓、騎各編制一支，調整兵力後按「出征進戰場」。</p>
-        <div class="troop-rows">
-          <div class="troop-row" data-type="infantry">
-            <span class="type-badge infantry">步</span>
-            <label>步兵</label>
-            <input type="range" min="10" max="500" value="120" data-input="troops" />
-            <output data-output="troops">120</output>
-          </div>
-          <div class="troop-row" data-type="archer">
-            <span class="type-badge archer">弓</span>
-            <label>弓兵</label>
-            <input type="range" min="10" max="500" value="100" data-input="troops" />
-            <output data-output="troops">100</output>
-          </div>
-          <div class="troop-row" data-type="cavalry">
-            <span class="type-badge cavalry">騎</span>
-            <label>騎兵</label>
-            <input type="range" min="10" max="500" value="80" data-input="troops" />
-            <output data-output="troops">80</output>
+        <div class="deploy-panel-wrap">
+          <div class="deploy-panel-art" aria-hidden="true"></div>
+          <div class="troop-rows">
+            <div class="troop-row" data-type="infantry">
+              <img
+                class="troop-stack-icon"
+                src="QJP_stack_infantry_v01.png"
+                width="48"
+                height="56"
+                alt="步兵堆"
+              />
+              <label>步兵</label>
+              <input type="range" min="10" max="500" value="120" data-input="troops" />
+              <output data-output="troops">120</output>
+            </div>
+            <div class="troop-row" data-type="archer">
+              <img
+                class="troop-stack-icon"
+                src="QJP_stack_archer_v01.png"
+                width="48"
+                height="56"
+                alt="弓兵堆"
+              />
+              <label>弓兵</label>
+              <input type="range" min="10" max="500" value="100" data-input="troops" />
+              <output data-output="troops">100</output>
+            </div>
+            <div class="troop-row" data-type="cavalry">
+              <img
+                class="troop-stack-icon"
+                src="QJP_stack_cavalry_v01.png"
+                width="48"
+                height="56"
+                alt="騎兵堆"
+              />
+              <label>騎兵</label>
+              <input type="range" min="10" max="500" value="80" data-input="troops" />
+              <output data-output="troops">80</output>
+            </div>
           </div>
         </div>
-        <button type="button" id="btn-expedition" class="primary">出征進戰場</button>
+        <button type="button" id="btn-expedition" class="primary" disabled>出征進戰場</button>
       </section>
 
       <section id="screen-battle" class="screen hidden">
@@ -47,7 +68,7 @@
             <ol class="help-list">
               <li>先<strong>點選</strong>己方一支小兵堆（外框高亮）。</li>
               <li>再點<strong>空格</strong>（綠色提示）移動。</li>
-              <li>或點<strong>敵軍堆</strong>（紅框）攻擊，只扣該支兵力。</li>
+              <li>或點<strong>敵軍堆</strong>攻擊，只扣該支兵力。</li>
             </ol>
             <p id="status-line" class="status">請選取己方單位。</p>
             <button type="button" id="btn-back-deploy" class="secondary">返回選兵</button>
