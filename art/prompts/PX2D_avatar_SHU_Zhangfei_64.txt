@@ -1,0 +1,4 @@
+PX2D_avatar_SHU_Zhangfei_64
+Source: approved v04 card PX2D_CHAR_SHU_Zhangfei_ex_v04.png (320x400). Not a redraw.
+Crop: nearest-neighbor, shifted down so face + thick beard + tiger-fur shoulder sit inside 64x64.
+Output: exact 64x64. Do not regenerate the character card.
