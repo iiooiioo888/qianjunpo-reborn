@@ -45,6 +45,12 @@ import {
 } from './live-gateway.js';
 import { createLiveAutoPlayer } from './live-auto-play.js';
 import {
+  ensureFreshLiveZoneBeforeEnter,
+  isTerminalLiveSnapshot,
+  mintFreshLiveZoneId,
+  persistZoneIdInLocation,
+} from './live-zone-entry.js';
+import {
   CAMPAIGN_BUTTON_ICONS,
   HUD_RESOURCE_ICONS,
   HUD_TOWN_ICONS,
@@ -596,6 +602,29 @@ async function startLiveWithToken() {
   await runLivePrepare();
 }
 
+function resetLiveSessionForNewZone(zoneId) {
+  boot.liveGateway.zoneId = zoneId;
+  persistZoneIdInLocation(zoneId);
+  const shard = Number(boot.liveGateway.shard) || 0;
+  liveBattleId = `${zoneId}/${shard}`;
+  liveSessionId = '';
+  stickyTerminalOutcome = null;
+  snapshot = null;
+  stopLivePoll();
+  renderer.clearSelection();
+  els.boardWrap?.classList.add('pre-battle');
+  campaign?.toDeploy();
+  render();
+}
+
+function bounceLiveToDeployAfterTerminalZone({ previousZoneId, zoneId, endReason }) {
+  resetLiveSessionForNewZone(zoneId);
+  const reasonLabel = endReason && endReason !== 'none' ? endReason : '終局';
+  setStatus(
+    `戰區 ${previousZoneId} 的戰局已結束（${reasonLabel}），已開新戰區 ${zoneId}；請重新排兵佈陣 → 補給 → 開戰。`,
+  );
+}
+
 async function runLivePrepare() {
   stopLivePoll();
   lastPollAt = 0;
@@ -609,11 +638,33 @@ async function runLivePrepare() {
     });
     return;
   }
+  setStatus('Live：檢查戰區戰局是否已結束…');
+  try {
+    const zoneCheck = await ensureFreshLiveZoneBeforeEnter(boot);
+    liveBattleId = zoneCheck.battleId;
+    if (zoneCheck.action === 'rotated') {
+      bounceLiveToDeployAfterTerminalZone(zoneCheck);
+      return;
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    setStatus(`Live：戰區檢查失敗（${msg}）；仍嘗試建局…`, true);
+  }
   setStatus('Live：POST connect → enter-battle…');
   try {
     const prepared = await prepareLiveJanusSession(boot.liveGateway, liveBattleId);
     liveSessionId = prepared.sessionId;
     liveBattleId = prepared.battleId;
+    if (prepared.initialSnapshot && isTerminalLiveSnapshot(prepared.initialSnapshot)) {
+      const previousZoneId = boot.liveGateway.zoneId || 'default';
+      const zoneId = mintFreshLiveZoneId();
+      bounceLiveToDeployAfterTerminalZone({
+        previousZoneId,
+        zoneId,
+        endReason: prepared.initialSnapshot.endReason,
+      });
+      return;
+    }
     if (prepared.initialSnapshot) {
       ingestSnapshot(prepared.initialSnapshot);
       render();
