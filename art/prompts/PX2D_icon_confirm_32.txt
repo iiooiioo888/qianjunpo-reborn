@@ -1,0 +1,5 @@
+A. HARD OUTPUT: exact 32x32 pixel HUD icon, single subject only, solid flat background #1A1410, no sprite sheet no collage no frame no text,
+B. STYLE LOCK: cartoon pixel art, 1px hard black outline, no anti-aliasing, top-left light, palette #DAA520 gold check on #1A1410,
+C. POSE LOCK: one centered check mark filling most of the 32px square,
+D. IDENTITY confirm MUST SHOW FIRST: (1) silhouette a thick check mark, (2) gold #DAA520 fill, (3) readable at 32px, (4) means confirm yes,
+E. FORBIDDEN: wrong size not 32x32 letters words X mark swords photoreal gradient sprite sheet collage gold frame

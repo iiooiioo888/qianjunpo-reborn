@@ -7,7 +7,7 @@
 
 ## 1. Purpose · 目的
 
-wan2.7-image 生成 **ISO25** 卡通像素地格（如 grass／mountain／water／forest／road／wall／sand／hill），與 2D track **同一 STYLE LOCK 調色語言**（`#8B4513` / `#CD5C5C` / `#DAA520` + terrain greens／greys），經 post-process 裁成精確 **64×32** 並套鑽石 alpha mask，供 art-manager 樣張過審。
+Grok 生成 **ISO25** 卡通像素地格（如 grass／mountain／water／forest／road／wall／sand／hill），與 2D track **同一 STYLE LOCK 調色語言**（`#8B4513` / `#CD5C5C` / `#DAA520` + terrain greens／greys），經 post-process 裁成精確 **64×32** 並套鑽石 alpha mask，供 art-manager 樣張過審。
 
 ---
 
