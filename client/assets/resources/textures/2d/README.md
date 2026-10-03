@@ -45,6 +45,8 @@ bash client/scripts/sync-wip-char-textures.sh
 | `mountain` | `ISO25_tile_mountain_v01` | `Mountain`（`1`） |
 | `forest` | `ISO25_tile_forest_v01` | `Forest`（`2`） |
 | `river` | `ISO25_tile_water_v01` | `River`（`3`） |
+| `city` | `ISO25_tile_wall_v01` | `City`（`4`） |
+| `pass` | `ISO25_tile_road_v01` | `Pass`（`5`） |
 
 - **STANDARD 畫布**：64×32 等距菱形（`ISO25_TILE_ART_WIDTH_PX` × `ISO25_TILE_ART_HEIGHT_PX`）；棋盤 **Nearest** + **整數倍** 縮放，見 `boardIsoTileDisplaySize`。
 - **同步 STANDARD 工作稿**（來源 art #83，不改 `art/`）：

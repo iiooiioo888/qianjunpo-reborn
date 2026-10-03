@@ -11,6 +11,8 @@ export const TERRAIN_TILE_TEXTURE_KEYS = {
   mountain: 'mountain',
   forest: 'forest',
   river: 'river',
+  city: 'city',
+  pass: 'pass',
 } as const;
 
 export type TerrainTileTextureKey =
@@ -22,6 +24,8 @@ const DEFAULT_STEM_BY_KEY: Record<TerrainTileTextureKey, string> = {
   mountain: 'ISO25_tile_mountain_v01',
   forest: 'ISO25_tile_forest_v01',
   river: 'ISO25_tile_water_v01',
+  city: 'ISO25_tile_wall_v01',
+  pass: 'ISO25_tile_road_v01',
 };
 
 const TERRAIN_TO_KEY: Partial<Record<TerrainKind, TerrainTileTextureKey>> = {
@@ -29,6 +33,8 @@ const TERRAIN_TO_KEY: Partial<Record<TerrainKind, TerrainTileTextureKey>> = {
   [TerrainKind.Mountain]: TERRAIN_TILE_TEXTURE_KEYS.mountain,
   [TerrainKind.Forest]: TERRAIN_TILE_TEXTURE_KEYS.forest,
   [TerrainKind.River]: TERRAIN_TILE_TEXTURE_KEYS.river,
+  [TerrainKind.City]: TERRAIN_TILE_TEXTURE_KEYS.city,
+  [TerrainKind.Pass]: TERRAIN_TILE_TEXTURE_KEYS.pass,
 };
 
 const DEFAULT_TERRAIN_KEY = TERRAIN_TILE_TEXTURE_KEYS.plain;
