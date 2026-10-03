@@ -21,7 +21,12 @@ export function boardUnitDisplaySize(cellSizePx, maxUpscale = 2) {
     w /= 2;
     h /= 2;
   }
-  return { width: Math.min(w, cellSizePx), height: Math.min(h, cellSizePx) };
+  const fittedW = Math.min(w, cellSizePx);
+  const fittedH = Math.min(h, cellSizePx);
+  if (fittedW < cellSizePx || fittedH < cellSizePx) {
+    return { width: cellSizePx, height: cellSizePx };
+  }
+  return { width: fittedW, height: fittedH };
 }
 
 /**

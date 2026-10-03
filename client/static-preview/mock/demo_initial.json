@@ -819,23 +819,23 @@
         "unitId": 0
       },
       {
-        "terrain": 0,
+        "terrain": 1,
+        "passable": false,
+        "unitId": 0
+      },
+      {
+        "terrain": 2,
         "passable": true,
         "unitId": 0
       },
       {
         "terrain": 0,
         "passable": true,
-        "unitId": 0
+        "unitId": 102
       },
       {
-        "terrain": 0,
-        "passable": true,
-        "unitId": 0
-      },
-      {
-        "terrain": 0,
-        "passable": true,
+        "terrain": 4,
+        "passable": false,
         "unitId": 0
       },
       {
@@ -1866,6 +1866,15 @@
       "type": 2,
       "x": 16,
       "y": 10,
+      "hp": 429496729600,
+      "maxHp": 100
+    },
+    {
+      "id": 102,
+      "owner": 0,
+      "type": 1,
+      "x": 9,
+      "y": 8,
       "hp": 429496729600,
       "maxHp": 100
     }
