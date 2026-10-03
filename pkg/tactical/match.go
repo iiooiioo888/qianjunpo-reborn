@@ -82,6 +82,9 @@ type Match struct {
 	initial   uint64
 	recording replay.Recording
 	sealed    bool
+
+	autoMode          AutoCommandMode
+	submittedThisStep [PlayerCount]bool
 }
 
 // NewMatch creates a standard infantry vs cavalry duel with a bridged river.
@@ -197,6 +200,9 @@ func (m *Match) Submit(cmd Command) error {
 	}
 
 	m.buffer.queue(m.Frame, cmd)
+	if int(cmd.PlayerID) < len(m.submittedThisStep) {
+		m.submittedThisStep[cmd.PlayerID] = true
+	}
 	return nil
 }
 

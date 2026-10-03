@@ -23,6 +23,17 @@
 
 **超時（timeout）** 在雙方每幀 `kind=3` pass 時於 `maxTurnFrames`（64）觸發。HP 較高者勝（`winner: 0|1`）；同 HP 和局為 `winner: 255`、`endReason: "timeout"`。
 
+## 觀戰／自動（spectator / auto）
+
+無玩家手動 `Submit` 時，**仍可直接 `StepLockstep`**，frame 會照常遞增（超時／占點同樣會在規則滿足時終局）。
+
+若需雙方自動出指令（簡單 AI：朝敵方移動、能攻擊則攻擊、否則 pass）：
+
+- `Match.SetAutoCommandMode(AutoCommandBoth)` 後每幀呼叫 `StepWithAuto()`，或
+- `RunSpectatorAuto(maxFrames)` 一次跑完。
+
+終局 `winner`／`endReason` token 與手動對局相同（例如殲滅仍為 `"wipeout"`）。
+
 ## 測試（驗收）
 
 進行中契約：
@@ -57,6 +68,12 @@ go test ./pkg/tactical/ -run 'TestViewSnapshotTimeout|TestTimeout'
 go test ./internal/roma/ -run TestTacticalViewSnapshotJSONReportsTimeout
 go test ./pkg/integration/ -run TestPhase2TimeoutViewSnapshotIntegration
 go test ./services/janus/ -run TestHTTPTacticalSnapshotReportsTimeoutVictory
+```
+
+**觀戰／自動**（無手動指令仍推進 frame；簡單 AI 可打到 wipeout）：
+
+```bash
+go test ./pkg/tactical/ -run 'TestSpectatorAuto|TestIdleStepLockstep'
 ```
 
 一次跑齊勝敗快照相關測：
