@@ -48,6 +48,32 @@ export function createBattleFromDeploy(deploy) {
     selectedId: null,
     highlightCells: [],
     message: '請選取己方單位。',
+    gameResult: null,
+  };
+}
+
+function sumSideTroops(state, side) {
+  return state.units
+    .filter((u) => u.side === side)
+    .reduce((sum, u) => sum + u.troops, 0);
+}
+
+function resolveGameResult(state) {
+  if (sumSideTroops(state, 'player') <= 0) return 'lose';
+  if (sumSideTroops(state, 'enemy') <= 0) return 'win';
+  return null;
+}
+
+function applyEndGame(state) {
+  const gameResult = resolveGameResult(state);
+  if (!gameResult) return state;
+  return {
+    ...state,
+    gameResult,
+    selectedId: null,
+    highlightCells: [],
+    message:
+      gameResult === 'win' ? '勝利！敵軍全滅。' : '失敗！己方全滅。',
   };
 }
 
@@ -94,6 +120,10 @@ function computeMoveHighlights(state, unit) {
 }
 
 export function handleCellClick(state, gx, gy) {
+  if (state.gameResult) {
+    return state;
+  }
+
   const clicked = unitAt(state, gx, gy);
 
   if (!state.selectedId) {
@@ -127,13 +157,13 @@ export function handleCellClick(state, gx, gy) {
         ? { ...u, troops: Math.max(0, u.troops - damage) }
         : u,
     );
-    return {
+    return applyEndGame({
       ...state,
       units,
       selectedId: null,
       highlightCells: [],
       message: `攻擊 ${typeName(clicked.type)}，敵損 ${damage}，剩 ${Math.max(0, clicked.troops - damage)}。`,
-    };
+    });
   }
 
   const canMove = state.highlightCells.some((c) => c.x === gx && c.y === gy);
