@@ -22,30 +22,56 @@ export function screenToGrid(px, py, originX, originY) {
   return { gx, gy };
 }
 
+/** 與 field-render drawDiamondPath 相同四頂點（top → right → bottom → left） */
+export function diamondVertices(topX, topY) {
+  return [
+    { x: topX, y: topY },
+    { x: topX + TILE_W / 2, y: topY + TILE_H / 2 },
+    { x: topX, y: topY + TILE_H },
+    { x: topX - TILE_W / 2, y: topY + TILE_H / 2 },
+  ];
+}
+
+function pointInPolygon(px, py, verts) {
+  let inside = false;
+  for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
+    const xi = verts[i].x;
+    const yi = verts[i].y;
+    const xj = verts[j].x;
+    const yj = verts[j].y;
+    const intersect =
+      yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+export function pointInDiamond(px, py, topX, topY) {
+  return pointInPolygon(px, py, diamondVertices(topX, topY));
+}
+
 export function pickGridCell(px, py, originX, originY) {
-  const { gx, gy } = screenToGrid(px, py, originX, originY);
-  const cx = Math.round(gx);
-  const cy = Math.round(gy);
-  if (cx < 0 || cy < 0 || cx >= GRID_W || cy >= GRID_H) {
-    return null;
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      const { x, y } = gridToScreen(gx, gy, originX, originY);
+      if (pointInDiamond(px, py, x, y)) {
+        return { x: gx, y: gy };
+      }
+    }
   }
-  const center = gridToScreen(cx, cy, originX, originY);
-  const dx = Math.abs(gx - cx) + Math.abs(gy - cy);
-  if (dx > 0.55) {
-    return null;
-  }
-  const dist = Math.hypot(px - center.x, py - (center.y + TILE_H / 2));
-  if (dist > TILE_W * 0.55) {
-    return null;
-  }
-  return { x: cx, y: cy };
+  return null;
 }
 
 /**
- * 先命中兵堆圖（含高出菱形的上半部），否則走菱形空格判定。
+ * 點在哪顆畫出來的菱形裡就回該格（不被隔壁兵堆矩形搶走）；
+ * 僅在菱形外時，用裁切後兵身矩形補點。
  * @param {{ units: Array<{ id: number, x: number, y: number, troops: number }> }} state
  */
 export function pickBattleCell(px, py, originX, originY, state) {
+  const cell = pickGridCell(px, py, originX, originY);
+  if (cell) {
+    return cell;
+  }
   const live = state.units.filter((u) => u.troops > 0);
   const drawOrder = [...live].sort((a, b) => b.y + b.x - (a.y + a.x));
   for (const u of drawOrder) {
@@ -54,7 +80,7 @@ export function pickBattleCell(px, py, originX, originY, state) {
       return { x: u.x, y: u.y };
     }
   }
-  return pickGridCell(px, py, originX, originY);
+  return null;
 }
 
 export function computeOrigin(canvasWidth, canvasHeight) {

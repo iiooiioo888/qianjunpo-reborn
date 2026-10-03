@@ -2,7 +2,7 @@ import {
   GRID_W,
   GRID_H,
   TILE_W,
-  TILE_H,
+  diamondVertices,
   gridToScreen,
   computeOrigin,
 } from './field-iso.js';
@@ -10,11 +10,12 @@ import { getGroundImage, getStackImage } from './field-assets.js';
 import { STACK_SRC_CROP_TOP, stackLayout } from './field-stack-layout.js';
 
 function drawDiamondPath(ctx, cx, cy) {
+  const verts = diamondVertices(cx, cy);
   ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + TILE_W / 2, cy + TILE_H / 2);
-  ctx.lineTo(cx, cy + TILE_H);
-  ctx.lineTo(cx - TILE_W / 2, cy + TILE_H / 2);
+  ctx.moveTo(verts[0].x, verts[0].y);
+  for (let i = 1; i < verts.length; i++) {
+    ctx.lineTo(verts[i].x, verts[i].y);
+  }
   ctx.closePath();
 }
 
