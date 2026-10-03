@@ -17,8 +17,7 @@ import (
 )
 
 const (
-	PlayerCount   = 2
-	maxTurnFrames = 64
+	PlayerCount = 2
 )
 
 // commandBuffer queues tactical commands with standard lockstep delay.
@@ -84,6 +83,7 @@ type Match struct {
 	sealed    bool
 
 	autoMode          AutoCommandMode
+	liveAutoProfile   LiveAutoProfile
 	submittedThisStep [PlayerCount]bool
 }
 
@@ -250,7 +250,7 @@ func (m *Match) StepLockstep() {
 	if !m.Finished {
 		m.tickCapture()
 	}
-	if !m.Finished && m.Frame >= maxTurnFrames {
+	if !m.Finished && m.Frame >= MaxTurnFrames {
 		m.decideTimeoutWinner()
 	}
 	m.Frame++

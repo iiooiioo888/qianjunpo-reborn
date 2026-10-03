@@ -38,7 +38,7 @@ func TestTimeoutPassLockstepIntegration(t *testing.T) {
 		_ = m.Submit(Command{PlayerID: 0, Kind: KindPass, UnitID: UnitIDPlayer0, To: m.Units[UnitIDPlayer0].Pos})
 		_ = m.Submit(Command{PlayerID: 1, Kind: KindPass, UnitID: UnitIDPlayer1, To: m.Units[UnitIDPlayer1].Pos})
 		m.StepLockstep()
-		if m.Frame > maxTurnFrames+2 {
+		if m.Frame > MaxTurnFrames+2 {
 			t.Fatal("timeout did not fire")
 		}
 	}

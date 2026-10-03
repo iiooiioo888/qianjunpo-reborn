@@ -125,6 +125,16 @@ func planSimpleAutoCommand(m *Match, playerID uint8) (Command, bool) {
 	if u == nil {
 		return Command{}, false
 	}
+	switch m.liveAutoProfile {
+	case LiveAutoTimeout:
+		return Command{PlayerID: playerID, Kind: KindPass, UnitID: u.ID, To: u.Pos}, true
+	case LiveAutoOccupy:
+		if len(m.controlPoints) > 0 {
+			if cmd, ok := planOccupyAutoCommand(m, playerID, u); ok {
+				return cmd, true
+			}
+		}
+	}
 	enemy := aliveUnitForOwner(m, enemyOwner(playerID))
 	if enemy == nil {
 		return Command{PlayerID: playerID, Kind: KindPass, UnitID: u.ID, To: u.Pos}, true
@@ -187,4 +197,38 @@ func bestMoveToward(m *Match, u *Unit, target board.Coord) (board.Coord, bool) {
 		}
 	}
 	return best, found
+}
+
+func planOccupyAutoCommand(m *Match, playerID uint8, u *Unit) (Command, bool) {
+	for _, cp := range m.controlPoints {
+		if u.Pos != cp.Pos {
+			continue
+		}
+		owners := uniqueOwnersOnCell(m, cp.Pos)
+		if len(owners) == 1 && owners[0] == playerID {
+			return Command{PlayerID: playerID, Kind: KindPass, UnitID: u.ID, To: u.Pos}, true
+		}
+	}
+	target := nearestControlPoint(u.Pos, m.controlPoints)
+	if dest, ok := bestMoveToward(m, u, target.Pos); ok && dest != u.Pos {
+		return Command{PlayerID: playerID, Kind: KindMove, UnitID: u.ID, To: dest}, true
+	}
+	return Command{PlayerID: playerID, Kind: KindPass, UnitID: u.ID, To: u.Pos}, true
+}
+
+func nearestControlPoint(from board.Coord, points []ControlPoint) ControlPoint {
+	if len(points) == 0 {
+		return ControlPoint{}
+	}
+	best := points[0]
+	bestDist := board.Chebyshev(from, best.Pos)
+	for i := 1; i < len(points); i++ {
+		cp := points[i]
+		d := board.Chebyshev(from, cp.Pos)
+		if d < bestDist || (d == bestDist && coordLess(cp.Pos, best.Pos)) {
+			bestDist = d
+			best = cp
+		}
+	}
+	return best
 }

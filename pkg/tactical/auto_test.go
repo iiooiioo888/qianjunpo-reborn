@@ -18,7 +18,7 @@ func TestIdleStepLockstepAdvancesFrame(t *testing.T) {
 func TestSpectatorAutoNoManualInputFinishes(t *testing.T) {
 	m := NewMatch(0xa110)
 	start := m.Frame
-	m.RunSpectatorAuto(maxTurnFrames + 8)
+	m.RunSpectatorAuto(MaxTurnFrames + 8)
 	if m.Frame <= start {
 		t.Fatalf("expected frames to advance, frame=%d", m.Frame)
 	}
@@ -34,7 +34,7 @@ func TestSpectatorAutoNoManualInputFinishes(t *testing.T) {
 
 func TestSpectatorAutoCanReachWipeout(t *testing.T) {
 	m := NewMatch(0xdeadbeef)
-	m.RunSpectatorAuto(maxTurnFrames + 8)
+	m.RunSpectatorAuto(MaxTurnFrames + 8)
 	if !m.Finished {
 		t.Fatal("match did not finish")
 	}
