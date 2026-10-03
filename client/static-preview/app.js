@@ -216,6 +216,9 @@ function ingestSnapshot(raw) {
 }
 
 function refreshHud() {
+  els.mode.textContent = boot.live
+    ? `Live: ${liveSnapshotUrlRawForBattle(liveBattleId)}`
+    : `Mock: mock/demo_initial.json  ·  ?live=1 → ${liveSnapshotUrlRawForBattle(liveBattleId)}`;
   if (!snapshot) {
     return;
   }
@@ -229,16 +232,13 @@ function refreshHud() {
     localPlayerOwner: LOCAL_PLAYER_OWNER,
   });
   updateCastSkillButton();
-  els.mode.textContent = boot.live
-    ? `Live: ${boot.liveUrlRaw}`
-    : `Mock: mock/demo_initial.json  ·  ?live=1 → ${boot.liveUrlRaw}`;
 }
 
 function render() {
   if (snapshot) {
     renderer.draw(snapshot);
-    refreshHud();
   }
+  refreshHud();
 }
 
 function validateSnapshot(raw) {
@@ -275,13 +275,17 @@ function battleIdFromLiveUrl(liveUrlRaw) {
   }
 }
 
-function liveSnapshotUrlForBattle(battleId) {
+function liveSnapshotUrlRawForBattle(battleId) {
   const raw = boot.liveUrlRaw;
   if (raw.includes('battle_id=')) {
-    return resolveAppUrl(raw.replace(/battle_id=[^&]+/, `battle_id=${encodeURIComponent(battleId)}`));
+    return raw.replace(/battle_id=[^&]+/, `battle_id=${encodeURIComponent(battleId)}`);
   }
   const sep = raw.includes('?') ? '&' : '?';
-  return resolveAppUrl(`${raw}${sep}battle_id=${encodeURIComponent(battleId)}`);
+  return `${raw}${sep}battle_id=${encodeURIComponent(battleId)}`;
+}
+
+function liveSnapshotUrlForBattle(battleId) {
+  return resolveAppUrl(liveSnapshotUrlRawForBattle(battleId));
 }
 
 function updateCastSkillButton() {
