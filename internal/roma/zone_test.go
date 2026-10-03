@@ -3,7 +3,6 @@ package roma
 import (
 	"testing"
 
-	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/tactical"
 )
 
@@ -33,26 +32,68 @@ func TestZonePartitionInMemory(t *testing.T) {
 	}
 }
 
-func TestJoinUsesLiveControlPoints(t *testing.T) {
+func TestJoinDefaultUsesWipeoutMatch(t *testing.T) {
 	store := NewStore(nil)
-	b, err := store.Join("capture-live", 0)
+	b, err := store.Join("default", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(liveJoinControlPoints) != 1 {
-		t.Fatalf("points=%d", len(liveJoinControlPoints))
+	if b.Match.LiveAutoProfile() != tactical.LiveAutoDefault {
+		t.Fatalf("profile=%d", b.Match.LiveAutoProfile())
 	}
-	cp := liveJoinControlPoints[0]
-	if cp.Pos != (board.Coord{X: 2, Y: 8}) || cp.HoldFrames != 3 {
-		t.Fatalf("cp=%+v", cp)
+	occupyBattle, err := store.Join(ZoneLiveOccupy, 0)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for i := 0; i < 3 && !b.Match.Finished; i++ {
+	if occupyBattle.Match.LiveAutoProfile() == b.Match.LiveAutoProfile() {
+		t.Fatal("default and live-occupy must use different Live auto profiles")
+	}
+}
+
+func TestJoinLiveOccupyZone(t *testing.T) {
+	store := NewStore(nil)
+	b, err := store.Join(ZoneLiveOccupy, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.Match.LiveAutoProfile() != tactical.LiveAutoOccupy {
+		t.Fatalf("profile=%d", b.Match.LiveAutoProfile())
+	}
+	cps := tactical.LiveControlPointsOccupy()
+	if cps[0].Pos != tactical.LiveSpawnP0 || cps[0].HoldFrames != tactical.LiveOccupyHoldFrames {
+		t.Fatalf("cp=%+v", cps[0])
+	}
+	b.Match.SetAutoCommandMode(tactical.AutoCommandBoth)
+	for i := 0; i < tactical.MaxTurnFrames+8 && !b.Match.Finished; i++ {
 		if _, _, _, _, _, err := store.StepLockstep(b.ID, 1, StepLockstepOpts{}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	if !b.Match.Finished || b.Match.EndReason != tactical.EndCapture || b.Match.Winner != 0 {
-		t.Fatalf("finished=%v reason=%d winner=%d", b.Match.Finished, b.Match.EndReason, b.Match.Winner)
+		t.Fatalf("finished=%v reason=%d winner=%d frame=%d", b.Match.Finished, b.Match.EndReason, b.Match.Winner, b.Match.Frame)
+	}
+}
+
+func TestJoinLiveTimeoutZone(t *testing.T) {
+	store := NewStore(nil)
+	b, err := store.Join(ZoneLiveTimeout, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.Match.LiveAutoProfile() != tactical.LiveAutoTimeout {
+		t.Fatalf("profile=%d", b.Match.LiveAutoProfile())
+	}
+	b.Match.SetAutoCommandMode(tactical.AutoCommandBoth)
+	for i := 0; i < tactical.MaxTurnFrames+8 && !b.Match.Finished; i++ {
+		if _, _, _, _, _, err := store.StepLockstep(b.ID, 1, StepLockstepOpts{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !b.Match.Finished || b.Match.EndReason != tactical.EndTimeout {
+		t.Fatalf("finished=%v reason=%d winner=%d frame=%d", b.Match.Finished, b.Match.EndReason, b.Match.Winner, b.Match.Frame)
+	}
+	if b.Match.Frame < tactical.MaxTurnFrames {
+		t.Fatalf("frame=%d want >= %d", b.Match.Frame, tactical.MaxTurnFrames)
 	}
 }
 

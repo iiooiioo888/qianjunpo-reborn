@@ -13,10 +13,10 @@ func TestTacticalViewSnapshotMatchesDemoSchedule(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ref := tactical.NewMatchWithControlPoints(b.Match.Seed, liveJoinControlPoints)
+	ref := tactical.NewMatch(b.Match.Seed)
 	sched := tactical.DemoSchedule()
 	idx := 0
-	for frame := uint64(0); frame < tactical.DemoTargetFrame() && !b.Match.Finished; frame++ {
+	for frame := uint64(0); frame < tactical.DemoTargetFrame(); frame++ {
 		for idx < len(sched) && sched[idx].SubmitFrame == frame {
 			item := sched[idx]
 			_, _, err := store.SubmitTacticalCommand(b.ID, uint32(item.Cmd.PlayerID), uint32(item.Cmd.Kind), item.Cmd.UnitID, int32(item.Cmd.To.X), int32(item.Cmd.To.Y), uint32(item.Cmd.SkillID))
@@ -32,9 +32,7 @@ func TestTacticalViewSnapshotMatchesDemoSchedule(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !ref.Finished {
-			ref.StepLockstep()
-		}
+		ref.StepLockstep()
 	}
 
 	raw, hash, frame, err := store.TacticalViewSnapshotJSON(b.ID)

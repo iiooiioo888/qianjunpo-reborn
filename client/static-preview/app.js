@@ -42,6 +42,8 @@ import {
   stepTacticalLockstep,
   TACTICAL_AUTO_COMMAND_MODE_BOTH,
   TACTICAL_LOCKSTEP_STEPS_AFTER_COMMAND,
+  LIVE_ZONE_OCCUPY,
+  LIVE_ZONE_TIMEOUT,
 } from './live-gateway.js';
 import { createLiveAutoPlayer } from './live-auto-play.js';
 import {
@@ -78,6 +80,10 @@ const els = {
   campaignBattle: document.getElementById('campaign-battle'),
   btnCampaignSupply: document.getElementById('btn-campaign-supply'),
   btnCampaignBattle: document.getElementById('btn-campaign-battle'),
+  liveZoneDemoHint: document.getElementById('live-zone-demo-hint'),
+  liveZoneDemoActions: document.getElementById('live-zone-demo-actions'),
+  btnLiveOccupy: document.getElementById('btn-live-occupy'),
+  btnLiveTimeout: document.getElementById('btn-live-timeout'),
   cards: document.getElementById('char-cards'),
   canvas: document.getElementById('board'),
   boardWrap: document.getElementById('board-wrap'),
@@ -887,6 +893,14 @@ els.canvas.addEventListener('click', (ev) => {
   }
 });
 
+function beginLiveBattleWithZone(zoneId) {
+  boot.liveGateway.zoneId = zoneId;
+  persistZoneIdInLocation(zoneId);
+  const shard = Number(boot.liveGateway.shard) || 0;
+  liveBattleId = `${zoneId}/${shard}`;
+  campaign?.toBattle();
+}
+
 function beginBattleSession() {
   els.boardWrap?.classList.remove('pre-battle');
   if (boot.live) {
@@ -913,6 +927,12 @@ function initCampaign() {
   });
   els.btnCampaignSupply?.addEventListener('click', () => campaign.toSupply());
   els.btnCampaignBattle?.addEventListener('click', () => campaign.toBattle());
+  if (boot.live) {
+    els.liveZoneDemoHint?.removeAttribute('hidden');
+    els.liveZoneDemoActions?.removeAttribute('hidden');
+    els.btnLiveOccupy?.addEventListener('click', () => beginLiveBattleWithZone(LIVE_ZONE_OCCUPY));
+    els.btnLiveTimeout?.addEventListener('click', () => beginLiveBattleWithZone(LIVE_ZONE_TIMEOUT));
+  }
   els.boardWrap?.classList.add('pre-battle');
   if (boot.skipCampaign) {
     campaign.toBattle();
