@@ -1,0 +1,5 @@
+A. HARD OUTPUT: exact 64x32 pixel isometric terrain tile, single subject only, 2:1 isometric diamond footprint filling canvas, outside diamond transparent alpha zero, no sprite sheet no collage no gold frame no text,
+B. STYLE LOCK: cartoon pixel art, 1px hard black outline, no anti-aliasing, top-left light, palette terrain rammed-earth ochre grey brick crenellation dark mortar accents #8B4513 #CD5C5C #DAA520 tiny flecks only,
+C. POSE LOCK: sand-table isometric city wall tile centered diamond, low crenellated parapet readable above diamond plane but still one compact wall segment not a mountain peak,
+D. IDENTITY wall MUST SHOW FIRST: (1) silhouette crenellated city wall segment on diamond base, (2) main color blocks ochre rammed earth and grey brick battlements, (3) edge readability hard merlon notches vs diamond rim, (4) passability cue blocked city wall no path no gate,
+E. FORBIDDEN: opaque square corners wrong size not 64x32 photoreal gradient sprite sheet collage text gold frame buildings units grass meadow mountain rocky peak cliffs forest trees water sand dunes open road
