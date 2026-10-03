@@ -1,4 +1,4 @@
-import { SpriteFrame, Texture2D } from 'cc';
+import { Rect, Size, SpriteFrame, Texture2D } from 'cc';
 
 /** Cartoon pixel风：Nearest / Point，關閉 mipmap 語意（Cocos 2D 預設無 mipmap）。 */
 export function applyPixelArtSampling(frame: SpriteFrame | null): void {
@@ -18,6 +18,38 @@ export const UNIT_ART_CANVAS_PX = 128;
 /** ISO25 地格畫布（像素，2:1 diamond）；stem 見 {@link TerrainTileSpriteRegistry}。 */
 export const ISO25_TILE_ART_WIDTH_PX = 64;
 export const ISO25_TILE_ART_HEIGHT_PX = 32;
+
+/**
+ * ISO25 STANDARD 不透明菱形在 64×32 畫布上的取樣框（左右各 16px 透明邊；菱形寬 = 畫布高）。
+ * 棋盤繪製須用此裁切再縮到 {@link boardIsoTileDisplaySize}，否則菱形會只有格寬的一半。
+ */
+export function iso25TileOpaqueSourceRect(
+  artW = ISO25_TILE_ART_WIDTH_PX,
+  artH = ISO25_TILE_ART_HEIGHT_PX,
+): { x: number; y: number; width: number; height: number } {
+  const width = artH;
+  const height = artH;
+  const x = (artW - width) / 2;
+  return { x, y: 0, width, height };
+}
+
+const iso25TileDisplayFrameCache = new WeakMap<SpriteFrame, SpriteFrame>();
+
+/** 裁掉 STANDARD 左右透明邊後的 SpriteFrame，供棋盤地格 CUSTOM 尺寸繪製。 */
+export function iso25TileDisplaySpriteFrame(sf: SpriteFrame): SpriteFrame {
+  const cached = iso25TileDisplayFrameCache.get(sf);
+  if (cached) {
+    return cached;
+  }
+  const crop = iso25TileOpaqueSourceRect();
+  const base = sf.rect;
+  const out = sf.clone();
+  out.rect = new Rect(base.x + crop.x, base.y + crop.y, crop.width, crop.height);
+  out.originalSize = new Size(crop.width, crop.height);
+  applyPixelArtSampling(out);
+  iso25TileDisplayFrameCache.set(sf, out);
+  return out;
+}
 
 /** v03 角色卡畫布（像素）；寬 × 高。 */
 export const CHAR_CARD_ART_WIDTH_PX = 320;

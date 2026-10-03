@@ -1,4 +1,14 @@
 import { ISO25_TILE_ART_H, ISO25_TILE_ART_W } from './config.js';
+
+/**
+ * ISO25 STANDARD：不透明菱形在畫布上的取樣框（與 Cocos iso25TileOpaqueSourceRect 對齊）。
+ */
+export function boardIsoTileSourceRect(artW = ISO25_TILE_ART_W, artH = ISO25_TILE_ART_H) {
+  const width = artH;
+  const height = artH;
+  const x = (artW - width) / 2;
+  return { x, y: 0, width, height };
+}
 import { TERRAIN_TILE_SRC } from './asset-registry.js';
 import { resolveAppUrl } from './paths.js';
 

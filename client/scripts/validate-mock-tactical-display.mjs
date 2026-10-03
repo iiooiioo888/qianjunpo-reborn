@@ -314,6 +314,9 @@ const staticPreviewBoard = readFileSync(join(root, 'static-preview/board.js'), '
 if (!staticPreviewBoard.includes('drawTerrainTile')) {
   fail('static-preview/board.js missing ISO25 terrain tile draw path');
 }
+if (!staticPreviewBoard.includes('boardIsoTileSourceRect')) {
+  fail('static-preview/board.js must crop ISO25 opaque diamond before drawImage');
+}
 
 const staticPreviewApp = readFileSync(join(root, 'static-preview/app.js'), 'utf8');
 const staticPreviewHud = readFileSync(join(root, 'static-preview/hud.js'), 'utf8');
