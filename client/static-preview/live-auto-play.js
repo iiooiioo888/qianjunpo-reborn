@@ -1,31 +1,26 @@
 import { LIVE_AUTO_TICK_MS } from './config.js';
 import {
-  deriveLocalSuggestion,
-  normalizeInferSuggestion,
+  deriveLocalCommand,
+  normalizeTacticalCommand,
   summarizeBattleContext,
 } from './local-suggest.js';
-import { TACTICAL_COMMAND_KIND_SKILL } from './stub-skill.js';
 
 /**
- * @typedef {{ kind: string, unitId: number, to: {x:number,y:number}, skillId?: number, tacticalKind: number, inferPath?: string }} TacticalSuggestion
+ * @returns {Promise<{ command: object | null, source: string }>}
  */
-
-/**
- * @returns {Promise<{ suggestion: TacticalSuggestion | null, source: string }>}
- */
-export async function fetchLiveSuggestion(boot, battleId, snap) {
+export async function fetchLiveCommand(boot, battleId, sessionId, snap) {
   const wbUrl = `${boot.suggestWriteBackUrl}?battle_id=${encodeURIComponent(battleId)}`;
   try {
     const res = await fetch(wbUrl, { cache: 'no-store' });
     if (res.ok) {
       const json = await res.json();
-      const normalized = normalizeInferSuggestion(json.suggestion, snap);
-      if (normalized) {
-        return { suggestion: normalized, source: 'infer-write-back' };
+      const cmd = normalizeTacticalCommand(json.command, battleId, sessionId, snap);
+      if (cmd) {
+        return { command: cmd, source: 'infer-write-back' };
       }
     }
   } catch {
-    /* Janus often has no /v1/suggest mirror */
+    /* suggest mirror may be absent on Janus host */
   }
 
   const ctx = summarizeBattleContext(snap);
@@ -42,17 +37,17 @@ export async function fetchLiveSuggestion(boot, battleId, snap) {
     });
     if (res.ok) {
       const json = await res.json();
-      const normalized = normalizeInferSuggestion(json.suggestion, snap);
-      if (normalized) {
-        return { suggestion: normalized, source: 'infer-post' };
+      const cmd = normalizeTacticalCommand(json.command, battleId, sessionId, snap);
+      if (cmd) {
+        return { command: cmd, source: 'infer-post' };
       }
     }
   } catch {
     /* fall through */
   }
 
-  const local = deriveLocalSuggestion(snap);
-  return { suggestion: local, source: 'local-ai' };
+  const local = deriveLocalCommand(battleId, sessionId, snap);
+  return { command: local, source: 'local-ai' };
 }
 
 export function formatAutoHudLine(state) {
@@ -60,26 +55,25 @@ export function formatAutoHudLine(state) {
     return 'auto: off';
   }
   if (state.paused) {
-    return `auto: paused (${state.pauseReason}) · next tick ~${state.tickMs}ms`;
+    return `auto: paused (${state.pauseReason}) · tick ${state.tickMs}ms`;
   }
   if (state.busy) {
     return `auto: busy (${state.busyLabel})`;
   }
   const last = state.lastSource
-    ? `last=${state.lastSource} ${state.lastKind ?? ''} u${state.lastUnitId ?? '?'}`
+    ? `last=${state.lastSource} kind=${state.lastKind ?? '?'} u${state.lastUnitId ?? '?'}`
     : 'waiting';
   return `auto: on · ${last} · tick ${state.tickMs}ms`;
 }
 
-/**
- * Wires timer-driven suggest → onCommand callback (app.js submits command + lockstep).
- */
 export function createLiveAutoPlayer({
   boot,
   getBattleId,
+  getSessionId,
   getSnapshot,
   isBattleFinished,
   onCommand,
+  onStep,
   onStatus,
   tickMs = LIVE_AUTO_TICK_MS,
 }) {
@@ -103,7 +97,7 @@ export function createLiveAutoPlayer({
     onStatus?.(formatAutoHudLine(lastState));
   }
 
-  function pauseForUser(ms = 8000, reason = 'manual') {
+  function pauseForUser(ms = 8000, reason = 'player') {
     pausedUntil = Date.now() + ms;
     pauseReason = reason;
     lastState.paused = true;
@@ -135,7 +129,12 @@ export function createLiveAutoPlayer({
 
     let outcome;
     try {
-      outcome = await fetchLiveSuggestion(boot, getBattleId(), snap);
+      outcome = await fetchLiveCommand(
+        boot,
+        getBattleId(),
+        getSessionId(),
+        snap,
+      );
     } catch (err) {
       busy = false;
       lastState.busy = false;
@@ -144,22 +143,24 @@ export function createLiveAutoPlayer({
       return;
     }
 
-    const sug = outcome.suggestion;
-    if (!sug) {
-      busy = false;
-      lastState.busy = false;
+    const cmd = outcome.command;
+    if (cmd) {
+      lastState.lastSource = outcome.source;
+      lastState.lastKind = String(cmd.kind);
+      lastState.lastUnitId = cmd.unit_id;
+      lastState.busyLabel = 'command';
       emitHud();
-      return;
+      try {
+        await onCommand(cmd);
+      } catch {
+        /* onCommand surfaces HUD errors */
+      }
     }
 
-    lastState.lastSource = outcome.source;
-    lastState.lastKind = sug.kind;
-    lastState.lastUnitId = sug.unitId;
-    lastState.busyLabel = 'command';
+    lastState.busyLabel = 'step';
     emitHud();
-
     try {
-      await onCommand(sug);
+      await onStep();
     } finally {
       busy = false;
       lastState.busy = false;
@@ -174,7 +175,7 @@ export function createLiveAutoPlayer({
     lastState.enabled = true;
     emitHud();
     timer = window.setInterval(() => void tick(), tickMs);
-    window.setTimeout(() => void tick(), 400);
+    window.setTimeout(() => void tick(), 500);
   }
 
   function stop() {
@@ -194,13 +195,5 @@ export function createLiveAutoPlayer({
       pauseForUser(8000, 'player');
     },
     isBusy: () => busy,
-    formatLine: () => formatAutoHudLine(lastState),
   };
-}
-
-export function suggestionToCommandArgs(sug) {
-  if (sug.tacticalKind === TACTICAL_COMMAND_KIND_SKILL) {
-    return { kind: TACTICAL_COMMAND_KIND_SKILL, skillId: sug.skillId };
-  }
-  return { kind: 1 };
 }

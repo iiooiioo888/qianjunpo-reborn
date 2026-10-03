@@ -131,7 +131,7 @@ export class TacticalBoardRenderer {
       const r = cellPx * 0.36;
       const unitImg = this.unitSprites.get(unit.type) ?? this.unitSprites.get(0);
       const drewSprite =
-        unitImg?.complete &&
+        unitImg &&
         unitImg.naturalWidth > 0 &&
         this.drawUnitSprite(ctx, unitImg, cx, cy, cellPx, unit.owner, pal);
       if (!drewSprite) {
@@ -174,11 +174,6 @@ export class TacticalBoardRenderer {
       ctx.filter = 'hue-rotate(-18deg) saturate(1.15)';
     }
     ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, dw, dh);
-    ctx.restore();
-    ctx.save();
-    ctx.globalAlpha = 0.35;
-    ctx.fillStyle = pal.fill;
-    ctx.fillRect(dx, dy + dh - 4, dw, 4);
     ctx.restore();
     return true;
   }

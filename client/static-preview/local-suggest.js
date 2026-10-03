@@ -138,6 +138,60 @@ export function normalizeInferSuggestion(raw, snap) {
   return null;
 }
 
+/**
+ * #104: POST /v1/suggest `.command` → Janus command body (snake_case).
+ */
+export function normalizeTacticalCommand(raw, battleId, sessionId, snap) {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const unitId = Number(raw.unit_id ?? raw.unitId);
+  const toX = Number(raw.to_x ?? raw.toX);
+  const toY = Number(raw.to_y ?? raw.toY);
+  const kind = Number(raw.kind);
+  if (!Number.isFinite(unitId) || !Number.isFinite(toX) || !Number.isFinite(toY) || !Number.isFinite(kind)) {
+    return null;
+  }
+  const unit = snap?.units?.find((u) => u.id === unitId && u.hp > 0);
+  if (!unit || unit.owner !== LOCAL_PLAYER_OWNER) {
+    return null;
+  }
+  const body = {
+    battle_id: battleId,
+    session_id: sessionId,
+    player_id: Number(raw.player_id ?? raw.playerId ?? unit.owner),
+    kind,
+    unit_id: unitId,
+    to_x: toX,
+    to_y: toY,
+  };
+  const skillId = raw.skill_id ?? raw.skillId;
+  if (kind === TACTICAL_COMMAND_KIND_SKILL && skillId != null) {
+    body.skill_id = Number(skillId);
+  }
+  return body;
+}
+
+export function deriveLocalCommand(battleId, sessionId, snap) {
+  const sug = deriveLocalSuggestion(snap);
+  if (!sug) {
+    return null;
+  }
+  const body = {
+    battle_id: battleId,
+    session_id: sessionId,
+    player_id: LOCAL_PLAYER_OWNER,
+    kind: sug.tacticalKind,
+    unit_id: sug.unitId,
+    to_x: sug.to.x,
+    to_y: sug.to.y,
+  };
+  if (sug.tacticalKind === TACTICAL_COMMAND_KIND_SKILL) {
+    body.skill_id = sug.skillId ?? STUB_SKILL_STRIKE_ID;
+  }
+  return body;
+}
+
 export function summarizeBattleContext(snap) {
   const alive = snap.units.filter((u) => u.hp > 0);
   const p0 = alive.filter((u) => u.owner === LOCAL_PLAYER_OWNER).length;
