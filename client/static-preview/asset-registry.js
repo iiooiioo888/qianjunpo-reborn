@@ -22,10 +22,24 @@ export const UNIT_TEXTURE_SRC = {
 
 /** 角色卡：static-preview/chars/（config CHAR_CARD_V04 路徑） */
 export const CHAR_CARD_V04 = [
-  { label: '曹操', src: 'chars/PX2D_CHAR_WEI_Caocao_ex_v04.png' },
+  {
+    label: '曹操',
+    src: 'chars/PX2D_CHAR_WEI_Caocao_ex_v04.png',
+    avatarSrc: 'avatars/PX2D_avatar_WEI_Caocao_64.png',
+  },
   { label: '張飛', src: 'chars/PX2D_CHAR_SHU_Zhangfei_ex_v04.png' },
-  { label: '吳', src: 'chars/PX2D_CHAR_WU_Placeholder_01_v04.png' },
+  {
+    label: '吳',
+    src: 'chars/PX2D_CHAR_WU_Placeholder_01_v04.png',
+    avatarSrc: 'avatars/PX2D_avatar_WU_Placeholder_64.png',
+  },
 ];
+
+/** 戰前流程按鈕 32px（#111 wip icons） */
+export const CAMPAIGN_BUTTON_ICONS = {
+  supply: `${TEXTURE_2D_BASE}/icons/PX2D_icon_confirm_32.png`,
+  battle: `${TEXTURE_2D_BASE}/icons/PX2D_icon_battle_start_32.png`,
+};
 
 export const HUD_RESOURCE_ICONS = [
   { label: '糧', src: `${TEXTURE_2D_BASE}/icons/PX2D_icon_res_food_32.png` },

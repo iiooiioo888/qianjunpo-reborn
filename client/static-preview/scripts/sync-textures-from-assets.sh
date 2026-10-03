@@ -5,8 +5,10 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 ASSETS="${ROOT}/client/assets/resources/textures/2d"
 DST="${ROOT}/client/static-preview/textures/2d"
 CHARS_PREVIEW="${ROOT}/client/static-preview/chars"
+AVATARS_PREVIEW="${ROOT}/client/static-preview/avatars"
+WIP_2D="${ROOT}/art/2d/_wip"
 
-mkdir -p "${DST}/tiles" "${DST}/chars" "${DST}/units" "${DST}/icons" "${CHARS_PREVIEW}"
+mkdir -p "${DST}/tiles" "${DST}/chars" "${DST}/units" "${DST}/icons" "${CHARS_PREVIEW}" "${AVATARS_PREVIEW}"
 
 if [[ -d "${ASSETS}/tiles" ]]; then
   cp -f "${ASSETS}/tiles/"*.png "${DST}/tiles/" 2>/dev/null || true
@@ -29,4 +31,22 @@ do
   fi
 done
 
-echo "Synced -> ${DST} and ${CHARS_PREVIEW}"
+for f in \
+  PX2D_avatar_WEI_Caocao_64.png \
+  PX2D_avatar_WU_Placeholder_64.png
+do
+  if [[ -f "${WIP_2D}/avatars/${f}" ]]; then
+    cp -f "${WIP_2D}/avatars/${f}" "${AVATARS_PREVIEW}/${f}"
+  fi
+done
+
+for f in \
+  PX2D_icon_confirm_32.png \
+  PX2D_icon_battle_start_32.png
+do
+  if [[ -f "${WIP_2D}/icons/${f}" ]]; then
+    cp -f "${WIP_2D}/icons/${f}" "${DST}/icons/${f}"
+  fi
+done
+
+echo "Synced -> ${DST}, ${CHARS_PREVIEW}, ${AVATARS_PREVIEW}"

@@ -121,6 +121,20 @@ h1 {
   color: var(--accent);
 }
 
+.campaign-btn.campaign-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.campaign-btn .campaign-btn-img {
+  display: block;
+  image-rendering: pixelated;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
 .hud-icon-strip {
   display: flex;
   flex-wrap: wrap;
@@ -277,6 +291,22 @@ h1 {
   font-size: 0.8rem;
   color: var(--muted);
   margin-top: 0.35rem;
+}
+
+.char-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.char-card .char-avatar {
+  display: block;
+  image-rendering: pixelated;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  flex-shrink: 0;
 }
 
 footer {

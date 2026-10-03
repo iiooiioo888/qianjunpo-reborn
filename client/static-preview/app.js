@@ -44,7 +44,11 @@ import {
   TACTICAL_LOCKSTEP_STEPS_AFTER_COMMAND,
 } from './live-gateway.js';
 import { createLiveAutoPlayer } from './live-auto-play.js';
-import { HUD_RESOURCE_ICONS, HUD_TOWN_ICONS } from './asset-registry.js';
+import {
+  CAMPAIGN_BUTTON_ICONS,
+  HUD_RESOURCE_ICONS,
+  HUD_TOWN_ICONS,
+} from './asset-registry.js';
 
 captureBootQuery();
 const boot = parseBootConfig();
@@ -755,6 +759,25 @@ function bindResourceIcons() {
   bindIconStrip(els.townIcons, HUD_TOWN_ICONS);
 }
 
+function decorateCampaignButton(btn, iconSrc) {
+  if (!btn || !iconSrc) {
+    return;
+  }
+  btn.classList.add('campaign-btn-icon');
+  const img = document.createElement('img');
+  img.className = 'campaign-btn-img';
+  img.src = resolveAppUrl(iconSrc);
+  img.alt = '';
+  img.width = 32;
+  img.height = 32;
+  btn.prepend(img);
+}
+
+function bindCampaignButtonIcons() {
+  decorateCampaignButton(els.btnCampaignSupply, CAMPAIGN_BUTTON_ICONS.supply);
+  decorateCampaignButton(els.btnCampaignBattle, CAMPAIGN_BUTTON_ICONS.battle);
+}
+
 function bindCards() {
   if (!boot.showCards) {
     els.cards.hidden = true;
@@ -775,7 +798,23 @@ function bindCards() {
       }));
     };
     const cap = document.createElement('figcaption');
-    cap.textContent = card.label;
+    if (card.avatarSrc) {
+      const head = document.createElement('div');
+      head.className = 'char-card-head';
+      const avatar = document.createElement('img');
+      avatar.className = 'char-avatar';
+      avatar.src = resolveAppUrl(card.avatarSrc);
+      avatar.alt = '';
+      avatar.width = 64;
+      avatar.height = 64;
+      avatar.loading = 'lazy';
+      const name = document.createElement('span');
+      name.textContent = card.label;
+      head.append(avatar, name);
+      cap.append(head);
+    } else {
+      cap.textContent = card.label;
+    }
     fig.append(img, cap);
     els.cards.append(fig);
   }
@@ -826,6 +865,7 @@ function initCampaign() {
 }
 
 bindResourceIcons();
+bindCampaignButtonIcons();
 bindCards();
 
 els.mintToken.addEventListener('click', () => {
