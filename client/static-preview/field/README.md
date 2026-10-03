@@ -58,6 +58,6 @@ npx --yes serve . -l 3460
 | `field-battle.js` | 戰鬥狀態與移動／攻擊 |
 | `field-render.js` | Canvas 菱形格與單位 |
 | `field-assets.js` | 手繪 PNG 載入 |
-| `field-iso.js` | 斜角座標與點選（菱形／兵堆） |
+| `field-iso.js` | 斜角座標與點選（兵身優先，否則菱形） |
 | `field-stack-layout.js` | 兵堆繪製與點選共用版面 |
 | `QJP_*.png` | 手繪貼圖（見上表） |

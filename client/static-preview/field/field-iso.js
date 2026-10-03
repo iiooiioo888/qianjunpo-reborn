@@ -63,15 +63,10 @@ export function pickGridCell(px, py, originX, originY) {
 }
 
 /**
- * 點在哪顆畫出來的菱形裡就回該格（不被隔壁兵堆矩形搶走）；
- * 僅在菱形外時，用裁切後兵身矩形補點。
+ * 裁切後兵身矩形優先（點兵身回該支部隊格），否則回底下菱形格。
  * @param {{ units: Array<{ id: number, x: number, y: number, troops: number }> }} state
  */
 export function pickBattleCell(px, py, originX, originY, state) {
-  const cell = pickGridCell(px, py, originX, originY);
-  if (cell) {
-    return cell;
-  }
   const live = state.units.filter((u) => u.troops > 0);
   const drawOrder = [...live].sort((a, b) => b.y + b.x - (a.y + a.x));
   for (const u of drawOrder) {
@@ -80,7 +75,7 @@ export function pickBattleCell(px, py, originX, originY, state) {
       return { x: u.x, y: u.y };
     }
   }
-  return null;
+  return pickGridCell(px, py, originX, originY);
 }
 
 export function computeOrigin(canvasWidth, canvasHeight) {
