@@ -2,8 +2,13 @@ import { manhattan } from './field-iso.js';
 
 const MOVE_RANGE = 4;
 const ATTACK_RANGE = 2;
+const GRID_SIZE = 13;
 
 let nextId = 1;
+
+export function calcTroopDamage(attackerTroops) {
+  return Math.max(8, Math.floor(attackerTroops * 0.25));
+}
 
 export function createBattleFromDeploy(deploy) {
   nextId = 1;
@@ -45,9 +50,9 @@ export function createBattleFromDeploy(deploy) {
 
   return {
     units,
-    selectedId: null,
-    highlightCells: [],
-    message: '請選取己方單位。',
+    turnNumber: 0,
+    popups: [],
+    message: '自動戰鬥進行中…',
     gameResult: null,
   };
 }
@@ -70,8 +75,6 @@ function applyEndGame(state) {
   return {
     ...state,
     gameResult,
-    selectedId: null,
-    highlightCells: [],
     message:
       gameResult === 'win' ? '勝利！敵軍全滅。' : '失敗！己方全滅。',
   };
@@ -83,104 +86,155 @@ export function unitAt(state, gx, gy) {
   );
 }
 
-export function getUnit(state, id) {
-  return state.units.find((u) => u.id === id);
-}
-
-export function selectUnit(state, unitId) {
-  const u = getUnit(state, unitId);
-  if (!u || u.side !== 'player' || u.troops <= 0) {
-    return { ...state, selectedId: null, highlightCells: [], message: '請選取己方單位。' };
-  }
-  const highlights = computeMoveHighlights(state, u);
-  return {
-    ...state,
-    selectedId: unitId,
-    highlightCells: highlights,
-    message: `已選 ${typeName(u.type)}（${u.troops}）· 點空格移動或點敵軍攻擊。`,
-  };
-}
-
 function typeName(type) {
   return { infantry: '步兵', archer: '弓兵', cavalry: '騎兵' }[type] ?? type;
 }
 
-function computeMoveHighlights(state, unit) {
-  const cells = [];
-  for (let gy = 0; gy < 13; gy++) {
-    for (let gx = 0; gx < 13; gx++) {
+function livingUnits(state) {
+  return state.units.filter((u) => u.troops > 0);
+}
+
+function findNearestEnemy(unit, state) {
+  const enemies = livingUnits(state).filter((u) => u.side !== unit.side);
+  let best = null;
+  let bestDist = Infinity;
+  for (const e of enemies) {
+    const d = manhattan(unit, e);
+    if (d < bestDist) {
+      bestDist = d;
+      best = e;
+    }
+  }
+  return { target: best, dist: bestDist };
+}
+
+function bestMoveCell(unit, target, state) {
+  let best = null;
+  let bestDist = manhattan(unit, target);
+  for (let gy = 0; gy < GRID_SIZE; gy++) {
+    for (let gx = 0; gx < GRID_SIZE; gx++) {
       if (gx === unit.x && gy === unit.y) continue;
       if (unitAt(state, gx, gy)) continue;
-      if (manhattan({ x: gx, y: gy }, unit) <= MOVE_RANGE) {
-        cells.push({ x: gx, y: gy, kind: 'move' });
+      const step = manhattan({ x: gx, y: gy }, unit);
+      if (step > MOVE_RANGE || step === 0) continue;
+      const toTarget = manhattan({ x: gx, y: gy }, target);
+      if (toTarget < bestDist) {
+        bestDist = toTarget;
+        best = { x: gx, y: gy };
       }
     }
   }
-  return cells;
+  return best;
 }
 
-export function handleCellClick(state, gx, gy) {
-  if (state.gameResult) {
-    return state;
-  }
+function appendPopup(state, gx, gy, text) {
+  const popups = [
+    ...(state.popups ?? []),
+    { gx, gy, text, ttl: 48 },
+  ];
+  return { ...state, popups };
+}
 
-  const clicked = unitAt(state, gx, gy);
-
-  if (!state.selectedId) {
-    if (clicked?.side === 'player') {
-      return selectUnit(state, clicked.id);
-    }
-    return { ...state, message: '請先點選己方一支部隊。' };
-  }
-
-  const selected = getUnit(state, state.selectedId);
-  if (!selected || selected.troops <= 0) {
-    return selectUnit(state, null);
-  }
-
-  if (clicked?.id === selected.id) {
-    return { ...state, selectedId: null, highlightCells: [], message: '已取消選取。' };
-  }
-
-  if (clicked?.side === 'player') {
-    return selectUnit(state, clicked.id);
-  }
-
-  if (clicked?.side === 'enemy') {
-    const dist = manhattan(clicked, selected);
-    if (dist > ATTACK_RANGE) {
-      return { ...state, message: '距離太遠，無法攻擊該敵軍。' };
-    }
-    const damage = Math.max(8, Math.floor(selected.troops * 0.25));
-    const units = state.units.map((u) =>
-      u.id === clicked.id
-        ? { ...u, troops: Math.max(0, u.troops - damage) }
-        : u,
-    );
-    return applyEndGame({
-      ...state,
-      units,
-      selectedId: null,
-      highlightCells: [],
-      message: `攻擊 ${typeName(clicked.type)}，敵損 ${damage}，剩 ${Math.max(0, clicked.troops - damage)}。`,
-    });
-  }
-
-  const canMove = state.highlightCells.some((c) => c.x === gx && c.y === gy);
-  if (!canMove) {
-    return { ...state, message: '該格不可移動。' };
-  }
-
+function applyAttack(state, attacker, defender) {
+  const damage = calcTroopDamage(attacker.troops);
+  const remaining = Math.max(0, defender.troops - damage);
   const units = state.units.map((u) =>
-    u.id === selected.id ? { ...u, x: gx, y: gy } : u,
+    u.id === defender.id ? { ...u, troops: remaining } : u,
   );
-  const moved = { ...selected, x: gx, y: gy };
-  const next = {
-    ...state,
-    units,
-    selectedId: moved.id,
-    highlightCells: computeMoveHighlights({ ...state, units }, moved),
-    message: `已移動至 (${gx},${gy})。`,
+  let next = { ...state, units };
+  next = appendPopup(
+    next,
+    defender.x,
+    defender.y,
+    `-${damage}`,
+  );
+  return {
+    ...next,
+    message: `${sideLabel(attacker.side)}${typeName(attacker.type)} 攻擊 ${typeName(defender.type)}，敵損 ${damage}。`,
   };
+}
+
+function sideLabel(side) {
+  return side === 'player' ? '己方' : '敵方';
+}
+
+function moveUnit(state, unitId, gx, gy) {
+  const units = state.units.map((u) =>
+    u.id === unitId ? { ...u, x: gx, y: gy } : u,
+  );
+  return { ...state, units };
+}
+
+/** 單一單位本回合行動：射程內攻擊，否則朝最近敵軍移動一格距內最佳格 */
+function actUnit(state, unit) {
+  if (unit.troops <= 0) return state;
+  const { target, dist } = findNearestEnemy(unit, state);
+  if (!target) return state;
+
+  if (dist <= ATTACK_RANGE) {
+    return applyAttack(state, unit, target);
+  }
+
+  const dest = bestMoveCell(unit, target, state);
+  if (!dest) return state;
+  const moved = moveUnit(state, unit.id, dest.x, dest.y);
+  return {
+    ...moved,
+    message: `${sideLabel(unit.side)}${typeName(unit.type)} 向敵軍靠近。`,
+  };
+}
+
+function turnOrderUnits(state) {
+  return livingUnits(state).sort((a, b) => {
+    if (a.side !== b.side) return a.side === 'player' ? -1 : 1;
+    return a.id - b.id;
+  });
+}
+
+/**
+ * 推進一個完整回合：己方各堆行動後，敵方各堆再行動（含反擊移動／攻擊）。
+ */
+export function advanceAutoTurn(state) {
+  if (state.gameResult) return state;
+
+  let next = { ...state, turnNumber: (state.turnNumber ?? 0) + 1 };
+  const order = turnOrderUnits(next);
+
+  for (const snapshot of order) {
+    const unit = next.units.find((u) => u.id === snapshot.id);
+    if (!unit || unit.troops <= 0) continue;
+
+    next = actUnit(next, unit);
+    next = applyEndGame(next);
+    if (next.gameResult) break;
+  }
+
+  if (!next.gameResult) {
+    next = {
+      ...next,
+      message: `第 ${next.turnNumber} 回合 · 己方 ${sumSideTroops(next, 'player')} / 敵方 ${sumSideTroops(next, 'enemy')}`,
+    };
+  }
+
   return next;
+}
+
+/** 動畫帧：衰減飄字與技能閃光 */
+export function tickBattleFx(state) {
+  if (!state) return state;
+  const popups = (state.popups ?? [])
+    .map((p) => ({ ...p, ttl: p.ttl - 1 }))
+    .filter((p) => p.ttl > 0);
+  return { ...state, popups };
+}
+
+/** 無 UI 快速模擬至結束（除錯／自測） */
+export function simulateBattleToEnd(deploy, maxTurns = 500) {
+  let state = createBattleFromDeploy(deploy);
+  let turns = 0;
+  while (!state.gameResult && turns < maxTurns) {
+    state = advanceAutoTurn(state);
+    turns += 1;
+  }
+  return { state, turns, log: state.message };
 }
