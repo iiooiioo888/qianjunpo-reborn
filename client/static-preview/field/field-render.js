@@ -2,6 +2,7 @@ import {
   GRID_W,
   GRID_H,
   TILE_W,
+  TILE_H,
   diamondVertices,
   gridToScreen,
   computeOrigin,
