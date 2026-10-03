@@ -1,6 +1,7 @@
 package roma
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/replay"
@@ -31,8 +32,33 @@ func TestExportRecordingMatchesCLI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := tactical.ReplayFromRecording(back)
+	got, err := replayLiveJoinRecording(back)
 	if err != nil || got != final {
 		t.Fatalf("verify replay: %016x err=%v", got, err)
 	}
+}
+
+// replayLiveJoinRecording mirrors tactical.ReplayFromRecording for Join's control-point duels.
+func replayLiveJoinRecording(rec replay.Recording) (uint64, error) {
+	if err := replay.VerifyConsistency(rec); err != nil {
+		return 0, err
+	}
+	m := tactical.NewMatchWithControlPoints(rec.RNGSeed.S0, liveJoinControlPoints)
+	m.RNG.SetState(rec.RNGSeed)
+	if m.StateHash() != rec.InitialHash {
+		return 0, fmt.Errorf("tactical: initial hash mismatch: got %016x want %016x", m.StateHash(), rec.InitialHash)
+	}
+	sched := make([]tactical.ScheduledCommand, 0, len(rec.Frames))
+	for _, fc := range rec.Frames {
+		cmd, err := tactical.Decode(fc.Payload)
+		if err != nil {
+			return 0, err
+		}
+		sched = append(sched, tactical.ScheduledCommand{SubmitFrame: fc.Frame, Cmd: cmd})
+	}
+	final := m.RunSchedule(sched, tactical.DemoTargetFrame())
+	if final != rec.FinalHash {
+		return final, fmt.Errorf("tactical: final hash mismatch: got %016x want %016x", final, rec.FinalHash)
+	}
+	return final, nil
 }

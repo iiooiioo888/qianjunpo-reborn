@@ -3,6 +3,7 @@ package roma
 import (
 	"testing"
 
+	"github.com/iiooiioo888/qianjunpo-reborn/pkg/board"
 	"github.com/iiooiioo888/qianjunpo-reborn/pkg/tactical"
 )
 
@@ -29,6 +30,29 @@ func TestZonePartitionInMemory(t *testing.T) {
 	b2, _ := store.Get(b.ID)
 	if hash != b2.StateHash() && h2 != b2.StateHash() {
 		t.Fatalf("hash mismatch submit=%x step=%x state=%x", hash, h2, b2.StateHash())
+	}
+}
+
+func TestJoinUsesLiveControlPoints(t *testing.T) {
+	store := NewStore(nil)
+	b, err := store.Join("capture-live", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(liveJoinControlPoints) != 1 {
+		t.Fatalf("points=%d", len(liveJoinControlPoints))
+	}
+	cp := liveJoinControlPoints[0]
+	if cp.Pos != (board.Coord{X: 2, Y: 8}) || cp.HoldFrames != 3 {
+		t.Fatalf("cp=%+v", cp)
+	}
+	for i := 0; i < 3 && !b.Match.Finished; i++ {
+		if _, _, _, _, _, err := store.StepLockstep(b.ID, 1, StepLockstepOpts{}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !b.Match.Finished || b.Match.EndReason != tactical.EndCapture || b.Match.Winner != 0 {
+		t.Fatalf("finished=%v reason=%d winner=%d", b.Match.Finished, b.Match.EndReason, b.Match.Winner)
 	}
 }
 

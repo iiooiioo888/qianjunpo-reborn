@@ -49,10 +49,7 @@ func TestTacticalViewSnapshotJSONReportsOccupy(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	b.Match = tactical.NewMatchWithControlPoints(b.Match.Seed, []tactical.ControlPoint{
-		{Pos: board.Coord{2, 8}, HoldFrames: 2},
-	})
-	for i := 0; i < 2 && !b.Match.Finished; i++ {
+	for i := 0; i < 3 && !b.Match.Finished; i++ {
 		if _, _, _, _, _, err := store.StepLockstep(b.ID, 1, StepLockstepOpts{}); err != nil {
 			t.Fatal(err)
 		}
@@ -82,6 +79,14 @@ func TestTacticalViewSnapshotJSONReportsTimeout(t *testing.T) {
 	b, err := store.Join("default", 0)
 	if err != nil {
 		t.Fatal(err)
+	}
+	u0 := b.Match.Units[tactical.UnitIDPlayer0]
+	from := u0.Pos
+	to := board.Coord{X: from.X + 1, Y: from.Y}
+	b.Match.Board.ClearUnit(from)
+	u0.Pos = to
+	if !b.Match.Board.SetUnit(to, u0.ID) {
+		t.Fatal("move off capture point")
 	}
 	b.Match.Units[tactical.UnitIDPlayer0].Stats.HP = fixed.FromInt(50)
 	b.Match.Units[tactical.UnitIDPlayer1].Stats.HP = fixed.FromInt(30)

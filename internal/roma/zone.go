@@ -32,6 +32,12 @@ type BattleState struct {
 	Match   *tactical.Match
 }
 
+// liveJoinControlPoints match pkg/tactical TestCapturePointHoldLockstepIntegration and
+// TestViewSnapshotCaptureExportsOccupy (HoldFrames 3; occupy export test uses 2 for shorter JSON path).
+var liveJoinControlPoints = []tactical.ControlPoint{
+	{Pos: board.Coord{X: 2, Y: 8}, HoldFrames: 3},
+}
+
 // Store keeps battles keyed by id per zone shard.
 type Store struct {
 	mu       sync.RWMutex
@@ -65,7 +71,7 @@ func (s *Store) Join(zoneID string, shard uint32) (*BattleState, error) {
 		ZoneID:  zoneID,
 		Shard:   shard,
 		SimTime: s.clock.Now(),
-		Match:   tactical.NewMatch(seed),
+		Match:   tactical.NewMatchWithControlPoints(seed, liveJoinControlPoints),
 	}
 	s.battles[id] = b
 	metrics.SetActiveRooms(len(s.battles))
