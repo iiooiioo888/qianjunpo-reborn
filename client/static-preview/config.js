@@ -1,6 +1,8 @@
 import { resolveAppUrl } from './paths.js';
 import { parseLiveGatewayConfig } from './live-gateway.js';
 import { STUB_SKILL_STRIKE_ID } from './stub-skill.js';
+export { TERRAIN_TILE_SRC } from './asset-registry.js';
+export { CHAR_CARD_V04 } from './asset-registry.js';
 
 /** Bundled mock for offline / deploy-web-preview (static-preview only). */
 export const MOCK_SNAPSHOT_URL = 'mock/demo_initial.json';
@@ -27,21 +29,14 @@ export const CLIENT_DEFAULT_MOVE_POINTS = 4;
 /** ISO25 STANDARD 地格（art #83）；檔名 stem 與 Cocos TerrainTileSpriteRegistry 一致。 */
 export const ISO25_TILE_ART_W = 64;
 export const ISO25_TILE_ART_H = 32;
-export const TERRAIN_TILE_SRC = {
-  0: 'tiles/ISO25_tile_grass_v02.png',
-  1: 'tiles/ISO25_tile_mountain_v01.png',
-  2: 'tiles/ISO25_tile_forest_v01.png',
-  3: 'tiles/ISO25_tile_water_v01.png',
-};
-
 export const LIVE_POLL_INTERVAL_MS = 400;
 
-/** Optional v04 cards — drop files under `chars/` or show placeholder. */
-export const CHAR_CARD_V04 = [
-  { label: '曹操', src: 'chars/PX2D_CHAR_WEI_Caocao_ex_v04.png' },
-  { label: '張飛', src: 'chars/PX2D_CHAR_SHU_Zhangfei_ex_v04.png' },
-  { label: '吳', src: 'chars/PX2D_CHAR_WU_Placeholder_01_v04.png' },
-];
+/** Live auto-play: infer suggest → command → step-lockstep (disable with ?auto=0). */
+export const LIVE_AUTO_TICK_MS = 1400;
+
+/** POST /v1/suggest + GET write-back (Janus may not mirror; local AI fallback). */
+export const DEFAULT_LIVE_SUGGEST_URL = 'v1/suggest';
+export const DEFAULT_LIVE_SUGGEST_WRITE_BACK_URL = 'v1/suggest/write-back';
 
 export function parseBootConfig() {
   const params = new URLSearchParams(window.location.search);
@@ -61,8 +56,27 @@ export function parseBootConfig() {
     mockVictoryRaw === 'win' || mockVictoryRaw === 'lose' || mockVictoryRaw === 'draw'
       ? mockVictoryRaw
       : '';
+  const autoParam = params.get('auto');
+  const liveAuto =
+    live && autoParam !== '0' && autoParam !== 'false' && autoParam !== 'off';
+  const suggestUrlRaw = params.get('suggestUrl') || DEFAULT_LIVE_SUGGEST_URL;
+  const suggestWriteBackUrlRaw =
+    params.get('suggestWriteBackUrl') || DEFAULT_LIVE_SUGGEST_WRITE_BACK_URL;
+  const debugMoves =
+    params.get('debug') === '1' ||
+    params.get('debugMoves') === '1' ||
+    params.get('debug') === 'true';
+  const skipCampaign =
+    params.get('skipCampaign') === '1' || params.get('skipCampaign') === 'true';
   return {
     live,
+    liveAuto,
+    debugMoves,
+    skipCampaign,
+    suggestUrl: resolveAppUrl(suggestUrlRaw),
+    suggestUrlRaw,
+    suggestWriteBackUrl: resolveAppUrl(suggestWriteBackUrlRaw),
+    suggestWriteBackUrlRaw,
     liveUrl,
     liveUrlRaw,
     commandUrl,

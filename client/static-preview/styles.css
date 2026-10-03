@@ -87,6 +87,59 @@ h1 {
   color: var(--accent);
 }
 
+.campaign {
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.campaign-phase {
+  font-weight: 650;
+  margin: 0 0 0.5rem;
+}
+
+.campaign-panel p {
+  margin: 0.35rem 0;
+  color: var(--muted);
+}
+
+.campaign-btn {
+  margin-top: 0.5rem;
+  margin-right: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid var(--muted);
+  background: #252b3a;
+  color: var(--text);
+}
+
+.campaign-btn.primary {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.hud-icon-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.hud-icon-strip .res-icon img {
+  display: block;
+  image-rendering: pixelated;
+  width: 32px;
+  height: 32px;
+}
+
+.board-wrap.pre-battle {
+  opacity: 0.45;
+  filter: grayscale(0.35);
+}
+
 .board-panel {
   display: flex;
   flex-wrap: wrap;
