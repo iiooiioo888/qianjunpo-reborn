@@ -37,7 +37,15 @@
         <div id="campaign-supply" class="campaign-panel" hidden>
           <div id="hud-town-icons" class="hud-icon-strip" aria-label="城鎮建築"></div>
           <p>補給完成後開戰（Live 需同域 <code>v1/lares/login</code> + <code>v1/tactical/*</code>）。</p>
-          <button type="button" id="btn-campaign-battle" class="campaign-btn primary">開戰</button>
+          <button type="button" id="btn-campaign-battle" class="campaign-btn primary">開戰（wipeout · default）</button>
+          <p class="live-zone-demo" id="live-zone-demo-hint" hidden>
+            Live 終局示範：<code>zoneId=live-occupy</code>（佔點）／<code>live-timeout</code>（超時 frame 64）；預設
+            <code>default</code> 為 wipeout。
+          </p>
+          <div class="live-zone-demo" id="live-zone-demo-actions" hidden>
+            <button type="button" id="btn-live-occupy" class="campaign-btn">開戰（佔點 live-occupy）</button>
+            <button type="button" id="btn-live-timeout" class="campaign-btn">開戰（超時 live-timeout）</button>
+          </div>
         </div>
         <div id="campaign-battle" class="campaign-panel" hidden>
           <p>戰局進行中（自動推進；終局見棋盤 overlay）。</p>

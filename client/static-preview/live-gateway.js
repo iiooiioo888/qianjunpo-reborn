@@ -15,6 +15,11 @@ export const TACTICAL_LOCKSTEP_STEPS_AFTER_COMMAND = 4;
 /** Janus HTTP wire: 2 = 雙方自動（持久），見 docs/janus-http-mirror.md */
 export const TACTICAL_AUTO_COMMAND_MODE_BOTH = 2;
 
+/** Roma Join zone ids (internal/roma/zone.go) for Live endReason demos. */
+export const LIVE_ZONE_WIPEOUT = 'default';
+export const LIVE_ZONE_OCCUPY = 'live-occupy';
+export const LIVE_ZONE_TIMEOUT = 'live-timeout';
+
 /**
  * 暫定契約（與核心 LaresAuth/Login HTTP 鏡像並行對齊；路徑／欄位以核心合入後為準）。
  * POST JSON `{ "username", "password" }` → `{ "access_token" }`（或 camelCase `accessToken`）。

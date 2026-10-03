@@ -15,6 +15,12 @@ import (
 // BattleID identifies an in-memory battle instance.
 type BattleID string
 
+// Live zone ids select distinct tactical constructors in Join (see pkg/tactical/live.go).
+const (
+	ZoneLiveOccupy  = "live-occupy"
+	ZoneLiveTimeout = "live-timeout"
+)
+
 // UnitState is legacy stub metadata (tests / docs); tactical truth lives in Match.
 type UnitState struct {
 	ID uint32
@@ -48,6 +54,17 @@ func NewStore(clock *timesync.Clock) *Store {
 	return &Store{battles: make(map[BattleID]*BattleState), clock: clock, dilation: newRegionDilation()}
 }
 
+func newLiveMatchForZone(seed uint64, zoneID string) *tactical.Match {
+	switch zoneID {
+	case ZoneLiveOccupy:
+		return tactical.NewLiveMatchOccupy(seed)
+	case ZoneLiveTimeout:
+		return tactical.NewLiveMatchTimeout(seed)
+	default:
+		return tactical.NewMatch(seed)
+	}
+}
+
 // Join creates or returns a tactical duel for zone shard (in-memory only).
 func (s *Store) Join(zoneID string, shard uint32) (*BattleState, error) {
 	if zoneID == "" {
@@ -65,7 +82,7 @@ func (s *Store) Join(zoneID string, shard uint32) (*BattleState, error) {
 		ZoneID:  zoneID,
 		Shard:   shard,
 		SimTime: s.clock.Now(),
-		Match:   tactical.NewMatch(seed),
+		Match:   newLiveMatchForZone(seed, zoneID),
 	}
 	s.battles[id] = b
 	metrics.SetActiveRooms(len(s.battles))
