@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Pack static-preview + synced textures for /var/www/qjp-static-preview (see nginx-qjp-snippet.conf).
 set -euo pipefail
-ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PREVIEW="${ROOT}/client/static-preview"
 TARGET="${1:-/var/www/qjp-static-preview}"
 
