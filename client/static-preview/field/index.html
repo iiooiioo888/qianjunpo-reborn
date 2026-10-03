@@ -64,13 +64,14 @@
         <div class="battle-layout">
           <canvas id="field-canvas" width="960" height="640" aria-label="斜角戰場"></canvas>
           <aside class="side-panel">
-            <h3>操作說明</h3>
+            <h3>自動戰鬥</h3>
             <ol class="help-list">
-              <li>先<strong>點選</strong>己方一支小兵堆（外框高亮）。</li>
-              <li>再點<strong>空格</strong>（綠色提示）移動。</li>
-              <li>或點<strong>敵軍堆</strong>攻擊，只扣該支兵力。</li>
+              <li>出征後<strong>回合自動推進</strong>，無需點格移動或選目標。</li>
+              <li>雙方各堆自動靠近（移動曼哈頓 ≤4）並在射程內攻擊（≤2）。</li>
+              <li>傷害 <code>max(8, floor(兵力×0.25))</code>；敵方會反擊；受擊堆上方紅字扣兵。</li>
+              <li>一方合計兵力歸零即結束，畫布顯示勝／負並鎖定。</li>
             </ol>
-            <p id="status-line" class="status">請選取己方單位。</p>
+            <p id="status-line" class="status">自動戰鬥進行中…</p>
             <button type="button" id="btn-back-deploy" class="secondary">返回選兵</button>
           </aside>
         </div>

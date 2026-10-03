@@ -36,17 +36,6 @@ function drawGrassTile(ctx, topX, topY) {
   ctx.stroke();
 }
 
-function drawHighlightOverlay(ctx, topX, topY, kind) {
-  drawDiamondPath(ctx, topX, topY);
-  if (kind === 'move') {
-    ctx.fillStyle = 'rgba(42, 90, 58, 0.45)';
-    ctx.fill();
-    ctx.strokeStyle = '#5a9a6a';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-  }
-}
-
 export function drawBattlefield(ctx, canvas, state) {
   const { originX, originY } = computeOrigin(canvas.width, canvas.height);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -55,10 +44,6 @@ export function drawBattlefield(ctx, canvas, state) {
     for (let gx = 0; gx < GRID_W; gx++) {
       const { x, y } = gridToScreen(gx, gy, originX, originY);
       drawGrassTile(ctx, x, y);
-      const hl = state.highlightCells?.find((c) => c.x === gx && c.y === gy);
-      if (hl) {
-        drawHighlightOverlay(ctx, x, y, hl.kind);
-      }
     }
   }
 
@@ -66,8 +51,10 @@ export function drawBattlefield(ctx, canvas, state) {
     .filter((u) => u.troops > 0)
     .sort((a, b) => a.y + a.x - (b.y + b.x));
   for (const u of drawOrder) {
-    drawUnitStack(ctx, u, originX, originY, state.selectedId === u.id);
+    drawUnitStack(ctx, u, originX, originY);
   }
+
+  drawDamagePopups(ctx, state.popups ?? [], originX, originY);
 
   if (state.gameResult) {
     drawGameResultOverlay(ctx, canvas, state.gameResult);
@@ -95,19 +82,13 @@ function drawGameResultOverlay(ctx, canvas, gameResult) {
   ctx.restore();
 }
 
-function drawUnitStack(ctx, unit, originX, originY, selected) {
+function drawUnitStack(ctx, unit, originX, originY) {
   const layout = stackLayout(unit.x, unit.y, originX, originY);
   const { anchorX, left, bodyTop, bodyDrawH, drawW } = layout;
   const stackImg = getStackImage(unit.type);
   const bodySrcH = stackImg?.naturalHeight
     ? stackImg.naturalHeight - STACK_SRC_CROP_TOP
     : 224 - STACK_SRC_CROP_TOP;
-
-  if (selected) {
-    ctx.strokeStyle = '#f0d040';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(left - 4, bodyTop - 4, drawW + 8, bodyDrawH + 8);
-  }
 
   if (stackImg?.complete && stackImg.naturalWidth) {
     ctx.drawImage(
@@ -139,4 +120,25 @@ function drawTroopCount(ctx, cx, stackTop, troops) {
   ctx.strokeText(label, cx, stackTop - 4);
   ctx.fillStyle = '#ffe066';
   ctx.fillText(label, cx, stackTop - 4);
+}
+
+function drawDamagePopups(ctx, popups, originX, originY) {
+  for (const p of popups) {
+    const layout = stackLayout(p.gx, p.gy, originX, originY);
+    const rise = (48 - p.ttl) * 0.6;
+    const alpha = Math.min(1, p.ttl / 24);
+    const x = layout.anchorX;
+    const y = layout.bodyTop - 18 - rise;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.font = 'bold 16px system-ui, "PingFang TC", "Microsoft JhengHei", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.strokeText(p.text, x, y);
+    ctx.fillStyle = '#ff4444';
+    ctx.fillText(p.text, x, y);
+    ctx.restore();
+  }
 }

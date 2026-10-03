@@ -1,6 +1,5 @@
-import { createBattleFromDeploy, handleCellClick } from './field-battle.js';
+import { createBattleFromDeploy, advanceAutoTurn, tickBattleFx } from './field-battle.js';
 import { drawBattlefield } from './field-render.js';
-import { pickBattleCell } from './field-iso.js';
 import { loadFieldAssets } from './field-assets.js';
 
 const deployScreen = document.getElementById('screen-deploy');
@@ -19,6 +18,11 @@ let battleState = null;
 let lastOrigin = { originX: 0, originY: 0 };
 let assetsReady = false;
 
+/** 每回合間隔（毫秒） */
+const TURN_INTERVAL_MS = 750;
+let turnTimer = null;
+let fxFrame = null;
+
 function readDeployFromDom() {
   document.querySelectorAll('.troop-row').forEach((row) => {
     const type = row.dataset.type;
@@ -34,6 +38,47 @@ document.querySelectorAll('.troop-row [data-input="troops"]').forEach((input) =>
   input.addEventListener('input', () => readDeployFromDom());
 });
 
+function stopBattleLoops() {
+  if (turnTimer) {
+    clearInterval(turnTimer);
+    turnTimer = null;
+  }
+  if (fxFrame) {
+    cancelAnimationFrame(fxFrame);
+    fxFrame = null;
+  }
+}
+
+function startFxLoop() {
+  if (fxFrame) return;
+  const tick = () => {
+    if (!battleState) {
+      fxFrame = null;
+      return;
+    }
+    battleState = tickBattleFx(battleState);
+    redraw();
+    fxFrame = requestAnimationFrame(tick);
+  };
+  fxFrame = requestAnimationFrame(tick);
+}
+
+function startAutoTurnLoop() {
+  stopBattleLoops();
+  startFxLoop();
+  turnTimer = setInterval(() => {
+    if (!battleState || battleState.gameResult) {
+      stopBattleLoops();
+      syncStatus();
+      redraw();
+      return;
+    }
+    battleState = advanceAutoTurn(battleState);
+    syncStatus();
+    redraw();
+  }, TURN_INTERVAL_MS);
+}
+
 btnExpedition.addEventListener('click', () => {
   if (!assetsReady) return;
   readDeployFromDom();
@@ -42,9 +87,11 @@ btnExpedition.addEventListener('click', () => {
   battleScreen.classList.remove('hidden');
   syncStatus();
   redraw();
+  startAutoTurnLoop();
 });
 
 btnBack.addEventListener('click', () => {
+  stopBattleLoops();
   battleState = null;
   battleScreen.classList.add('hidden');
   deployScreen.classList.remove('hidden');
@@ -61,25 +108,6 @@ function redraw() {
   const ctx = canvas.getContext('2d');
   lastOrigin = drawBattlefield(ctx, canvas, battleState);
 }
-
-canvas.addEventListener('click', (ev) => {
-  if (!battleState) return;
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = canvas.width / rect.width;
-  const scaleY = canvas.height / rect.height;
-  const px = (ev.clientX - rect.left) * scaleX;
-  const py = (ev.clientY - rect.top) * scaleY;
-  const cell = pickBattleCell(px, py, lastOrigin.originX, lastOrigin.originY, battleState);
-  if (!cell) {
-    battleState = { ...battleState, message: '請點在格子上。' };
-    syncStatus();
-    return;
-  }
-
-  battleState = handleCellClick(battleState, cell.x, cell.y);
-  syncStatus();
-  redraw();
-});
 
 window.addEventListener('resize', () => redraw());
 
