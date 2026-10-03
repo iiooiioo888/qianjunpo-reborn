@@ -369,6 +369,14 @@ if (
 ) {
   fail('static-preview missing sticky terminal battle-end ingest (Live wipeout)');
 }
+if (
+  !staticPreviewApp.includes('ensureFreshLiveZoneBeforeEnter') ||
+  !readFileSync(join(root, 'static-preview/live-zone-entry.js'), 'utf8').includes(
+    'isTerminalLiveSnapshot',
+  )
+) {
+  fail('static-preview missing live zone fresh entry (ended battle → new zoneId)');
+}
 const staticPreviewIndex = readFileSync(join(root, 'static-preview/index.html'), 'utf8');
 if (!staticPreviewIndex.includes("base.href = '/qjp/'")) {
   fail('static-preview index.html missing /qjp/ base bootstrap');

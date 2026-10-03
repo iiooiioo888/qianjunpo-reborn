@@ -28,6 +28,11 @@ export function createCampaignFlow(opts) {
     syncUi();
   }
 
+  function toDeploy() {
+    phase = PHASE_DEPLOY;
+    syncUi();
+  }
+
   function toBattle() {
     phase = PHASE_BATTLE;
     syncUi();
@@ -39,6 +44,7 @@ export function createCampaignFlow(opts) {
   return {
     getPhase: () => phase,
     isBattle: () => phase === PHASE_BATTLE,
+    toDeploy,
     toSupply,
     toBattle,
   };
