@@ -1,5 +1,7 @@
 /** 斜角格座標 ↔ 畫布像素（自製菱形，非 ISO25 貼圖） */
 
+import { pointInStackPick, stackLayout } from './field-stack-layout.js';
+
 export const GRID_W = 13;
 export const GRID_H = 13;
 export const TILE_W = 48;
@@ -14,28 +16,66 @@ export function gridToScreen(gx, gy, originX, originY) {
 export function screenToGrid(px, py, originX, originY) {
   const rx = px - originX;
   const ry = py - originY;
-  const gx = (rx / (TILE_W / 2) + ry / TILE_H) / 2;
-  const gy = (ry / TILE_H - rx / (TILE_W / 2)) / 2;
+  const halfH = TILE_H / 2;
+  const gx = (rx / (TILE_W / 2) + ry / halfH) / 2;
+  const gy = (ry / halfH - rx / (TILE_W / 2)) / 2;
   return { gx, gy };
 }
 
+/** 與 field-render drawDiamondPath 相同四頂點（top → right → bottom → left） */
+export function diamondVertices(topX, topY) {
+  return [
+    { x: topX, y: topY },
+    { x: topX + TILE_W / 2, y: topY + TILE_H / 2 },
+    { x: topX, y: topY + TILE_H },
+    { x: topX - TILE_W / 2, y: topY + TILE_H / 2 },
+  ];
+}
+
+function pointInPolygon(px, py, verts) {
+  let inside = false;
+  for (let i = 0, j = verts.length - 1; i < verts.length; j = i++) {
+    const xi = verts[i].x;
+    const yi = verts[i].y;
+    const xj = verts[j].x;
+    const yj = verts[j].y;
+    const intersect =
+      yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+export function pointInDiamond(px, py, topX, topY) {
+  return pointInPolygon(px, py, diamondVertices(topX, topY));
+}
+
 export function pickGridCell(px, py, originX, originY) {
-  const { gx, gy } = screenToGrid(px, py, originX, originY);
-  const cx = Math.round(gx);
-  const cy = Math.round(gy);
-  if (cx < 0 || cy < 0 || cx >= GRID_W || cy >= GRID_H) {
-    return null;
+  for (let gy = 0; gy < GRID_H; gy++) {
+    for (let gx = 0; gx < GRID_W; gx++) {
+      const { x, y } = gridToScreen(gx, gy, originX, originY);
+      if (pointInDiamond(px, py, x, y)) {
+        return { x: gx, y: gy };
+      }
+    }
   }
-  const center = gridToScreen(cx, cy, originX, originY);
-  const dx = Math.abs(gx - cx) + Math.abs(gy - cy);
-  if (dx > 0.55) {
-    return null;
+  return null;
+}
+
+/**
+ * 裁切後兵身矩形優先（點兵身回該支部隊格），否則回底下菱形格。
+ * @param {{ units: Array<{ id: number, x: number, y: number, troops: number }> }} state
+ */
+export function pickBattleCell(px, py, originX, originY, state) {
+  const live = state.units.filter((u) => u.troops > 0);
+  const drawOrder = [...live].sort((a, b) => b.y + b.x - (a.y + a.x));
+  for (const u of drawOrder) {
+    const layout = stackLayout(u.x, u.y, originX, originY);
+    if (pointInStackPick(px, py, layout)) {
+      return { x: u.x, y: u.y };
+    }
   }
-  const dist = Math.hypot(px - center.x, py - (center.y + TILE_H / 2));
-  if (dist > TILE_W * 0.55) {
-    return null;
-  }
-  return { x: cx, y: cy };
+  return pickGridCell(px, py, originX, originY);
 }
 
 export function computeOrigin(canvasWidth, canvasHeight) {

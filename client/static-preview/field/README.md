@@ -3,7 +3,7 @@
 獨立靜態頁，公開路徑：**http://47.79.23.223/qjp/field/**（nginx `alias /var/www/qjp-static-preview/` 下之子目錄）。
 
 - 不接 Janus／Live API、不用 `/qjp/` 根目錄既有卡通貼圖。
-- 手繪稿僅放在本目錄；地格、兵堆、選兵面板為 PNG，**兵力數字由程式繪製**（原稿上的 1200／800／600 等僅佔位）。
+- 手繪稿僅放在本目錄；地格、兵堆、選兵面板為 PNG，**兵力數字由程式繪製**（原稿頂部約 y&lt;56 的佔位字在繪製時裁切，不改 PNG）。
 
 ## 手繪資源（入庫 MD5）
 
@@ -58,5 +58,6 @@ npx --yes serve . -l 3460
 | `field-battle.js` | 戰鬥狀態與移動／攻擊 |
 | `field-render.js` | Canvas 菱形格與單位 |
 | `field-assets.js` | 手繪 PNG 載入 |
-| `field-iso.js` | 斜角座標 |
+| `field-iso.js` | 斜角座標與點選（兵身優先，否則菱形） |
+| `field-stack-layout.js` | 兵堆繪製與點選共用版面 |
 | `QJP_*.png` | 手繪貼圖（見上表） |
