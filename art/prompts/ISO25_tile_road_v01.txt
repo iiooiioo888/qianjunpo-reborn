@@ -1,0 +1,5 @@
+A. HARD OUTPUT: exact 64x32 pixel isometric terrain tile, single subject only, 2:1 isometric diamond footprint filling canvas, outside diamond transparent alpha zero, no sprite sheet no collage no gold frame no text,
+B. STYLE LOCK: cartoon pixel art, 1px hard black outline, no anti-aliasing, top-left light, palette terrain packed dirt browns ochre stone chips warm tan path accents #8B4513 #CD5C5C #DAA520 tiny flecks only,
+C. POSE LOCK: sand-table flat isometric dirt road tile centered diamond, low packed path nearly flush with diamond plane,
+D. IDENTITY road MUST SHOW FIRST: (1) silhouette dirt and cobble road band crossing the diamond, (2) main color blocks brown tan packed earth with grey stone chips, (3) edge readability hard pixel road edges vs diamond rim, (4) passability cue open walkable dirt road no grass meadow,
+E. FORBIDDEN: opaque square corners wrong size not 64x32 photoreal gradient sprite sheet collage text gold frame buildings units grass meadow green turf mountain cliffs water forest trees sand dunes city wall

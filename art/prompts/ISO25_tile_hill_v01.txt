@@ -1,0 +1,5 @@
+A. HARD OUTPUT: exact 64x32 pixel isometric terrain tile, single subject only, 2:1 isometric diamond footprint filling canvas, outside diamond transparent alpha zero, no sprite sheet no collage no gold frame no text,
+B. STYLE LOCK: cartoon pixel art, 1px hard black outline, no anti-aliasing, top-left light, palette terrain dry grass olive muted tan slope soft brown soil accents #8B4513 #CD5C5C #DAA520 tiny flecks only,
+C. POSE LOCK: sand-table isometric low hill tile centered diamond, gentle low mound readable above diamond plane but still walkable slow terrain not a cliff,
+D. IDENTITY hill MUST SHOW FIRST: (1) silhouette low rounded hill mound on diamond base, (2) main color blocks olive dry grass and tan slope, (3) edge readability soft slope vs diamond rim hard pixel edge, (4) passability cue walkable slow hill no cliff no rocky peak,
+E. FORBIDDEN: opaque square corners wrong size not 64x32 photoreal gradient sprite sheet collage text gold frame buildings units flat grass meadow mountain rocky peak cliffs snow water forest canopy dirt road city wall sand dunes
