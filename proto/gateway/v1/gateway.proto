@@ -75,6 +75,8 @@ message StepTacticalLockstepRequest {
   string session_id = 1;
   string battle_id = 2;
   uint32 steps = 3;
+  bool auto_command = 4;
+  uint32 auto_command_mode = 5;
 }
 
 message StepTacticalLockstepResponse {
@@ -84,6 +86,8 @@ message StepTacticalLockstepResponse {
   uint32 winner = 4;
   // Optional: same payload as GetBattleSnapshot after the step (avoids extra RPC).
   bytes view_snapshot_json = 5;
+  // Persisted auto policy on Roma match: 0=off, 1=both, 2=missing (for HUD polling).
+  uint32 auto_command_mode = 6;
 }
 
 message GetBattleSnapshotRequest {

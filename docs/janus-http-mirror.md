@@ -254,11 +254,22 @@ Request：
 {
   "session_id": "optional",
   "battle_id": "default/0",
-  "steps": 1
+  "steps": 1,
+  "auto_command": false,
+  "auto_command_mode": 0
 }
 ```
 
 `steps` 省略或 `0` 時視為 **1**。
+
+**觀戰／自動對戰（#96 playable）**
+
+| 欄位 | 意義 |
+|------|------|
+| `auto_command` | 本次請求每步使用 Roma 簡單 AI 補指令（`StepWithAuto`），與手動 `command` 可並用 |
+| `auto_command_mode` | `0` 不變；`1` 關閉；`2` 雙方自動（持久）；`3` 僅補未提交方 |
+
+無玩家輸入時仍可 `POST step-lockstep`（`steps:1`），**frame 會遞增**（超時／占點照常）。推薦觀戰迴圈：一次 `auto_command_mode: 2` 啟用持久自動，之後每 tick 僅 `steps: 1`；或 Infer 路徑 `POST /v1/suggest` → `POST /v1/tactical/command` → `POST step-lockstep`（可不帶 `auto_command`）。
 
 Response：
 
@@ -268,11 +279,28 @@ Response：
   "state_hash": 123,
   "finished": false,
   "winner": 0,
-  "view_snapshot_json": { }
+  "auto_command_mode": 1,
+  "view_snapshot_json": { "autoCommandMode": "both", "endReason": "none" }
 }
 ```
 
+`view_snapshot_json.autoCommandMode` 為 HUD 用 token：`off` \| `both` \| `missing`。`auto_command_mode` 為 Roma 持久策略 wire（`0=off, 1=both, 2=missing`）。
+
 與 gRPC `StepTacticalLockstep` 對齊；`view_snapshot_json` 為步進後顯示層快照（避免多一次 snapshot RPC）。
+
+**curl smoke（idle frame + 觀戰自動）**
+
+```bash
+# enter-battle 後，無 command 仍步進
+curl -sS -X POST "$JANUS/v1/tactical/step-lockstep" \
+  -H 'Content-Type: application/json' \
+  -d '{"battle_id":"default/0","steps":1}' | jq '.lockstep_frame,.finished'
+
+# 啟用持久雙方自動後步進至終局（本地 mock Roma 或 Compose）
+curl -sS -X POST "$JANUS/v1/tactical/step-lockstep" \
+  -H 'Content-Type: application/json' \
+  -d '{"battle_id":"default/0","auto_command_mode":2,"steps":0}'
+```
 
 ### Environment
 

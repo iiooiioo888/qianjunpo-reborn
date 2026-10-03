@@ -16,6 +16,54 @@ const (
 	AutoCommandMissing
 )
 
+// AutoCommandWireOff/Both/Missing are persisted on Roma/Janus step-lockstep (0=leave unchanged on wire).
+const (
+	AutoCommandWireUnchanged uint32 = 0
+	AutoCommandWireOff       uint32 = 1
+	AutoCommandWireBoth      uint32 = 2
+	AutoCommandWireMissing   uint32 = 3
+)
+
+// AutoCommandModeToWire maps match policy to API uint32 (off=0, both=1, missing=2).
+func AutoCommandModeToWire(mode AutoCommandMode) uint32 {
+	switch mode {
+	case AutoCommandBoth:
+		return 1
+	case AutoCommandMissing:
+		return 2
+	default:
+		return 0
+	}
+}
+
+// AutoCommandModeFromWire applies SetTacticalAutoMode / step-lockstep auto_command_mode field.
+func AutoCommandModeFromWire(v uint32) (AutoCommandMode, bool) {
+	switch v {
+	case AutoCommandWireUnchanged:
+		return AutoCommandOff, false
+	case AutoCommandWireOff:
+		return AutoCommandOff, true
+	case AutoCommandWireBoth:
+		return AutoCommandBoth, true
+	case AutoCommandWireMissing:
+		return AutoCommandMissing, true
+	default:
+		return AutoCommandOff, false
+	}
+}
+
+// AutoCommandModeToken is the Live JSON token for ViewSnapshot.autoCommandMode.
+func AutoCommandModeToken(mode AutoCommandMode) string {
+	switch mode {
+	case AutoCommandBoth:
+		return "both"
+	case AutoCommandMissing:
+		return "missing"
+	default:
+		return "off"
+	}
+}
+
 // SetAutoCommandMode enables or disables spectator-style auto command production.
 func (m *Match) SetAutoCommandMode(mode AutoCommandMode) {
 	if m == nil {

@@ -87,15 +87,19 @@ func (s *romaServer) SubmitTacticalCommand(_ context.Context, req *romav1.Submit
 }
 
 func (s *romaServer) StepLockstep(_ context.Context, req *romav1.StepLockstepRequest) (*romav1.StepLockstepResponse, error) {
-	frame, hash, finished, winner, err := s.store.StepLockstep(roma.BattleID(req.GetBattleId()), req.GetSteps())
+	frame, hash, finished, winner, autoWire, err := s.store.StepLockstep(roma.BattleID(req.GetBattleId()), req.GetSteps(), roma.StepLockstepOpts{
+		OneShotAuto:     req.GetAutoCommand(),
+		SetAutoModeWire: req.GetAutoCommandMode(),
+	})
 	if err != nil {
 		return nil, err
 	}
 	return &romav1.StepLockstepResponse{
-		LockstepFrame: frame,
-		StateHash:     hash,
-		Finished:      finished,
-		Winner:        winner,
+		LockstepFrame:    frame,
+		StateHash:        hash,
+		Finished:         finished,
+		Winner:           winner,
+		AutoCommandMode:  autoWire,
 	}, nil
 }
 

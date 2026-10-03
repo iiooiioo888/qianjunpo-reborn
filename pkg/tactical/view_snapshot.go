@@ -53,6 +53,8 @@ type ViewSnapshot struct {
 	Winner *uint8 `json:"winner"`
 	// EndReason is none | wipeout | timeout | mutual_wipe | occupy (see EndReasonName).
 	EndReason string `json:"endReason"`
+	// AutoCommandMode is off | both | missing (spectator / co-op auto fill on Roma).
+	AutoCommandMode string `json:"autoCommandMode"`
 }
 
 // MatchToViewSnapshot exports current match state for local client preview.
@@ -119,6 +121,7 @@ func MatchToViewSnapshot(m *Match, timeFlowRateParts uint32) ViewSnapshot {
 		LastSkillCast:     lastCast,
 		Winner:            winner,
 		EndReason:         endReason,
+		AutoCommandMode:   AutoCommandModeToken(m.AutoCommandMode()),
 	}
 }
 

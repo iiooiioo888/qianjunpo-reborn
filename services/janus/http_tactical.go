@@ -34,9 +34,11 @@ type tacticalCommandJSON struct {
 }
 
 type stepLockstepBody struct {
-	SessionID string `json:"session_id"`
-	BattleID  string `json:"battle_id"`
-	Steps     uint32 `json:"steps"`
+	SessionID       string `json:"session_id"`
+	BattleID        string `json:"battle_id"`
+	Steps           uint32 `json:"steps"`
+	AutoCommand     bool   `json:"auto_command,omitempty"`
+	AutoCommandMode uint32 `json:"auto_command_mode,omitempty"`
 }
 
 type stepLockstepJSON struct {
@@ -44,6 +46,7 @@ type stepLockstepJSON struct {
 	StateHash        uint64          `json:"state_hash"`
 	Finished         bool            `json:"finished"`
 	Winner           uint32          `json:"winner,omitempty"`
+	AutoCommandMode  uint32          `json:"auto_command_mode,omitempty"`
 	ViewSnapshotJSON json.RawMessage `json:"view_snapshot_json,omitempty"`
 }
 
@@ -321,9 +324,11 @@ func handleTacticalStepLockstep(w http.ResponseWriter, r *http.Request, gw *janu
 		steps = 1
 	}
 	resp, err := gw.StepTacticalLockstep(r.Context(), &gatewayv1.StepTacticalLockstepRequest{
-		SessionId: body.SessionID,
-		BattleId:  body.BattleID,
-		Steps:     steps,
+		SessionId:       body.SessionID,
+		BattleId:        body.BattleID,
+		Steps:           steps,
+		AutoCommand:     body.AutoCommand,
+		AutoCommandMode: body.AutoCommandMode,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
@@ -338,6 +343,7 @@ func handleTacticalStepLockstep(w http.ResponseWriter, r *http.Request, gw *janu
 		StateHash:        resp.GetStateHash(),
 		Finished:         resp.GetFinished(),
 		Winner:           resp.GetWinner(),
+		AutoCommandMode:  resp.GetAutoCommandMode(),
 		ViewSnapshotJSON: viewSnap,
 	})
 }
