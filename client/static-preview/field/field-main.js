@@ -1,6 +1,6 @@
 import { createBattleFromDeploy, handleCellClick } from './field-battle.js';
 import { drawBattlefield } from './field-render.js';
-import { pickGridCell } from './field-iso.js';
+import { pickBattleCell } from './field-iso.js';
 import { loadFieldAssets } from './field-assets.js';
 
 const deployScreen = document.getElementById('screen-deploy');
@@ -69,7 +69,7 @@ canvas.addEventListener('click', (ev) => {
   const scaleY = canvas.height / rect.height;
   const px = (ev.clientX - rect.left) * scaleX;
   const py = (ev.clientY - rect.top) * scaleY;
-  const cell = pickGridCell(px, py, lastOrigin.originX, lastOrigin.originY);
+  const cell = pickBattleCell(px, py, lastOrigin.originX, lastOrigin.originY, battleState);
   if (!cell) {
     battleState = { ...battleState, message: '請點在格子上。' };
     syncStatus();

@@ -7,15 +7,7 @@ import {
   computeOrigin,
 } from './field-iso.js';
 import { getGroundImage, getStackImage } from './field-assets.js';
-
-/** 192×224 堆圖在畫布上的寬度（原稿上的兵力數字不採用） */
-const STACK_DRAW_W = 52;
-
-function stackDrawHeight() {
-  const img = getStackImage('infantry');
-  if (!img?.naturalWidth) return Math.round(STACK_DRAW_W * (224 / 192));
-  return Math.round(STACK_DRAW_W * (img.naturalHeight / img.naturalWidth));
-}
+import { STACK_SRC_CROP_TOP, stackLayout } from './field-stack-layout.js';
 
 function drawDiamondPath(ctx, cx, cy) {
   ctx.beginPath();
@@ -77,38 +69,46 @@ export function drawBattlefield(ctx, canvas, state) {
 }
 
 function drawUnitStack(ctx, unit, originX, originY, selected) {
-  const { x, y } = gridToScreen(unit.x, unit.y, originX, originY);
-  const anchorX = x;
-  const anchorY = y + TILE_H / 2 + 2;
+  const layout = stackLayout(unit.x, unit.y, originX, originY);
+  const { anchorX, left, bodyTop, bodyDrawH, drawW } = layout;
   const stackImg = getStackImage(unit.type);
-  const drawW = STACK_DRAW_W;
-  const drawH = stackDrawHeight();
-  const left = anchorX - drawW / 2;
-  const top = anchorY - drawH;
+  const bodySrcH = stackImg?.naturalHeight
+    ? stackImg.naturalHeight - STACK_SRC_CROP_TOP
+    : 224 - STACK_SRC_CROP_TOP;
 
   if (selected) {
     ctx.strokeStyle = '#f0d040';
     ctx.lineWidth = 3;
-    ctx.strokeRect(left - 4, top - 4, drawW + 8, drawH + 8);
+    ctx.strokeRect(left - 4, bodyTop - 4, drawW + 8, bodyDrawH + 8);
   }
 
   if (stackImg?.complete && stackImg.naturalWidth) {
-    ctx.drawImage(stackImg, left, top, drawW, drawH);
+    ctx.drawImage(
+      stackImg,
+      0,
+      STACK_SRC_CROP_TOP,
+      stackImg.naturalWidth,
+      bodySrcH,
+      left,
+      bodyTop,
+      drawW,
+      bodyDrawH,
+    );
   } else {
     ctx.fillStyle = '#555';
-    ctx.fillRect(left, top, drawW, drawH);
+    ctx.fillRect(left, bodyTop, drawW, bodyDrawH);
   }
 
-  drawTroopCount(ctx, anchorX, top, unit.troops);
+  drawTroopCount(ctx, anchorX, bodyTop, unit.troops);
 
   if (unit.troops <= 0) {
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(left, top, drawW, drawH);
+    ctx.fillRect(left, bodyTop, drawW, bodyDrawH);
     ctx.fillStyle = '#ddd';
     ctx.font = 'bold 12px system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('潰', anchorX, top + drawH / 2);
+    ctx.fillText('潰', anchorX, bodyTop + bodyDrawH / 2);
   }
 }
 

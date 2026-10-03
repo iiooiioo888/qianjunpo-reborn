@@ -1,5 +1,7 @@
 /** 斜角格座標 ↔ 畫布像素（自製菱形，非 ISO25 貼圖） */
 
+import { pointInStackPick, stackLayout } from './field-stack-layout.js';
+
 export const GRID_W = 13;
 export const GRID_H = 13;
 export const TILE_W = 48;
@@ -14,8 +16,9 @@ export function gridToScreen(gx, gy, originX, originY) {
 export function screenToGrid(px, py, originX, originY) {
   const rx = px - originX;
   const ry = py - originY;
-  const gx = (rx / (TILE_W / 2) + ry / TILE_H) / 2;
-  const gy = (ry / TILE_H - rx / (TILE_W / 2)) / 2;
+  const halfH = TILE_H / 2;
+  const gx = (rx / (TILE_W / 2) + ry / halfH) / 2;
+  const gy = (ry / halfH - rx / (TILE_W / 2)) / 2;
   return { gx, gy };
 }
 
@@ -36,6 +39,22 @@ export function pickGridCell(px, py, originX, originY) {
     return null;
   }
   return { x: cx, y: cy };
+}
+
+/**
+ * 先命中兵堆圖（含高出菱形的上半部），否則走菱形空格判定。
+ * @param {{ units: Array<{ id: number, x: number, y: number, troops: number }> }} state
+ */
+export function pickBattleCell(px, py, originX, originY, state) {
+  const live = state.units.filter((u) => u.troops > 0);
+  const drawOrder = [...live].sort((a, b) => b.y + b.x - (a.y + a.x));
+  for (const u of drawOrder) {
+    const layout = stackLayout(u.x, u.y, originX, originY);
+    if (pointInStackPick(px, py, layout)) {
+      return { x: u.x, y: u.y };
+    }
+  }
+  return pickGridCell(px, py, originX, originY);
 }
 
 export function computeOrigin(canvasWidth, canvasHeight) {
