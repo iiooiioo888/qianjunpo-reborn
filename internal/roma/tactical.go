@@ -63,7 +63,13 @@ func (s *Store) SubmitTacticalCommand(id BattleID, playerID, kind, unitID uint32
 	return b.Match.Frame, b.Match.StateHash(), nil
 }
 
-func (s *Store) StepLockstep(id BattleID, steps uint32) (uint64, uint64, bool, uint32, error) {
+// StepLockstepOpts controls optional auto-command fill for spectator / auto-battle ticks.
+type StepLockstepOpts struct {
+	OneShotAuto      bool
+	SetAutoModeWire  uint32 // 0=unchanged; see tactical.AutoCommandWire*
+}
+
+func (s *Store) StepLockstep(id BattleID, steps uint32, opts StepLockstepOpts) (uint64, uint64, bool, uint32, uint32, error) {
 	if steps == 0 {
 		steps = 1
 	}
@@ -71,18 +77,27 @@ func (s *Store) StepLockstep(id BattleID, steps uint32) (uint64, uint64, bool, u
 	defer s.mu.Unlock()
 	b, ok := s.battles[id]
 	if !ok {
-		return 0, 0, false, winnerUndecided, errors.New("roma: battle not found")
+		return 0, 0, false, winnerUndecided, 0, errors.New("roma: battle not found")
 	}
 	if b.Match == nil {
-		return 0, 0, false, winnerUndecided, errors.New("roma: battle has no tactical match")
+		return 0, 0, false, winnerUndecided, 0, errors.New("roma: battle has no tactical match")
+	}
+	if mode, apply := tactical.AutoCommandModeFromWire(opts.SetAutoModeWire); apply {
+		b.Match.SetAutoCommandMode(mode)
 	}
 	for i := 0; i < int(steps); i++ {
-		b.Match.StepLockstep()
+		auto := opts.OneShotAuto || b.Match.AutoCommandMode() != tactical.AutoCommandOff
+		if auto {
+			b.Match.StepWithAuto()
+		} else {
+			b.Match.StepLockstep()
+		}
 		s.observeAndTickDilation(b)
 	}
 	winner := uint32(winnerUndecided)
 	if b.Match.Finished {
 		winner = uint32(b.Match.Winner)
 	}
-	return b.Match.Frame, b.Match.StateHash(), b.Match.Finished, winner, nil
+	autoWire := tactical.AutoCommandModeToWire(b.Match.AutoCommandMode())
+	return b.Match.Frame, b.Match.StateHash(), b.Match.Finished, winner, autoWire, nil
 }

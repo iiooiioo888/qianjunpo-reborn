@@ -28,7 +28,7 @@ func TestTacticalViewSnapshotMatchesDemoSchedule(t *testing.T) {
 			}
 			idx++
 		}
-		_, _, _, _, err := store.StepLockstep(b.ID, 1)
+		_, _, _, _, _, err := store.StepLockstep(b.ID, 1, StepLockstepOpts{})
 		if err != nil {
 			t.Fatal(err)
 		}

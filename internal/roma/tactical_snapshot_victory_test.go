@@ -19,7 +19,7 @@ func TestTacticalViewSnapshotJSONReportsWipeout(t *testing.T) {
 	enemy := b.Match.Units[tactical.UnitIDPlayer1]
 	enemy.Stats.HP = enemy.Stats.HP.Sub(enemy.Stats.HP)
 	b.Match.Board.ClearUnit(enemy.Pos)
-	_, _, finished, winner, err := store.StepLockstep(b.ID, 1)
+	_, _, finished, winner, _, err := store.StepLockstep(b.ID, 1, StepLockstepOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestTacticalViewSnapshotJSONReportsOccupy(t *testing.T) {
 		{Pos: board.Coord{2, 8}, HoldFrames: 2},
 	})
 	for i := 0; i < 2 && !b.Match.Finished; i++ {
-		if _, _, _, _, err := store.StepLockstep(b.ID, 1); err != nil {
+		if _, _, _, _, _, err := store.StepLockstep(b.ID, 1, StepLockstepOpts{}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -124,7 +124,7 @@ func driveStoreTimeoutPass(t *testing.T, store *Store, id BattleID) {
 		if _, _, err := store.SubmitTacticalCommand(id, 1, uint32(tactical.KindPass), tactical.UnitIDPlayer1, int32(u1.Pos.X), int32(u1.Pos.Y), 0); err != nil {
 			t.Fatal(err)
 		}
-		if _, _, _, _, err := store.StepLockstep(id, 1); err != nil {
+		if _, _, _, _, _, err := store.StepLockstep(id, 1, StepLockstepOpts{}); err != nil {
 			t.Fatal(err)
 		}
 		if b.Match.Frame > 66 {

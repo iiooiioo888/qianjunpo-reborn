@@ -19,7 +19,7 @@ func TestZonePartitionInMemory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	frame, h2, _, _, err := store.StepLockstep(b.ID, 4)
+	frame, h2, _, _, _, err := store.StepLockstep(b.ID, 4, StepLockstepOpts{})
 	if err != nil {
 		t.Fatal(err)
 	}

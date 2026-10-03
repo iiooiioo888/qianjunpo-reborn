@@ -121,8 +121,10 @@ func (c *RomaClient) StepTacticalLockstep(ctx context.Context, target string, re
 		return nil, err
 	}
 	resp, err := cli.StepLockstep(ctx, &romav1.StepLockstepRequest{
-		BattleId: req.GetBattleId(),
-		Steps:    req.GetSteps(),
+		BattleId:         req.GetBattleId(),
+		Steps:            req.GetSteps(),
+		AutoCommand:      req.GetAutoCommand(),
+		AutoCommandMode:  req.GetAutoCommandMode(),
 	})
 	if err != nil {
 		return nil, err
@@ -137,6 +139,7 @@ func (c *RomaClient) StepTacticalLockstep(ctx context.Context, target string, re
 		Finished:         resp.GetFinished(),
 		Winner:           resp.GetWinner(),
 		ViewSnapshotJson: snapJSON,
+		AutoCommandMode:  resp.GetAutoCommandMode(),
 	}, nil
 }
 

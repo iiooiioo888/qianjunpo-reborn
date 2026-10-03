@@ -231,6 +231,98 @@ func TestHTTPTacticalStepLockstepAdvancesFrame(t *testing.T) {
 	}
 }
 
+func TestHTTPTacticalStepLockstepAdvancesWithoutCommand(t *testing.T) {
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	snapRes, err := http.Get(srv.URL + "/v1/tactical/snapshot?battle_id=" + fix.BattleID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer snapRes.Body.Close()
+	var before tactical.ViewSnapshot
+	if err := json.NewDecoder(snapRes.Body).Decode(&before); err != nil {
+		t.Fatal(err)
+	}
+
+	stepRaw, _ := json.Marshal(map[string]interface{}{
+		"session_id": fix.SessionID,
+		"battle_id":  fix.BattleID,
+		"steps":      1,
+	})
+	stepRes, err := http.Post(srv.URL+"/v1/tactical/step-lockstep", "application/json", bytes.NewReader(stepRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stepRes.Body.Close()
+	var stepOut stepLockstepJSON
+	if err := json.NewDecoder(stepRes.Body).Decode(&stepOut); err != nil {
+		t.Fatal(err)
+	}
+	if stepOut.LockstepFrame <= before.LockstepFrame {
+		t.Fatalf("expected idle step to advance frame from %d, got %d", before.LockstepFrame, stepOut.LockstepFrame)
+	}
+}
+
+func TestHTTPTacticalSpectatorAutoCommandFinishes(t *testing.T) {
+	fix := startJanusGatewayWithEnterBattle(t)
+	srv := newTacticalHTTPServer(t, fix.GW, defaultTacticalHTTPOptions())
+
+	enableRaw, _ := json.Marshal(map[string]interface{}{
+		"session_id":        fix.SessionID,
+		"battle_id":         fix.BattleID,
+		"steps":             0,
+		"auto_command_mode": tactical.AutoCommandWireBoth,
+	})
+	enableRes, err := http.Post(srv.URL+"/v1/tactical/step-lockstep", "application/json", bytes.NewReader(enableRaw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer enableRes.Body.Close()
+	if enableRes.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(enableRes.Body)
+		t.Fatalf("enable auto status %d: %s", enableRes.StatusCode, b)
+	}
+
+	var finished bool
+	for i := 0; i < 96 && !finished; i++ {
+		stepRaw, _ := json.Marshal(map[string]interface{}{
+			"session_id": fix.SessionID,
+			"battle_id":  fix.BattleID,
+			"steps":      1,
+		})
+		stepRes, err := http.Post(srv.URL+"/v1/tactical/step-lockstep", "application/json", bytes.NewReader(stepRaw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var stepOut stepLockstepJSON
+		if err := json.NewDecoder(stepRes.Body).Decode(&stepOut); err != nil {
+			stepRes.Body.Close()
+			t.Fatal(err)
+		}
+		stepRes.Body.Close()
+		finished = stepOut.Finished
+		if finished {
+			var view tactical.ViewSnapshot
+			if err := json.Unmarshal(stepOut.ViewSnapshotJSON, &view); err != nil {
+				t.Fatal(err)
+			}
+			if view.AutoCommandMode != "both" {
+				t.Fatalf("autoCommandMode=%q want both", view.AutoCommandMode)
+			}
+			if view.EndReason == "none" {
+				t.Fatalf("expected terminal endReason, got %+v", view)
+			}
+			if stepOut.AutoCommandMode != 1 {
+				t.Fatalf("auto_command_mode wire=%d want 1 (both)", stepOut.AutoCommandMode)
+			}
+		}
+	}
+	if !finished {
+		t.Fatal("spectator auto did not finish within frame budget")
+	}
+}
+
 func TestHTTPTacticalCommandMirror(t *testing.T) {
 	fix := startJanusGatewayWithEnterBattle(t)
 	srv := newTacticalHTTPServer(t, fix.GW, tacticalHTTPOptions{

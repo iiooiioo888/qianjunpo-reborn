@@ -79,6 +79,10 @@ message SubmitTacticalCommandResponse {
 message StepLockstepRequest {
   string battle_id = 1;
   uint32 steps = 2;
+  // When true, each step runs StepWithAuto (simple AI fill) for this request only.
+  bool auto_command = 3;
+  // 0=unchanged; 1=off; 2=both; 3=missing — persisted on the authoritative match.
+  uint32 auto_command_mode = 4;
 }
 
 message StepLockstepResponse {
@@ -86,6 +90,7 @@ message StepLockstepResponse {
   uint64 state_hash = 2;
   bool finished = 3;
   uint32 winner = 4; // 255 = undecided / draw sentinel
+  uint32 auto_command_mode = 5; // persisted policy: 0=off, 1=both, 2=missing
 }
 
 message GetTacticalViewSnapshotRequest {
