@@ -44,7 +44,11 @@ export function boardUnitDisplaySize(
     }
     size /= 2;
   }
-  return Math.min(size, cellSizePx);
+  const fitted = Math.min(size, cellSizePx);
+  if (fitted < cellSizePx) {
+    return cellSizePx;
+  }
+  return fitted;
 }
 
 /**
@@ -72,7 +76,12 @@ export function boardIsoTileDisplaySize(
     w /= 2;
     h /= 2;
   }
-  return { width: Math.min(w, cellSizePx), height: Math.min(h, cellSizePx) };
+  const fittedW = Math.min(w, cellSizePx);
+  const fittedH = Math.min(h, cellSizePx);
+  if (fittedW < cellSizePx || fittedH < cellSizePx / 2) {
+    return { width: cellSizePx, height: Math.floor(cellSizePx / 2) };
+  }
+  return { width: fittedW, height: fittedH };
 }
 
 /**

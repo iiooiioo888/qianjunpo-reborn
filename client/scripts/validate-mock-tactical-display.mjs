@@ -12,7 +12,7 @@ import { inflateSync } from 'node:zlib';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const snapshotPath = join(root, 'assets/resources/data/tactical/demo_initial.json');
 
-const KNOWN_UNIT_TYPES = new Set([0, 2]);
+const KNOWN_UNIT_TYPES = new Set([0, 1, 2]);
 const HUD_CHAR_KEYS = ['char_caocao', 'char_zhangfei', 'char_wu_placeholder'];
 const CHAR_CARD_V04_STEMS = [
   'PX2D_CHAR_WEI_Caocao_ex_v04',
@@ -304,9 +304,10 @@ for (const stem of ISO25_TILE_STEMS) {
   }
 }
 const staticPreviewConfig = readFileSync(join(root, 'static-preview/config.js'), 'utf8');
+const staticPreviewAssetRegistry = readFileSync(join(root, 'static-preview/asset-registry.js'), 'utf8');
 for (const stem of ISO25_TILE_STEMS) {
-  if (!staticPreviewConfig.includes(stem)) {
-    fail(`static-preview/config.js missing tile stem ${stem}`);
+  if (!staticPreviewAssetRegistry.includes(stem)) {
+    fail(`static-preview/asset-registry.js missing tile stem ${stem}`);
   }
 }
 const staticPreviewBoard = readFileSync(join(root, 'static-preview/board.js'), 'utf8');
