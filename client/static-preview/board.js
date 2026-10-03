@@ -1,5 +1,9 @@
 import { BOARD_SIZE, LOCAL_PLAYER_OWNER } from './config.js';
-import { boardIsoTileDisplaySize, loadTerrainTileImages } from './tile-images.js';
+import {
+  boardIsoTileDisplaySize,
+  boardIsoTileSourceRect,
+  loadTerrainTileImages,
+} from './tile-images.js';
 import { boardUnitDisplaySize, loadUnitImages } from './unit-images.js';
 
 const OWNER_COLORS = {
@@ -85,8 +89,12 @@ export class TacticalBoardRenderer {
     const { width: dw, height: dh } = boardIsoTileDisplaySize(cellPx);
     const dx = px + (cellPx - dw) / 2;
     const dy = py + (cellPx - dh) / 2;
+    const { x: sx, y: sy, width: sw, height: sh } = boardIsoTileSourceRect(
+      img.naturalWidth,
+      img.naturalHeight,
+    );
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, dw, dh);
+    ctx.drawImage(img, sx, sy, sw, sh, dx, dy, dw, dh);
     return true;
   }
 

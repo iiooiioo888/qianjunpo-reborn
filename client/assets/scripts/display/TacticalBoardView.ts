@@ -3,7 +3,7 @@ import { Coord } from '../logic/BoardCoord';
 import { shouldRedrawGrid, shouldRedrawUnits } from '../logic/SnapshotDisplayDiff';
 import { BOARD_SIZE, parseViewSnapshot, ViewSnapshot } from '../logic/TacticalSnapshot';
 import { cellPixelOrigin, drawLegalMoveCell, drawSelectedUnitCell } from './BoardSelectionVisuals';
-import { boardIsoTileDisplaySize } from './PixelSpriteUtil';
+import { boardIsoTileDisplaySize, iso25TileDisplaySpriteFrame } from './PixelSpriteUtil';
 import { terrainFillColor } from './TerrainPalette';
 import { TerrainTileSpriteRegistry } from './TerrainTileSpriteRegistry';
 import { UnitPlaceholderView } from './UnitPlaceholderView';
@@ -146,7 +146,7 @@ export class TacticalBoardView extends Component {
           node.setParent(tiles);
           const sprite = node.addComponent(Sprite);
           sprite.sizeMode = Sprite.SizeMode.CUSTOM;
-          sprite.spriteFrame = sf;
+          sprite.spriteFrame = iso25TileDisplaySpriteFrame(sf);
           const ui = node.getComponent(UITransform) ?? node.addComponent(UITransform);
           ui.setContentSize(tileSize.width, tileSize.height);
           node.setPosition(px + cs / 2, py + cs / 2, 0);
