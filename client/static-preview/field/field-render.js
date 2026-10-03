@@ -62,12 +62,37 @@ export function drawBattlefield(ctx, canvas, state) {
     }
   }
 
-  const drawOrder = [...state.units].sort((a, b) => a.y + a.x - (b.y + b.x));
+  const drawOrder = state.units
+    .filter((u) => u.troops > 0)
+    .sort((a, b) => a.y + a.x - (b.y + b.x));
   for (const u of drawOrder) {
     drawUnitStack(ctx, u, originX, originY, state.selectedId === u.id);
   }
 
+  if (state.gameResult) {
+    drawGameResultOverlay(ctx, canvas, state.gameResult);
+  }
+
   return { originX, originY };
+}
+
+function drawGameResultOverlay(ctx, canvas, gameResult) {
+  const label = gameResult === 'win' ? '勝' : '負';
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  ctx.save();
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.font =
+    'bold 80px system-ui, "PingFang TC", "Microsoft JhengHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+  ctx.strokeText(label, cx, cy);
+  ctx.fillStyle = gameResult === 'win' ? '#ffe066' : '#ff6b6b';
+  ctx.fillText(label, cx, cy);
+  ctx.restore();
 }
 
 function drawUnitStack(ctx, unit, originX, originY, selected) {
@@ -102,16 +127,6 @@ function drawUnitStack(ctx, unit, originX, originY, selected) {
   }
 
   drawTroopCount(ctx, anchorX, bodyTop, unit.troops);
-
-  if (unit.troops <= 0) {
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    ctx.fillRect(left, bodyTop, drawW, bodyDrawH);
-    ctx.fillStyle = '#ddd';
-    ctx.font = 'bold 12px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('潰', anchorX, bodyTop + bodyDrawH / 2);
-  }
 }
 
 function drawTroopCount(ctx, cx, stackTop, troops) {
