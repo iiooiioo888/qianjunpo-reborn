@@ -34,7 +34,7 @@ func TestTimeoutHigherHPWins(t *testing.T) {
 	m := NewMatch(44)
 	m.Units[UnitIDPlayer0].Stats.HP = fixed.FromInt(50)
 	m.Units[UnitIDPlayer1].Stats.HP = fixed.FromInt(30)
-	m.Frame = maxTurnFrames
+	m.Frame = MaxTurnFrames
 	m.decideTimeoutWinner()
 	if m.Winner != 0 || m.EndReason != EndTimeout {
 		t.Fatalf("expected timeout win P0, got winner=%d reason=%d", m.Winner, m.EndReason)
@@ -66,7 +66,7 @@ func TestTimeoutTieIsDraw(t *testing.T) {
 	hp := fixed.FromInt(40)
 	m.Units[UnitIDPlayer0].Stats.HP = hp
 	m.Units[UnitIDPlayer1].Stats.HP = hp
-	m.Frame = maxTurnFrames
+	m.Frame = MaxTurnFrames
 	m.decideTimeoutWinner()
 	if m.Winner != NoWinner || m.EndReason != EndTimeout {
 		t.Fatalf("expected timeout draw, got winner=%d reason=%d", m.Winner, m.EndReason)

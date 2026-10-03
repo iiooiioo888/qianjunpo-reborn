@@ -114,7 +114,7 @@ func driveMatchToTimeoutPass(t *testing.T, m *Match) {
 		_ = m.Submit(Command{PlayerID: 0, Kind: KindPass, UnitID: UnitIDPlayer0, To: u0.Pos})
 		_ = m.Submit(Command{PlayerID: 1, Kind: KindPass, UnitID: UnitIDPlayer1, To: u1.Pos})
 		m.StepLockstep()
-		if m.Frame > maxTurnFrames+2 {
+		if m.Frame > MaxTurnFrames+2 {
 			t.Fatal("timeout did not fire")
 		}
 	}
