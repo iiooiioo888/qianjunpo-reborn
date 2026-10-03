@@ -4,12 +4,14 @@
 
 export const TEXTURE_2D_BASE = 'textures/2d';
 
-/** TerrainKind 0–3（城 4／關 5 待 art PR 另開，本 PR 不掛）。 */
+/** TerrainKind 0–5；sand／hill 僅入庫 textures，不掛槽。 */
 export const TERRAIN_TILE_SRC = {
   0: `${TEXTURE_2D_BASE}/tiles/ISO25_tile_grass_v02.png`,
   1: `${TEXTURE_2D_BASE}/tiles/ISO25_tile_mountain_v01.png`,
   2: `${TEXTURE_2D_BASE}/tiles/ISO25_tile_forest_v01.png`,
   3: `${TEXTURE_2D_BASE}/tiles/ISO25_tile_water_v01.png`,
+  4: `${TEXTURE_2D_BASE}/tiles/ISO25_tile_wall_v01.png`,
+  5: `${TEXTURE_2D_BASE}/tiles/ISO25_tile_road_v01.png`,
 };
 
 export const UNIT_TEXTURE_SRC = {
