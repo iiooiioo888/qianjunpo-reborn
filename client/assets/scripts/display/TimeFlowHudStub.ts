@@ -1,13 +1,28 @@
-import { _decorator, Color, Component, Label, Node, UITransform } from 'cc';
+import { _decorator, Color, Component, Graphics, Label, Node, UITransform } from 'cc';
 import {
   formatLockstepFrameLine,
   formatSelectionLine,
   HudLockstepSyncContext,
   mockSyncContextFromBootstrap,
 } from './LockstepHudFormat';
-import { timeFlowRateToFloat, ViewSnapshot } from '../logic/TacticalSnapshot';
+import {
+  formatSimTimeFromLockstepFrame,
+  formatTimeFlowRatePercent,
+  isTimeFlowOverload,
+  timeFlowBarFillRatio,
+  timeFlowRateToFloat,
+  ViewSnapshot,
+} from '../logic/TacticalSnapshot';
 
 const { ccclass, property } = _decorator;
+
+const RATE_LABEL_NORMAL = new Color(240, 240, 245, 255);
+const RATE_LABEL_OVERLOAD = new Color(255, 150, 90, 255);
+const RATE_BAR_BG = new Color(40, 44, 58, 255);
+const RATE_BAR_FILL_NORMAL = new Color(90, 210, 130, 255);
+const RATE_BAR_FILL_OVERLOAD = new Color(255, 120, 70, 255);
+const RATE_BAR_WIDTH = 240;
+const RATE_BAR_HEIGHT = 8;
 
 /**
  * HUD：速率與幀號僅來自 ViewSnapshot（Roma live `timeFlowRateParts`，萬分比 10000=1.0x）。
@@ -29,6 +44,11 @@ export class TimeFlowHudStub extends Component {
   @property(Label)
   statusLabel: Label | null = null;
 
+  @property(Label)
+  simTimeLabel: Label | null = null;
+
+  private rateBarFillGfx: Graphics | null = null;
+
   private lastSelectedUnitId: number | null = null;
 
   onLoad(): void {
@@ -41,11 +61,23 @@ export class TimeFlowHudStub extends Component {
       this.rateLabel = n.addComponent(Label);
       this.rateLabel.fontSize = 20;
       this.rateLabel.lineHeight = 24;
+      this.rateLabel.color = RATE_LABEL_NORMAL;
+    }
+    this.ensureRateBar();
+    if (!this.simTimeLabel) {
+      const n = new Node('SimTimeLabel');
+      n.setParent(this.node);
+      n.setPosition(0, -40, 0);
+      const ui = n.addComponent(UITransform);
+      ui.setContentSize(480, 24);
+      this.simTimeLabel = n.addComponent(Label);
+      this.simTimeLabel.fontSize = 17;
+      this.simTimeLabel.lineHeight = 21;
     }
     if (!this.frameLabel) {
       const n = new Node('FrameLabel');
       n.setParent(this.node);
-      n.setPosition(0, -28, 0);
+      n.setPosition(0, -58, 0);
       const ui = n.addComponent(UITransform);
       ui.setContentSize(480, 40);
       this.frameLabel = n.addComponent(Label);
@@ -55,7 +87,7 @@ export class TimeFlowHudStub extends Component {
     if (!this.selectionLabel) {
       const n = new Node('SelectionLabel');
       n.setParent(this.node);
-      n.setPosition(0, -56, 0);
+      n.setPosition(0, -86, 0);
       const ui = n.addComponent(UITransform);
       ui.setContentSize(480, 40);
       this.selectionLabel = n.addComponent(Label);
@@ -65,7 +97,7 @@ export class TimeFlowHudStub extends Component {
     if (!this.statusLabel) {
       const n = new Node('StatusLabel');
       n.setParent(this.node);
-      n.setPosition(0, -84, 0);
+      n.setPosition(0, -114, 0);
       const ui = n.addComponent(UITransform);
       ui.setContentSize(520, 36);
       this.statusLabel = n.addComponent(Label);
@@ -75,7 +107,7 @@ export class TimeFlowHudStub extends Component {
     }
     const retryN = new Node('LivePrepareRetry');
     retryN.setParent(this.node);
-    retryN.setPosition(0, -116, 0);
+    retryN.setPosition(0, -146, 0);
     const retryUi = retryN.addComponent(UITransform);
     retryUi.setContentSize(520, 28);
     const retryLbl = retryN.addComponent(Label);
@@ -87,6 +119,49 @@ export class TimeFlowHudStub extends Component {
     retryN.on(Node.EventType.TOUCH_END, this.onLiveRetryTap, this);
     this.retryTapNode = retryN;
     this.retryLabel = retryLbl;
+  }
+
+  private ensureRateBar(): void {
+    if (this.rateBarFillGfx) {
+      return;
+    }
+    const barRoot = new Node('RateBar');
+    barRoot.setParent(this.node);
+    barRoot.setPosition(0, -26, 0);
+    const rootUi = barRoot.addComponent(UITransform);
+    rootUi.setContentSize(RATE_BAR_WIDTH, RATE_BAR_HEIGHT);
+    const bg = barRoot.addComponent(Graphics);
+    bg.fillColor = RATE_BAR_BG;
+    bg.rect(0, 0, RATE_BAR_WIDTH, RATE_BAR_HEIGHT);
+    bg.fill();
+    const fillNode = new Node('RateBarFill');
+    fillNode.setParent(barRoot);
+    fillNode.setPosition(0, 0, 0);
+    fillNode.addComponent(UITransform).setContentSize(RATE_BAR_WIDTH, RATE_BAR_HEIGHT);
+    this.rateBarFillGfx = fillNode.addComponent(Graphics);
+  }
+
+  private syncTimeFlowVisuals(parts: number, lockstepFrame: number): void {
+    const overloaded = isTimeFlowOverload(parts);
+    if (this.rateLabel) {
+      const rate = timeFlowRateToFloat(parts);
+      const pct = formatTimeFlowRatePercent(parts);
+      this.rateLabel.string = `time_flow_rate: ${rate.toFixed(2)}x (${parts}/10000) · ${pct}`;
+      this.rateLabel.color = overloaded ? RATE_LABEL_OVERLOAD : RATE_LABEL_NORMAL;
+    }
+    if (this.simTimeLabel) {
+      this.simTimeLabel.string = formatSimTimeFromLockstepFrame(lockstepFrame);
+    }
+    if (this.rateBarFillGfx) {
+      const fillW = RATE_BAR_WIDTH * timeFlowBarFillRatio(parts);
+      const g = this.rateBarFillGfx;
+      g.clear();
+      g.fillColor = overloaded ? RATE_BAR_FILL_OVERLOAD : RATE_BAR_FILL_NORMAL;
+      if (fillW > 0) {
+        g.rect(0, 0, fillW, RATE_BAR_HEIGHT);
+        g.fill();
+      }
+    }
   }
 
   private onLiveRetryTap(): void {
@@ -153,10 +228,7 @@ export class TimeFlowHudStub extends Component {
     if (sync) {
       this.lastSync = sync;
     }
-    const rate = timeFlowRateToFloat(snap.timeFlowRateParts);
-    if (this.rateLabel) {
-      this.rateLabel.string = `time_flow_rate: ${rate.toFixed(2)}x (${snap.timeFlowRateParts}/10000)`;
-    }
+    this.syncTimeFlowVisuals(snap.timeFlowRateParts, snap.lockstepFrame);
     if (this.frameLabel) {
       this.frameLabel.string = formatLockstepFrameLine(snap, this.lastSync);
     }

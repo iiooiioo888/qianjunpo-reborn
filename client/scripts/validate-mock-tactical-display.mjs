@@ -187,6 +187,21 @@ if (
 ) {
   fail('TimeFlowHudStub missing lockstep sync HUD line (LockstepHudFormat)');
 }
+const snapshotLogicSrc = readFileSync(join(root, 'assets/scripts/logic/TacticalSnapshot.ts'), 'utf8');
+if (
+  !hudSrc.includes('syncTimeFlowVisuals') ||
+  !hudSrc.includes('timeFlowBarFillRatio') ||
+  !hudSrc.includes('formatSimTimeFromLockstepFrame')
+) {
+  fail('TimeFlowHudStub missing time-flow percent/bar/sim-time HUD visuals');
+}
+if (
+  !snapshotLogicSrc.includes('TIME_FLOW_BAR_CAP_PARTS') ||
+  !snapshotLogicSrc.includes('15000') ||
+  !snapshotLogicSrc.includes('isTimeFlowOverload')
+) {
+  fail('TacticalSnapshot missing time-flow HUD display helpers (150% bar cap, overload tint)');
+}
 if (
   !lockstepHudSrc.includes('formatSelectionLine') ||
   !hudSrc.includes('setSelectedUnitId') ||
