@@ -1,0 +1,5 @@
+A. HARD OUTPUT: exact 64x32 pixel isometric terrain tile, single subject only, 2:1 isometric diamond footprint filling canvas, outside diamond transparent alpha zero, no sprite sheet no collage no gold frame no text,
+B. STYLE LOCK: cartoon pixel art, 1px hard black outline, no anti-aliasing, top-left light, palette terrain pale flagstone greys warm stone slabs mortar lines accents #8B4513 #CD5C5C #DAA520 tiny flecks only,
+C. POSE LOCK: sand-table flat isometric flagstone pavement tile centered diamond, low paved surface nearly flush with diamond plane,
+D. IDENTITY stone MUST SHOW FIRST: (1) silhouette flat flagstone pavement diamond, (2) main color blocks grey stone slabs with dark mortar joints, (3) edge readability hard slab edges vs diamond rim, (4) passability cue open walkable pavement no cliff no rocky peak,
+E. FORBIDDEN: opaque square corners wrong size not 64x32 photoreal gradient sprite sheet collage text gold frame buildings units grass meadow mountain cliffs highland peak water forest trees sand dunes dirt road city wall
