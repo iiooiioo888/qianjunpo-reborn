@@ -98,9 +98,11 @@ func (s *server) handleSuggestGet(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no suggestion for battle", http.StatusNotFound)
 		return
 	}
+	cmd := ai.TacticalCommandFromSuggestion(battleID, sug)
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"battle_id":  battleID,
 		"suggestion": sug,
+		"command":    cmd,
 	})
 }

@@ -11,6 +11,7 @@ type InferHTTPResponse struct {
 	FallbackReason string           `json:"fallback_reason,omitempty"`
 	FallbackDetail string           `json:"fallback_detail,omitempty"`
 	Suggestion     *InferSuggestion `json:"suggestion,omitempty"`
+	Command        *TacticalCommandJSON `json:"command,omitempty"`
 }
 
 // InferPostBody is the JSON body pkg/ai sends to POST /v1/infer.
@@ -55,6 +56,7 @@ func InferResultToHTTP(r InferResult, model string, latencyMs int64) InferHTTPRe
 	if r.Suggestion != nil {
 		cp := *r.Suggestion
 		resp.Suggestion = &cp
+		AttachTacticalCommand(&resp, "")
 	}
 	if source == SourceNPC && r.FallbackReason != FallbackReasonNone {
 		resp.FallbackReason = string(r.FallbackReason)
