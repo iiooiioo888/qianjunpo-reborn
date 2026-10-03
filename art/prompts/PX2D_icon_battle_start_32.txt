@@ -1,0 +1,5 @@
+A. HARD OUTPUT: exact 32x32 pixel HUD icon, single subject only, solid flat background #1A1410, no sprite sheet no collage no frame no text,
+B. STYLE LOCK: cartoon pixel art, 1px hard black outline, no anti-aliasing, top-left light, palette #CD5C5C #DAA520 crossed swords on #1A1410,
+C. POSE LOCK: one centered pair of crossed short swords filling most of the 32px square,
+D. IDENTITY battle_start MUST SHOW FIRST: (1) silhouette two crossed swords, (2) steel and gold hilts, (3) readable at 32px, (4) means start battle,
+E. FORBIDDEN: wrong size not 32x32 letters words check mark X mark shield photoreal gradient sprite sheet collage gold frame
