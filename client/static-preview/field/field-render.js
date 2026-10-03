@@ -6,49 +6,52 @@ import {
   gridToScreen,
   computeOrigin,
 } from './field-iso.js';
+import { getGroundImage, getStackImage } from './field-assets.js';
 
-const TERRAIN_COLORS = [
-  '#2a3d4a',
-  '#324838',
-  '#3a3a50',
-  '#2d4048',
-  '#353530',
-  '#283842',
-  '#3d2f28',
-];
+/** 192×224 堆圖在畫布上的寬度（原稿上的兵力數字不採用） */
+const STACK_DRAW_W = 52;
 
-function terrainColor(gx, gy) {
-  const i = (gx * 7 + gy * 11 + (gx ^ gy)) % TERRAIN_COLORS.length;
-  return TERRAIN_COLORS[i];
+function stackDrawHeight() {
+  const img = getStackImage('infantry');
+  if (!img?.naturalWidth) return Math.round(STACK_DRAW_W * (224 / 192));
+  return Math.round(STACK_DRAW_W * (img.naturalHeight / img.naturalWidth));
 }
 
-function drawDiamond(ctx, cx, cy, fill, stroke) {
+function drawDiamondPath(ctx, cx, cy) {
   ctx.beginPath();
   ctx.moveTo(cx, cy);
   ctx.lineTo(cx + TILE_W / 2, cy + TILE_H / 2);
   ctx.lineTo(cx, cy + TILE_H);
   ctx.lineTo(cx - TILE_W / 2, cy + TILE_H / 2);
   ctx.closePath();
-  ctx.fillStyle = fill;
+}
+
+function drawGrassTile(ctx, topX, topY) {
+  const ground = getGroundImage();
+  const cx = topX;
+  const cy = topY;
+  if (ground?.complete && ground.naturalWidth) {
+    ctx.drawImage(ground, cx - TILE_W / 2, cy, TILE_W, TILE_H);
+    return;
+  }
+  drawDiamondPath(ctx, cx, cy);
+  ctx.fillStyle = '#324838';
   ctx.fill();
-  if (stroke) {
-    ctx.strokeStyle = stroke;
+  ctx.strokeStyle = '#1a2530';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+function drawHighlightOverlay(ctx, topX, topY, kind) {
+  drawDiamondPath(ctx, topX, topY);
+  if (kind === 'move') {
+    ctx.fillStyle = 'rgba(42, 90, 58, 0.45)';
+    ctx.fill();
+    ctx.strokeStyle = '#5a9a6a';
     ctx.lineWidth = 1;
     ctx.stroke();
   }
 }
-
-const TYPE_COLORS = {
-  infantry: { player: '#3d8b5a', enemy: '#a04040' },
-  archer: { player: '#5070a0', enemy: '#904848' },
-  cavalry: { player: '#a07050', enemy: '#883838' },
-};
-
-const TYPE_LABEL = {
-  infantry: '步',
-  archer: '弓',
-  cavalry: '騎',
-};
 
 export function drawBattlefield(ctx, canvas, state) {
   const { originX, originY } = computeOrigin(canvas.width, canvas.height);
@@ -57,17 +60,11 @@ export function drawBattlefield(ctx, canvas, state) {
   for (let gy = 0; gy < GRID_H; gy++) {
     for (let gx = 0; gx < GRID_W; gx++) {
       const { x, y } = gridToScreen(gx, gy, originX, originY);
-      const top = { x, y };
-      let stroke = '#1a2530';
-      let fill = terrainColor(gx, gy);
-
+      drawGrassTile(ctx, x, y);
       const hl = state.highlightCells?.find((c) => c.x === gx && c.y === gy);
       if (hl) {
-        fill = hl.kind === 'move' ? '#2a5a3a' : fill;
-        stroke = '#5a9a6a';
+        drawHighlightOverlay(ctx, x, y, hl.kind);
       }
-
-      drawDiamond(ctx, top.x, top.y, fill, stroke);
     }
   }
 
@@ -81,40 +78,48 @@ export function drawBattlefield(ctx, canvas, state) {
 
 function drawUnitStack(ctx, unit, originX, originY, selected) {
   const { x, y } = gridToScreen(unit.x, unit.y, originX, originY);
-  const cx = x;
-  const cy = y + TILE_H / 2 + 4;
-  const side = unit.side;
-  const palette = TYPE_COLORS[unit.type]?.[side] ?? '#888';
-  const w = 28;
-  const h = 22;
+  const anchorX = x;
+  const anchorY = y + TILE_H / 2 + 2;
+  const stackImg = getStackImage(unit.type);
+  const drawW = STACK_DRAW_W;
+  const drawH = stackDrawHeight();
+  const left = anchorX - drawW / 2;
+  const top = anchorY - drawH;
 
   if (selected) {
     ctx.strokeStyle = '#f0d040';
     ctx.lineWidth = 3;
-    ctx.strokeRect(cx - w / 2 - 3, cy - h / 2 - 3, w + 6, h + 6);
+    ctx.strokeRect(left - 4, top - 4, drawW + 8, drawH + 8);
   }
 
-  ctx.fillStyle = palette;
-  ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
-  ctx.strokeStyle = side === 'player' ? '#1a4080' : '#601818';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
+  if (stackImg?.complete && stackImg.naturalWidth) {
+    ctx.drawImage(stackImg, left, top, drawW, drawH);
+  } else {
+    ctx.fillStyle = '#555';
+    ctx.fillRect(left, top, drawW, drawH);
+  }
 
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 11px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(TYPE_LABEL[unit.type] ?? '?', cx, cy);
-
-  ctx.fillStyle = '#ffe066';
-  ctx.font = 'bold 12px system-ui, sans-serif';
-  ctx.fillText(String(unit.troops), cx, cy - h / 2 - 10);
+  drawTroopCount(ctx, anchorX, top, unit.troops);
 
   if (unit.troops <= 0) {
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
-    ctx.fillStyle = '#aaa';
-    ctx.font = '10px system-ui';
-    ctx.fillText('潰', cx, cy);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(left, top, drawW, drawH);
+    ctx.fillStyle = '#ddd';
+    ctx.font = 'bold 12px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('潰', anchorX, top + drawH / 2);
   }
+}
+
+function drawTroopCount(ctx, cx, stackTop, troops) {
+  const label = String(troops);
+  ctx.font = 'bold 13px system-ui, "PingFang TC", "Microsoft JhengHei", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+  ctx.strokeText(label, cx, stackTop - 4);
+  ctx.fillStyle = '#ffe066';
+  ctx.fillText(label, cx, stackTop - 4);
 }

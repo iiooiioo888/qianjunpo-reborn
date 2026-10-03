@@ -53,7 +53,22 @@ body {
   padding: 1.25rem;
   background: var(--panel);
   border-radius: 8px;
-  max-width: 420px;
+  max-width: 440px;
+}
+
+.deploy-panel-wrap {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+.deploy-panel-art {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 400 / 160;
+  margin: 0 auto 0.75rem;
+  background: url('QJP_panel_teal_gold_v01.png') center / contain no-repeat;
+  border-radius: 6px;
+  pointer-events: none;
 }
 
 #screen-deploy h2 {
@@ -76,30 +91,17 @@ body {
 
 .troop-row {
   display: grid;
-  grid-template-columns: 2rem 3rem 1fr 3rem;
+  grid-template-columns: 3rem 3rem 1fr 3rem;
   align-items: center;
   gap: 0.5rem;
 }
 
-.type-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 4px;
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-
-.type-badge.infantry {
-  background: var(--infantry);
-}
-.type-badge.archer {
-  background: var(--archer);
-}
-.type-badge.cavalry {
-  background: var(--cavalry);
+.troop-stack-icon {
+  display: block;
+  width: 48px;
+  height: auto;
+  object-fit: contain;
+  image-rendering: auto;
 }
 
 .troop-row label {
