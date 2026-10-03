@@ -19,7 +19,7 @@ const CHAR_CARD_V04_STEMS = [
   'PX2D_CHAR_SHU_Zhangfei_ex_v04',
   'PX2D_CHAR_WU_Placeholder_01_v04',
 ];
-const UNIT_STANDARD_STEMS = ['PX2D_unit_infantry', 'PX2D_unit_cavalry'];
+const UNIT_STANDARD_STEMS = ['PX2D_unit_infantry', 'PX2D_unit_archer', 'PX2D_unit_cavalry'];
 const ISO25_TILE_STEMS = [
   'ISO25_tile_grass_v02',
   'ISO25_tile_mountain_v01',

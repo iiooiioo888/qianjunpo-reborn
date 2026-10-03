@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SRC="${ROOT}/art/2d/_wip/units"
 DST="${ROOT}/client/assets/resources/textures/2d/units"
 mkdir -p "${DST}"
-for f in PX2D_unit_infantry.png PX2D_unit_cavalry.png; do
+for f in PX2D_unit_infantry.png PX2D_unit_archer.png PX2D_unit_cavalry.png; do
   if [[ ! -f "${SRC}/${f}" ]]; then
     echo "missing ${SRC}/${f} — git checkout art/2d/_wip/units 或從 main 拉資產（art #48 STANDARD）" >&2
     exit 1

@@ -43,6 +43,7 @@ const HUD_ICON_IDS = [
 
 const UNIT_KEYS_FOR_REPORT = [
   UNIT_TEXTURE_KEYS.infantry,
+  UNIT_TEXTURE_KEYS.archer,
   UNIT_TEXTURE_KEYS.cavalry,
 ] as const;
 

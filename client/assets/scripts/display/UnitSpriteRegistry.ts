@@ -7,6 +7,7 @@ import { applyPixelArtSampling, boardUnitDisplaySize, UNIT_ART_CANVAS_PX } from 
  */
 export const UNIT_TEXTURE_KEYS = {
   infantry: 'infantry',
+  archer: 'archer',
   cavalry: 'cavalry',
 } as const;
 
@@ -15,12 +16,14 @@ export type UnitTextureKey = (typeof UNIT_TEXTURE_KEYS)[keyof typeof UNIT_TEXTUR
 /** 預設資源 stem（無路徑、無擴展名）；可被 registerResourcePath 覆寫。 */
 const DEFAULT_STEM_BY_KEY: Record<UnitTextureKey, string> = {
   infantry: 'PX2D_unit_infantry',
+  archer: 'PX2D_unit_archer',
   cavalry: 'PX2D_unit_cavalry',
 };
 
 /** ViewUnit.type → registry 鍵（與 pkg/tactical 單位種類對齊，缺省回步兵）。 */
 const TYPE_TO_KEY: Record<number, UnitTextureKey> = {
   0: UNIT_TEXTURE_KEYS.infantry,
+  1: UNIT_TEXTURE_KEYS.archer,
   2: UNIT_TEXTURE_KEYS.cavalry,
 };
 

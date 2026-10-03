@@ -178,12 +178,12 @@ JSON schema 與 `pkg/tactical.ViewSnapshot` 一致：`schemaVersion=1`，`boardS
 
 | Registry | 目錄 | 鍵例 |
 |----------|------|------|
-| **`UnitSpriteRegistry`** | `textures/2d/units/` | `infantry`, `cavalry` |
+| **`UnitSpriteRegistry`** | `textures/2d/units/` | `infantry`, `archer`, `cavalry` |
 | **`CharacterCardSpriteRegistry`** | `textures/2d/chars/` | `char_caocao`, `char_zhangfei` |
 | **`IconSpriteRegistry`** | `textures/2d/icons/` | `ICON_ASSET_IDS.resFood` 等 |
 | **`TerrainTileSpriteRegistry`** | `textures/2d/tiles/` | `plain`, `mountain`, `forest`, `river` |
 
-- 單位：STANDARD 同步 `sync-wip-unit-textures.sh`（`PX2D_unit_infantry`／`PX2D_unit_cavalry`，128×128），棋盤 **`UnitPlaceholderView`** + `boardUnitDisplaySize`（整數倍，Nearest）。
+- 單位：STANDARD 同步 `sync-wip-unit-textures.sh`（`PX2D_unit_infantry`／`archer`／`cavalry`，128×128），棋盤 **`UnitPlaceholderView`** + `boardUnitDisplaySize`（整數倍，Nearest）。
 - 地格：ISO25 同步 `sync-wip-tile-textures.sh`（草／山／水／林四枚 STANDARD，64×32 菱形），棋盤 **`TacticalBoardView`** + `boardIsoTileDisplaySize`。
 - 角色卡：v03 目標 **320×400**；HUD **`CharacterCardHudStrip`** 預覽三鍵，缺圖色塊占位。
 - 圖標：**`ResourceIconHudStrip`**；缺圖時 Sprite 關閉、不 crash。

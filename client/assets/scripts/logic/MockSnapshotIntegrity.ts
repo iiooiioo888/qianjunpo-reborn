@@ -1,7 +1,7 @@
 import { ViewSnapshot } from './TacticalSnapshot';
 
-/** 單位 type 與 UnitSpriteRegistry 對齊（0=infantry, 2=cavalry）。 */
-export const MOCK_KNOWN_UNIT_TYPES = new Set([0, 2]);
+/** 單位 type 與 UnitSpriteRegistry 對齊（0=infantry, 1=archer, 2=cavalry）。 */
+export const MOCK_KNOWN_UNIT_TYPES = new Set([0, 1, 2]);
 
 /**
  * 驗證 cells.unitId 與 units 座標一致（mock／live 快照聯調用）。
