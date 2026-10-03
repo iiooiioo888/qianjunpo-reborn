@@ -1,8 +1,5 @@
-import {
-  ISO25_TILE_ART_H,
-  ISO25_TILE_ART_W,
-  TERRAIN_TILE_SRC,
-} from './config.js';
+import { ISO25_TILE_ART_H, ISO25_TILE_ART_W } from './config.js';
+import { TERRAIN_TILE_SRC } from './asset-registry.js';
 import { resolveAppUrl } from './paths.js';
 
 /**

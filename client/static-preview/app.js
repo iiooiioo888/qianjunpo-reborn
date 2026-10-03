@@ -1,3 +1,4 @@
+import { captureBootQuery } from './boot-query.js';
 import {
   CHAR_CARD_V04,
   LIVE_POLL_INTERVAL_MS,
@@ -5,6 +6,7 @@ import {
   mockSnapshotUrl,
   parseBootConfig,
 } from './config.js';
+import { createCampaignFlow } from './campaign-flow.js';
 import { resolveAppUrl } from './paths.js';
 import { TacticalBoardRenderer } from './board.js';
 import { applyMockVictoryPatch, isBattleFinished } from './battle-end.js';
@@ -38,8 +40,13 @@ import {
   mintLiveAccessToken,
   prepareLiveJanusSession,
   stepTacticalLockstep,
+  TACTICAL_AUTO_COMMAND_MODE_BOTH,
+  TACTICAL_LOCKSTEP_STEPS_AFTER_COMMAND,
 } from './live-gateway.js';
+import { createLiveAutoPlayer } from './live-auto-play.js';
+import { HUD_RESOURCE_ICONS, HUD_TOWN_ICONS } from './asset-registry.js';
 
+captureBootQuery();
 const boot = parseBootConfig();
 
 const els = {
@@ -52,6 +59,15 @@ const els = {
   castSkill: document.getElementById('hud-cast-skill'),
   skillCast: document.getElementById('hud-skill-cast'),
   mode: document.getElementById('hud-mode'),
+  auto: document.getElementById('hud-auto'),
+  resIcons: document.getElementById('hud-res-icons'),
+  townIcons: document.getElementById('hud-town-icons'),
+  campaignPhase: document.getElementById('campaign-phase'),
+  campaignDeploy: document.getElementById('campaign-deploy'),
+  campaignSupply: document.getElementById('campaign-supply'),
+  campaignBattle: document.getElementById('campaign-battle'),
+  btnCampaignSupply: document.getElementById('btn-campaign-supply'),
+  btnCampaignBattle: document.getElementById('btn-campaign-battle'),
   cards: document.getElementById('char-cards'),
   canvas: document.getElementById('board'),
   boardWrap: document.getElementById('board-wrap'),
@@ -78,6 +94,32 @@ let liveBattleId = battleIdFromLiveUrl(boot.liveUrlRaw);
 let stickyLastSkillCast = null;
 /** @type {object | null} sticky terminal winner/endReason for overlay (Live wipeout polls) */
 let stickyTerminalOutcome = null;
+
+let campaign = null;
+
+const liveAutoPlayer = boot.live
+  ? createLiveAutoPlayer({
+      boot,
+      getBattleId: () => liveBattleId,
+      getSessionId: () => liveSessionId,
+      getSnapshot: () => snapshot,
+      isBattleFinished,
+      onStatus: (line) => {
+        if (els.auto) {
+          els.auto.textContent = line;
+        }
+      },
+      onCommand: async (cmdBody) => {
+        const result = await submitLiveTacticalCommandBody(cmdBody);
+        if (!result.accepted) {
+          setStatus(formatLiveCommandError(result), true);
+        }
+      },
+      onStep: async () => {
+        await applyLiveLockstepTick(1);
+      },
+    })
+  : null;
 
 function setStatus(text, isError = false) {
   els.status.textContent = text;
@@ -144,6 +186,7 @@ function stopLivePoll() {
     clearInterval(pollTimer);
     pollTimer = null;
   }
+  liveAutoPlayer?.stop();
 }
 
 function ingestSnapshot(raw) {
@@ -158,6 +201,7 @@ function ingestSnapshot(raw) {
   snapshot = snap;
   if (boot.live && isBattleFinished(snapshot)) {
     stopLivePoll();
+    liveAutoPlayer?.stop();
   }
 }
 
@@ -231,7 +275,7 @@ function liveSnapshotUrlForBattle(battleId) {
 }
 
 function updateCastSkillButton() {
-  if (!boot.live) {
+  if (!boot.live || !boot.debugMoves) {
     els.castSkill.hidden = true;
     return;
   }
@@ -257,6 +301,35 @@ function updateCastSkillButton() {
     : '射程內無敵方單位（可先移動靠近）';
 }
 
+async function submitLiveTacticalCommandBody(body) {
+  const payload = {
+    ...body,
+    battle_id: body.battle_id ?? liveBattleId,
+    session_id: body.session_id ?? liveSessionId,
+  };
+  try {
+    const res = await fetch(boot.commandUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      return { accepted: false, rejectReason: `HTTP ${res.status}: ${text}` };
+    }
+    const json = await res.json();
+    return {
+      accepted: Boolean(json.accepted),
+      rejectReason: json.reject_reason,
+      lockstepFrame: json.lockstep_frame,
+      stateHash: json.state_hash,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { accepted: false, rejectReason: `網路錯誤：${msg}` };
+  }
+}
+
 async function submitLiveTacticalCommand(unitId, to, { kind = 1, skillId } = {}) {
   const unit = snapshot?.units.find((u) => u.id === unitId && u.hp > 0);
   if (!unit) {
@@ -274,27 +347,7 @@ async function submitLiveTacticalCommand(unitId, to, { kind = 1, skillId } = {})
   if (kind === TACTICAL_COMMAND_KIND_SKILL) {
     body.skill_id = skillId ?? boot.stubSkillId;
   }
-  try {
-    const res = await fetch(boot.commandUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) {
-      const text = await res.text();
-      return { accepted: false, rejectReason: `HTTP ${res.status}: ${text}` };
-    }
-    const json = await res.json();
-    return {
-      accepted: Boolean(json.accepted),
-      rejectReason: json.reject_reason,
-      lockstepFrame: json.lockstep_frame,
-      stateHash: json.state_hash,
-    };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { accepted: false, rejectReason: `網路錯誤：${msg}` };
-  }
+  return submitLiveTacticalCommandBody(body);
 }
 
 function formatLiveCommandError(result) {
@@ -334,11 +387,12 @@ function formatLiveStepError(step) {
   return `Live step-lockstep 失敗：HTTP ${step.status}`;
 }
 
-async function applyLiveLockstepAfterCommand() {
-  setStatus('Live：POST step-lockstep（步進權威帧）…');
+async function applyLiveLockstepTick(steps = 1, { autoCommandMode } = {}) {
   const step = await stepTacticalLockstep(boot.stepLockstepUrl, {
     sessionId: liveSessionId,
     battleId: liveBattleId,
+    steps,
+    autoCommandMode,
   });
   if (!step.ok) {
     throw new Error(formatLiveStepError(step));
@@ -354,6 +408,16 @@ async function applyLiveLockstepAfterCommand() {
     renderer.clearSelection();
     render();
   }
+  return step;
+}
+
+async function enableLiveAutoCommandModeBoth() {
+  await applyLiveLockstepTick(1, { autoCommandMode: TACTICAL_AUTO_COMMAND_MODE_BOTH });
+}
+
+async function applyLiveLockstepAfterCommand() {
+  setStatus('Live：POST step-lockstep（步進權威帧）…');
+  const step = await applyLiveLockstepTick(TACTICAL_LOCKSTEP_STEPS_AFTER_COMMAND);
   const hashPart = step.stateHash != null ? ` hash=${step.stateHash}` : '';
   setStatus(
     `Live：lockstep 已步進 frame=${step.lockstepFrame ?? '?'}${hashPart}（恢復快照輪詢）`,
@@ -428,6 +492,9 @@ function runCastSkillFromHud() {
 
 async function pollLive() {
   const started = performance.now();
+  if (!liveBattleId || !String(liveBattleId).includes('/')) {
+    throw new Error('live battle_id missing（請用 /qjp/?live=1 並完成開戰）');
+  }
   try {
     const res = await fetch(liveSnapshotUrlForBattle(liveBattleId), {
       cache: 'no-store',
@@ -547,9 +614,21 @@ async function runLivePrepare() {
       ingestSnapshot(prepared.initialSnapshot);
       render();
     }
-    setStatus(`Live：EnterBattle 已建局 ${liveBattleId}；開始快照輪詢。`);
+    setStatus(`Live：EnterBattle 已建局 ${liveBattleId}；啟用 auto_command_mode=2…`);
+    try {
+      await enableLiveAutoCommandModeBoth();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setStatus(`Live：auto_command_mode 設定失敗（${msg}），仍嘗試自動迴圈。`, true);
+    }
     await pollLive();
     pollTimer = window.setInterval(() => void pollLive(), LIVE_POLL_INTERVAL_MS);
+    if (boot.liveAuto) {
+      liveAutoPlayer?.start();
+      setStatus(
+        'Live：自動推進（suggest.command → tactical/command → step-lockstep steps:1；?auto=0 關）。',
+      );
+    }
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     syncCtx = { source: 'live', link: 'error', pollIntervalMs: LIVE_POLL_INTERVAL_MS };
@@ -580,6 +659,12 @@ function unitAt(x, y) {
 }
 
 function onCellClick(x, y) {
+  if (!campaign?.isBattle() && !boot.skipCampaign) {
+    return;
+  }
+  if (!boot.debugMoves) {
+    return;
+  }
   if (!snapshot || isBattleFinished(snapshot)) {
     return;
   }
@@ -625,6 +710,10 @@ function onCellClick(x, y) {
     }
   }
 
+  if (boot.live && boot.liveAuto) {
+    liveAutoPlayer?.notifyUserAction();
+  }
+
   if (unitAtCell && unitAtCell.owner === LOCAL_PLAYER_OWNER) {
     if (selected === unitAtCell.id) {
       renderer.clearSelection();
@@ -640,6 +729,30 @@ function onCellClick(x, y) {
 
   renderer.clearSelection();
   render();
+}
+
+function bindIconStrip(container, icons) {
+  if (!container) {
+    return;
+  }
+  container.innerHTML = '';
+  for (const icon of icons) {
+    const span = document.createElement('span');
+    span.className = 'res-icon';
+    span.title = icon.label;
+    const img = document.createElement('img');
+    img.src = resolveAppUrl(icon.src);
+    img.alt = icon.label;
+    img.width = 32;
+    img.height = 32;
+    span.append(img);
+    container.append(span);
+  }
+}
+
+function bindResourceIcons() {
+  bindIconStrip(els.resIcons, HUD_RESOURCE_ICONS);
+  bindIconStrip(els.townIcons, HUD_TOWN_ICONS);
 }
 
 function bindCards() {
@@ -680,6 +793,39 @@ els.canvas.addEventListener('click', (ev) => {
   }
 });
 
+function beginBattleSession() {
+  els.boardWrap?.classList.remove('pre-battle');
+  if (boot.live) {
+    startLive();
+    return;
+  }
+  loadMock().catch((err) => {
+    syncCtx = { source: 'mock', link: 'error' };
+    const msg = err instanceof Error ? err.message : String(err);
+    setStatus(
+      `Mock load failed (${msg}). Serve this folder: cd client/static-preview && npx serve . — or use HTTP, not file://`,
+      true,
+    );
+  });
+}
+
+function initCampaign() {
+  campaign = createCampaignFlow({
+    deployPanel: els.campaignDeploy,
+    supplyPanel: els.campaignSupply,
+    battlePanel: els.campaignBattle,
+    phaseLabel: els.campaignPhase,
+    onEnterBattle: beginBattleSession,
+  });
+  els.btnCampaignSupply?.addEventListener('click', () => campaign.toSupply());
+  els.btnCampaignBattle?.addEventListener('click', () => campaign.toBattle());
+  els.boardWrap?.classList.add('pre-battle');
+  if (boot.skipCampaign) {
+    campaign.toBattle();
+  }
+}
+
+bindResourceIcons();
 bindCards();
 
 els.mintToken.addEventListener('click', () => {
@@ -690,17 +836,9 @@ els.castSkill.addEventListener('click', () => {
   runCastSkillFromHud();
 });
 
-if (boot.live) {
-  startLive();
-} else {
-  loadMock().catch((err) => {
-    syncCtx = { source: 'mock', link: 'error' };
-    const msg = err instanceof Error ? err.message : String(err);
-    setStatus(
-      `Mock load failed (${msg}). Serve this folder: cd client/static-preview && npx serve . — or use HTTP, not file://`,
-      true,
-    );
-  });
+initCampaign();
+if (!boot.skipCampaign) {
+  setStatus('請完成排兵佈陣 → 補鎮／補給 → 開戰。');
 }
 
 window.addEventListener('beforeunload', () => {

@@ -12,6 +12,9 @@ export const DEFAULT_STEP_LOCKSTEP_PATH = 'v1/tactical/step-lockstep';
 /** pkg/lockstep.CommandDelayFrames (3) + 1 frame until delayed commands execute. */
 export const TACTICAL_LOCKSTEP_STEPS_AFTER_COMMAND = 4;
 
+/** Janus HTTP wire: 2 = 雙方自動（持久），見 docs/janus-http-mirror.md */
+export const TACTICAL_AUTO_COMMAND_MODE_BOTH = 2;
+
 /**
  * 暫定契約（與核心 LaresAuth/Login HTTP 鏡像並行對齊；路徑／欄位以核心合入後為準）。
  * POST JSON `{ "username", "password" }` → `{ "access_token" }`（或 camelCase `accessToken`）。
@@ -196,13 +199,22 @@ function readStateHash(json) {
  */
 export async function stepTacticalLockstep(
   stepUrl,
-  { sessionId, battleId, steps = TACTICAL_LOCKSTEP_STEPS_AFTER_COMMAND },
+  {
+    sessionId,
+    battleId,
+    steps = TACTICAL_LOCKSTEP_STEPS_AFTER_COMMAND,
+    autoCommandMode,
+  } = {},
 ) {
-  const stepRes = await postJson(stepUrl, {
+  const body = {
     session_id: sessionId,
     battle_id: battleId,
     steps,
-  });
+  };
+  if (autoCommandMode != null) {
+    body.auto_command_mode = autoCommandMode;
+  }
+  const stepRes = await postJson(stepUrl, body);
   const json = stepRes.json;
   return {
     ok: stepRes.res.ok && json != null,

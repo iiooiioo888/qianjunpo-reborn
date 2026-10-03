@@ -25,7 +25,17 @@ Dev nginx 已將上述路徑反代到 Janus。`?live=1` 會先 **`POST v1/tactic
 
 暫定 mint 預設 body：`{"username":"smoke","password":"smoke"}`（與 `docs/janus-http-mirror.md` smoke 帳密一致）。可用 `?mintUrl=`、`?mintUser=`、`?mintPass=` 覆寫。
 
-子路徑部署時 `index.html` 會在 pathname 為 `/qjp` 或 `/qjp/…` 時自動插入 `<base href="/qjp/" />`；`paths.js` 亦會辨識 `/qjp` 掛載。Nginx 請勿用會丟棄 query 的 `/qjp`→`/qjp/` 301（見 `deploy/nginx-qjp-snippet.conf`），否則 `?mockVictory=`／`?live=1` 會在重定向後消失。
+子路徑部署時 `index.html` 會在 pathname 為 `/qjp` 或 `/qjp/…` 時自動插入 `<base href="/qjp/" />`；`paths.js` 亦會辨識 `/qjp` 掛載。
+
+### Chrome 顯示 HTTP 400（根因）
+
+線上若仍用 `return 301 /qjp/`（**無** `$is_args$args`），`/qjp?live=1` 會變成無 query 的 `/qjp/`。HTML 本身 curl 仍 **200**，但 Live 會打 `GET …/snapshot` **缺 `battle_id`** → Janus **400** `missing battle_id`（Chrome 網路面板／失敗請求像「整頁壞掉」）。**修法**：套用 `deploy/nginx-qjp-snippet.conf`（301 保留 query、`^~ /qjp/v1/` 優先於靜態、`try_files` 勿落到反代）。客戶端另備 `boot-query.js`（Referer 還原 query）與 `/qjp`→`/qjp/` 同步腳本，**不能替代** nginx 修正。
+
+部署靜態與貼圖：
+
+```bash
+bash client/static-preview/deploy/deploy-web-preview.sh /var/www/qjp-static-preview
+```
 
 ## 本地開啟
 
@@ -50,20 +60,23 @@ cp client/assets/resources/data/tactical/demo_initial.json client/static-preview
 # 或：make client-snapshot 後再 cp
 ```
 
-## 角色卡 v04（可選）
+## 貼圖（deploy 必跑）
 
-將 PNG 放到 `chars/*_v04.png`（檔名見 `config.js`）。缺圖自動占位，不影響棋盤。
+```bash
+bash client/static-preview/scripts/sync-textures-from-assets.sh
+```
+
+自 `client/assets/resources/textures/2d/` 與 `art/2d/_wip/characters/`（v04 卡，**唯讀複製**）同步到 `textures/2d/`（`asset-registry.js`）。單位 `PX2D_unit_infantry`／`cavalry`、地格 0–3、32px HUD／城鎮圖標、角色卡皆走此路徑；缺檔才色塊 fallback。
 
 ## ISO25 地格（STANDARD）
 
 草／山／水／林地格貼圖由 `bash client/scripts/sync-wip-tile-textures.sh` 自 `art/25d/_wip/tiles` 複製至 `tiles/*.png`（檔名見 `config.js` `TERRAIN_TILE_SRC`）。缺圖時棋盤退回平面色塊。
 
-## 互動
+## 互動（主線）
 
-- 點己方單位（owner `0`）→ BFS 高亮（move **4**）。
-- Mock：點高亮格 → 非權威 `applyMockMove`（與 Cocos mock 一致）。
-- `?live=1`：啟動時 connect → enter-battle；點高亮格 → **同域** `POST v1/tactical/command`（帶 `session_id`＋`battle_id`）；**接受後** `POST v1/tactical/step-lockstep`（`steps: 4`，對齊 `CommandDelayFrames`）並套用回傳的 `view_snapshot_json`，再恢復快照輪詢；指令拒絕／HTTP／網路失敗顯示真實錯誤並可 **「重試戰術指令」**；建局／**快照輪詢**失敗可 **「重連 Live」**（或建局失敗時「重試 Live 建局」）。仍可用 `localDrift` mock 疊加。
-- Live 技能：選己方單位後點 **「施放 stub 技能 (Strike)」**（射程內自動選敵格）或 **點敵方單位格** → `POST` `kind=5` + `skill_id`（預設 `1`，`?skillId=` 覆寫）→ step-lockstep → HUD **`lastSkillCast`** 與 HP 來自快照。
+1. **排兵佈陣** → **補鎮／補給**（城鎮 32px 圖標）→ **開戰**（`campaign-flow.js`）。
+2. `?live=1`：**開戰後** `connect` → `enter-battle` → 預設 **auto**（`live-auto-play.js`：`POST /v1/suggest` 或本地 AI → `POST v1/tactical/command` → `POST v1/tactical/step-lockstep` → `GET snapshot` 輪詢）直到 `winner`／`endReason` overlay（#94／#103）。`?auto=0` 關閉自動。
+3. **手動點格移動／技能** 僅 `?debug=1`（或 `?debugMoves=1`）。`?skipCampaign=1` 跳過戰前步驟（測試用）。
 
 ### curl ↔ static-preview
 
