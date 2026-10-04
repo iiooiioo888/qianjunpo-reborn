@@ -8,7 +8,32 @@ import {
   computeOrigin,
 } from './field-iso.js';
 import { getGroundImage, getStackImage } from './field-assets.js';
-import { STACK_SRC_CROP_TOP, stackLayout } from './field-stack-layout.js';
+import {
+  STACK_SRC_CROP_TOP,
+  FIGURE_DRAW_W,
+  FIGURE_SRC_CROPS,
+  SIDE_FLAG_FILL,
+  SIDE_TINT,
+  stackLayout,
+} from './field-stack-layout.js';
+
+/** 單兵離屏染色用（避免主畫布 source-atop 染到草地／旗幟） */
+let figureScratchCanvas = null;
+
+function getFigureScratch(drawW, drawH) {
+  if (!figureScratchCanvas) {
+    figureScratchCanvas = document.createElement('canvas');
+  }
+  if (figureScratchCanvas.width < drawW) {
+    figureScratchCanvas.width = drawW;
+  }
+  if (figureScratchCanvas.height < drawH) {
+    figureScratchCanvas.height = drawH;
+  }
+  const sctx = figureScratchCanvas.getContext('2d');
+  sctx.clearRect(0, 0, drawW, drawH);
+  return { canvas: figureScratchCanvas, ctx: sctx };
+}
 
 function drawDiamondPath(ctx, cx, cy) {
   const verts = diamondVertices(cx, cy);
@@ -82,32 +107,79 @@ function drawGameResultOverlay(ctx, canvas, gameResult) {
   ctx.restore();
 }
 
-function drawUnitStack(ctx, unit, originX, originY) {
-  const layout = stackLayout(unit.x, unit.y, originX, originY);
-  const { anchorX, left, bodyTop, bodyDrawH, drawW } = layout;
-  const stackImg = getStackImage(unit.type);
-  const bodySrcH = stackImg?.naturalHeight
-    ? stackImg.naturalHeight - STACK_SRC_CROP_TOP
-    : 224 - STACK_SRC_CROP_TOP;
+function drawSideFlag(ctx, layout, side) {
+  const { flagX, flagTop, anchorY } = layout;
+  const fill = SIDE_FLAG_FILL[side] ?? SIDE_FLAG_FILL.enemy;
+  ctx.save();
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(flagX, anchorY);
+  ctx.lineTo(flagX, flagTop);
+  ctx.stroke();
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.moveTo(flagX, flagTop);
+  ctx.lineTo(flagX + 11, flagTop + 4);
+  ctx.lineTo(flagX, flagTop + 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawFigureSprite(ctx, stackImg, crop, footX, footY, tint) {
+  const srcY = STACK_SRC_CROP_TOP + crop.sy;
+  const drawW = FIGURE_DRAW_W;
+  const drawH = Math.max(18, Math.round(drawW * (crop.sh / crop.sw)));
+  const left = footX - drawW / 2;
+  const top = footY - drawH;
 
   if (stackImg?.complete && stackImg.naturalWidth) {
-    ctx.drawImage(
+    const { canvas: scratch, ctx: sctx } = getFigureScratch(drawW, drawH);
+    sctx.drawImage(
       stackImg,
+      crop.sx,
+      srcY,
+      crop.sw,
+      crop.sh,
       0,
-      STACK_SRC_CROP_TOP,
-      stackImg.naturalWidth,
-      bodySrcH,
-      left,
-      bodyTop,
+      0,
       drawW,
-      bodyDrawH,
+      drawH,
     );
-  } else {
-    ctx.fillStyle = '#555';
-    ctx.fillRect(left, bodyTop, drawW, bodyDrawH);
+    if (tint) {
+      sctx.save();
+      sctx.globalCompositeOperation = 'source-atop';
+      sctx.fillStyle = tint;
+      sctx.fillRect(0, 0, drawW, drawH);
+      sctx.restore();
+    }
+    ctx.drawImage(scratch, 0, 0, drawW, drawH, left, top, drawW, drawH);
+    return;
   }
 
-  drawTroopCount(ctx, anchorX, bodyTop, unit.troops);
+  ctx.fillStyle = '#555';
+  ctx.fillRect(left, top, drawW, drawH);
+}
+
+function drawUnitStack(ctx, unit, originX, originY) {
+  const layout = stackLayout(unit.x, unit.y, originX, originY);
+  const stackImg = getStackImage(unit.type);
+  const crops = FIGURE_SRC_CROPS[unit.type] ?? FIGURE_SRC_CROPS.infantry;
+  const tint = SIDE_TINT[unit.side] ?? SIDE_TINT.enemy;
+
+  drawSideFlag(ctx, layout, unit.side);
+
+  const figureCount = Math.min(crops.length, layout.figures.length);
+  for (let i = 0; i < figureCount; i++) {
+    const { cx, footY } = layout.figures[i];
+    drawFigureSprite(ctx, stackImg, crops[i], cx, footY, tint);
+  }
+
+  drawTroopCount(ctx, layout.anchorX, layout.bodyTop, unit.troops);
 }
 
 function drawTroopCount(ctx, cx, stackTop, troops) {
