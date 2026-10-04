@@ -9,7 +9,13 @@ export const STACK_NATURAL_W = 192;
 export const STACK_NATURAL_H = 224;
 
 /** 單兵在畫布上的目標寬度 */
-export const FIGURE_DRAW_W = 24;
+export const FIGURE_DRAW_W = 22;
+
+/** 相鄰個體外框（寬度 FIGURE_DRAW_W）之間的水平留白 */
+export const FIGURE_FRAME_GAP_PX = 6;
+
+/** 相鄰腳點水平距 = 外框寬 + 留白 */
+export const FIGURE_FOOT_SPACING = FIGURE_DRAW_W + FIGURE_FRAME_GAP_PX;
 
 /**
  * 從兵堆稿裁切前排三兵（座標相對於裁切後兵身，y=0 為 STACK_SRC_CROP_TOP 之下）
@@ -33,11 +39,11 @@ export const FIGURE_SRC_CROPS = {
   ],
 };
 
-/** 格內三兵腳點偏移（相對 anchor） */
+/** 格內三兵腳點偏移（相對 anchor；左右各距中心 FIGURE_FOOT_SPACING） */
 export const FIGURE_FOOT_OFFSETS = [
-  { dx: -15, dy: 0 },
+  { dx: -FIGURE_FOOT_SPACING, dy: 0 },
   { dx: 0, dy: -4 },
-  { dx: 15, dy: 0 },
+  { dx: FIGURE_FOOT_SPACING, dy: 0 },
 ];
 
 export const SIDE_TINT = {

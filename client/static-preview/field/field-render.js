@@ -17,6 +17,24 @@ import {
   stackLayout,
 } from './field-stack-layout.js';
 
+/** 單兵離屏染色用（避免主畫布 source-atop 染到草地／旗幟） */
+let figureScratchCanvas = null;
+
+function getFigureScratch(drawW, drawH) {
+  if (!figureScratchCanvas) {
+    figureScratchCanvas = document.createElement('canvas');
+  }
+  if (figureScratchCanvas.width < drawW) {
+    figureScratchCanvas.width = drawW;
+  }
+  if (figureScratchCanvas.height < drawH) {
+    figureScratchCanvas.height = drawH;
+  }
+  const sctx = figureScratchCanvas.getContext('2d');
+  sctx.clearRect(0, 0, drawW, drawH);
+  return { canvas: figureScratchCanvas, ctx: sctx };
+}
+
 function drawDiamondPath(ctx, cx, cy) {
   const verts = diamondVertices(cx, cy);
   ctx.beginPath();
@@ -120,24 +138,26 @@ function drawFigureSprite(ctx, stackImg, crop, footX, footY, tint) {
   const top = footY - drawH;
 
   if (stackImg?.complete && stackImg.naturalWidth) {
-    ctx.drawImage(
+    const { canvas: scratch, ctx: sctx } = getFigureScratch(drawW, drawH);
+    sctx.drawImage(
       stackImg,
       crop.sx,
       srcY,
       crop.sw,
       crop.sh,
-      left,
-      top,
+      0,
+      0,
       drawW,
       drawH,
     );
     if (tint) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = tint;
-      ctx.fillRect(left, top, drawW, drawH);
-      ctx.restore();
+      sctx.save();
+      sctx.globalCompositeOperation = 'source-atop';
+      sctx.fillStyle = tint;
+      sctx.fillRect(0, 0, drawW, drawH);
+      sctx.restore();
     }
+    ctx.drawImage(scratch, 0, 0, drawW, drawH, left, top, drawW, drawH);
     return;
   }
 
